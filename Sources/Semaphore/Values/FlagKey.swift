@@ -46,4 +46,8 @@ public struct FlagKeyPath: Hashable, Sendable {
     public func appending(_ propertyName: String) -> FlagKeyPath {
         FlagKeyPath(propertyNames + [propertyName])
     }
+
+    public func prepending(_ propertyName: String) -> FlagKeyPath {
+        FlagKeyPath([propertyName] + propertyNames)
+    }
 }

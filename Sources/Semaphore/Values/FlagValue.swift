@@ -177,3 +177,12 @@ public protocol FlagValueCases {
 extension FlagValueCases where Self: CaseIterable, Self: FlagValue {
     public static var flagValueCases: [FlagValueBox] { allCases.map(\.box) }
 }
+
+/// Lists a value type's cases, or returns `nil` when it has none to offer.
+///
+/// Generated code calls this for every flag. Writing the cast inline instead would
+/// warn "always succeeds" in any container that declares a `FlagValueCases` type, so
+/// the generic signature here is load-bearing: it hides the cast from the call site.
+public func _flagValueCases<Value: FlagValue>(of type: Value.Type) -> [FlagValueBox]? {
+    (type as? any FlagValueCases.Type)?.flagValueCases
+}
