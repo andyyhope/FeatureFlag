@@ -128,10 +128,13 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
     /// Clears overrides for every flag this pole knows about.
     ///
     /// Only declared flags are touched, so unrelated values sharing the store — an
-    /// App Group suite holds more than flags — are left alone.
+    /// App Group suite holds more than flags — are left alone. Flags that carry no
+    /// override are skipped rather than written blindly: on a large tree that is the
+    /// difference between one write and hundreds, each one a cross-process broadcast.
     public func removeAllOverrides() throws {
-        for key in keys {
-            try resolver.setOverride(nil, for: key)
+        for entry in schema.flags
+        where resolver.currentOverride(for: entry.key, as: entry.valueType) != nil {
+            try resolver.setOverride(nil, for: entry.key)
         }
     }
 }

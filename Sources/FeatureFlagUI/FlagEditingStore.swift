@@ -144,7 +144,10 @@ public final class FlagEditingStore: ObservableObject {
     /// Only declared flags are touched — an App Group suite holds more than flags.
     public func resetAll() throws {
         objectWillChange.send()
-        for entry in schema.flags {
+        // Skip flags that hold nothing: a blind write per flag would broadcast a
+        // cross-process change for each one.
+        for entry in schema.flags
+        where source.box(for: entry.key, as: entry.valueType) != nil {
             try source.setBox(nil, for: entry.key)
         }
     }

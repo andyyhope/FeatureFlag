@@ -215,3 +215,113 @@ private final class RefusingSource: MutableFlagValueSource, @unchecked Sendable 
         values[key] = box
     }
 }
+
+// MARK: - Bulk operations used to storm the other process
+
+final class WriteAmplificationTests: XCTestCase {
+
+    func testClearingEverythingOnlyWritesWhatWasSet() throws {
+        // Blindly writing nil to every declared flag turns one reset into hundreds of
+        // cross-process broadcasts, each waking the other app to re-read everything.
+        let source = CountingSource()
+        let pole = FlagPole(ManyEdgeFlags.self, sources: [source])
+        try pole.setOverride(true, for: pole.flags.$a)
+
+        source.writes = 0
+        try pole.removeAllOverrides()
+
+        XCTAssertEqual(source.writes, 1, "should touch only the one flag that was set")
+        XCTAssertTrue(pole.overrides.isEmpty)
+    }
+
+    func testClearingNothingWritesNothing() throws {
+        let source = CountingSource()
+        let pole = FlagPole(ManyEdgeFlags.self, sources: [source])
+
+        try pole.removeAllOverrides()
+        XCTAssertEqual(source.writes, 0)
+    }
+
+    func testUserDefaultsIgnoresAWriteThatChangesNothing() throws {
+        let suite = "com.featureflag.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let source = UserDefaultsSource(defaults: defaults, name: "shared")
+
+        try source.setBox(.bool(true), for: "a")
+
+        var changes = 0
+        let cancellable = source.changes.sink { _ in changes += 1 }
+        defer { cancellable.cancel() }
+
+        try source.setBox(.bool(true), for: "a")
+        XCTAssertEqual(changes, 0, "an identical write should not announce a change")
+
+        try source.setBox(.bool(false), for: "a")
+        XCTAssertEqual(changes, 1)
+    }
+
+    func testRemovingSomethingAbsentFromUserDefaultsAnnouncesNothing() throws {
+        let suite = "com.featureflag.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let source = UserDefaultsSource(defaults: defaults, name: "shared")
+
+        var changes = 0
+        let cancellable = source.changes.sink { _ in changes += 1 }
+        defer { cancellable.cancel() }
+
+        try source.setBox(nil, for: "never.set")
+        XCTAssertEqual(changes, 0)
+    }
+
+    func testAFlagChangingTypeIsStillRewritten() throws {
+        // NSNumber equates 1 and true, so a naive equality check would treat this as a
+        // no-op and leave the old value in place.
+        let suite = "com.featureflag.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let source = UserDefaultsSource(defaults: defaults, name: "shared")
+
+        try source.setBox(.int(1), for: "a")
+
+        var changes = 0
+        let cancellable = source.changes.sink { _ in changes += 1 }
+        defer { cancellable.cancel() }
+
+        try source.setBox(.bool(true), for: "a")
+        XCTAssertEqual(changes, 1, "1 and true are different values, however NSNumber compares them")
+    }
+}
+
+@FlagContainer
+private struct ManyEdgeFlags {
+    @Flag(default: false, description: "a") var a: Bool
+    @Flag(default: false, description: "b") var b: Bool
+    @Flag(default: false, description: "c") var c: Bool
+    @Flag(default: false, description: "d") var d: Bool
+    @Flag(default: false, description: "e") var e: Bool
+}
+
+private final class CountingSource: MutableFlagValueSource, @unchecked Sendable {
+    let sourceName = "counting"
+    var writes = 0
+
+    private let lock = NSLock()
+    private var values: [FlagKey: FlagValueBox] = [:]
+
+    func box(for key: FlagKey, as type: FlagValueType) -> FlagValueBox? {
+        lock.lock()
+        defer { lock.unlock() }
+        return values[key]
+    }
+
+    var changes: AnyPublisher<FlagChange, Never> { Empty().eraseToAnyPublisher() }
+
+    func setBox(_ box: FlagValueBox?, for key: FlagKey) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        writes += 1
+        values[key] = box
+    }
+}

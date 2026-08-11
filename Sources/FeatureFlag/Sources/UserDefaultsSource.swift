@@ -85,6 +85,11 @@ public final class UserDefaultsSource: MutableFlagValueSource, @unchecked Sendab
     }
 
     public func setBox(_ box: FlagValueBox?, for key: FlagKey) throws {
+        // A write that changes nothing still costs a cross-process broadcast, and every
+        // process that hears one re-reads everything. Bulk operations turn that into a
+        // storm, so no-op writes stop here.
+        if isUnchanged(box, for: key) { return }
+
         if let box {
             defaults.set(box.propertyListValue, forKey: key.rawValue)
         } else {
@@ -96,6 +101,19 @@ public final class UserDefaultsSource: MutableFlagValueSource, @unchecked Sendab
         if let crossProcessNotificationName {
             DarwinNotificationCenter.post(crossProcessNotificationName)
         }
+    }
+
+    private func isUnchanged(_ box: FlagValueBox?, for key: FlagKey) -> Bool {
+        let existing = defaults.object(forKey: key.rawValue) as? NSObject
+        let replacement = box?.propertyListValue as? NSObject
+
+        if existing == nil, replacement == nil { return true }
+        guard let existing, let replacement else { return false }
+
+        // NSNumber equates 1 and true, so a flag that changed type between builds would
+        // look unchanged and never be rewritten. Compare boolean-ness as well.
+        return existing.isEqual(replacement)
+            && isBooleanValue(existing) == isBooleanValue(replacement)
     }
 
     /// Re-reads everything, announcing a wholesale change.
