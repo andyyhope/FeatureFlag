@@ -1,8 +1,9 @@
-/// Semaphore — a Swift-native feature flag framework.
-///
-/// Declare flags with ``Flag`` and ``FlagGroup`` inside a type annotated with
-/// `@FlagContainer`, then read them through a ``SignalTower``.
-public enum Semaphore {
-    /// The version of the on-disk schema and payload formats this build produces.
-    public static let formatVersion = 1
-}
+// Semaphore — a Swift-native feature flag framework.
+//
+// Declare flags with `@Flag` and `@FlagGroup` inside a type annotated with
+// `@FlagContainer`, then read them through a `SignalTower`.
+//
+// Generated code refers to this module's types by their fully qualified names
+// (`Semaphore.FlagLookup` and friends) so that a host app's own types cannot shadow
+// them. Nothing in this module may therefore be *named* `Semaphore`: a type sharing
+// the module's name makes every qualified reference ambiguous.

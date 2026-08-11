@@ -3,5 +3,8 @@ import SwiftSyntaxMacros
 
 @main
 struct SemaphorePlugin: CompilerPlugin {
-    let providingMacros: [Macro.Type] = []
+    let providingMacros: [Macro.Type] = [
+        FlagContainerMacro.self,
+        FlagGroupMacro.self,
+    ]
 }
