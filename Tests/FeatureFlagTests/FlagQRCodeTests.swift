@@ -4,8 +4,8 @@ import XCTest
 
 final class FlagQRCodeTests: XCTestCase {
 
-    private func makeTower() -> SignalTower<DemoFlags> {
-        SignalTower(DemoFlags.self, sources: [SnapshotSource(name: "local")])
+    private func makeTower() -> FlagPole<DemoFlags> {
+        FlagPole(DemoFlags.self, sources: [SnapshotSource(name: "local")])
     }
 
     // MARK: - Wire format
@@ -50,7 +50,7 @@ final class FlagQRCodeTests: XCTestCase {
     func testCompressionMakesRealisticPayloadsFit() throws {
         // Flag keys and JSON structure repeat heavily, which is exactly what deflate is
         // good at. Without it a payload this size would not fit in one code.
-        let tower = SignalTower(ManyFlags.self, sources: [SnapshotSource(name: "local")])
+        let tower = FlagPole(ManyFlags.self, sources: [SnapshotSource(name: "local")])
         let value = String(repeating: "a moderately long override value. ", count: 8)
         for accessor in tower.flags.allAccessors {
             try tower.setOverride(value, for: accessor)
@@ -66,7 +66,7 @@ final class FlagQRCodeTests: XCTestCase {
     // MARK: - Size limit
 
     func testAnOversizedPayloadIsRefusedWithSomethingActionable() throws {
-        let tower = SignalTower(BlobFlags.self, sources: [SnapshotSource(name: "local")])
+        let tower = FlagPole(BlobFlags.self, sources: [SnapshotSource(name: "local")])
         // Incompressible bytes, so no amount of deflate can make this fit. A simple
         // congruential generator keeps the test deterministic.
         var state: UInt64 = 0x2545_F491_4F6C_DD1D
@@ -122,7 +122,7 @@ final class FlagQRCodeTests: XCTestCase {
 
     func testScannedCodeStillValidatesAgainstTheSchema() throws {
         // A code from another app's build must not smuggle in unknown keys.
-        let foreign = SignalTower(BlobFlags.self, sources: [SnapshotSource(name: "local")])
+        let foreign = FlagPole(BlobFlags.self, sources: [SnapshotSource(name: "local")])
         try foreign.setOverride(Data([0x01]), for: foreign.flags.$blob)
 
         XCTAssertThrowsError(try makeTower().importQRCode(try foreign.qrCodeString())) { error in

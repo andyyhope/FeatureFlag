@@ -6,7 +6,7 @@ import SwiftUI
 @main
 struct DemoApp: App {
 
-    @StateObject private var flags = SignalTower.demo()
+    @StateObject private var flags = FlagPole.demo()
 
     var body: some Scene {
         WindowGroup {

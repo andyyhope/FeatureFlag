@@ -3,7 +3,7 @@ import XCTest
 
 @testable import FeatureFlag
 
-final class SignalTowerTests: XCTestCase {
+final class FlagPoleTests: XCTestCase {
 
     private var cancellables: Set<AnyCancellable> = []
 
@@ -15,7 +15,7 @@ final class SignalTowerTests: XCTestCase {
     // MARK: - Resolution
 
     func testReadsTheCompiledDefaultWhenNoSourceHasAValue() {
-        let tower = SignalTower(DemoFlags.self, sources: [])
+        let tower = FlagPole(DemoFlags.self, sources: [])
         XCTAssertFalse(tower.flags.newOnboarding)
         XCTAssertEqual(tower.flags.maxItems, 10)
     }
@@ -24,7 +24,7 @@ final class SignalTowerTests: XCTestCase {
         let local = SnapshotSource(name: "local")
         try local.setBox(.bool(true), for: "new-onboarding")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
         XCTAssertTrue(tower.flags.newOnboarding)
     }
 
@@ -36,7 +36,7 @@ final class SignalTowerTests: XCTestCase {
         try remote.setBox(.bool(true), for: "new-onboarding")
         try local.setBox(.bool(false), for: "new-onboarding")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local, remote])
+        let tower = FlagPole(DemoFlags.self, sources: [local, remote])
         XCTAssertFalse(tower.flags.newOnboarding)
     }
 
@@ -46,7 +46,7 @@ final class SignalTowerTests: XCTestCase {
         try remote.setBox(.int(3), for: "max-items")
         try local.setBox(.bool(true), for: "new-onboarding")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local, remote])
+        let tower = FlagPole(DemoFlags.self, sources: [local, remote])
         XCTAssertEqual(tower.flags.maxItems, 3)
         XCTAssertTrue(tower.flags.newOnboarding)
     }
@@ -57,7 +57,7 @@ final class SignalTowerTests: XCTestCase {
         try local.setBox(.string("nonsense"), for: "max-items")
         try remote.setBox(.int(3), for: "max-items")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local, remote])
+        let tower = FlagPole(DemoFlags.self, sources: [local, remote])
         XCTAssertEqual(tower.flags.maxItems, 3)
     }
 
@@ -65,7 +65,7 @@ final class SignalTowerTests: XCTestCase {
         let local = SnapshotSource(name: "local")
         try local.setBox(.bool(true), for: "checkout.express.one-tap")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
         XCTAssertTrue(tower.flags.checkout.express.oneTap)
     }
 
@@ -73,7 +73,7 @@ final class SignalTowerTests: XCTestCase {
         let local = SnapshotSource(name: "local")
         try local.setBox(.int(4), for: "max-items")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
         XCTAssertEqual(tower.maxItems, 4)
         XCTAssertTrue(tower.checkout.express.oneTap == false)
     }
@@ -82,7 +82,7 @@ final class SignalTowerTests: XCTestCase {
         let local = SnapshotSource(name: "local")
         try local.setBox(.bool(true), for: "checkout.apple_pay")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local], keyEncoding: .snakecase)
+        let tower = FlagPole(DemoFlags.self, sources: [local], keyEncoding: .snakecase)
         XCTAssertTrue(tower.flags.checkout.applePay)
     }
 
@@ -93,7 +93,7 @@ final class SignalTowerTests: XCTestCase {
         let remote = SnapshotSource(name: "remote")
         try remote.setBox(.bool(true), for: "new-onboarding")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local, remote])
+        let tower = FlagPole(DemoFlags.self, sources: [local, remote])
         let resolution = tower.resolution(for: tower.flags.$newOnboarding)
 
         XCTAssertEqual(resolution.sourceName, "remote")
@@ -101,7 +101,7 @@ final class SignalTowerTests: XCTestCase {
     }
 
     func testResolutionReportsTheCompiledDefault() {
-        let tower = SignalTower(DemoFlags.self, sources: [SnapshotSource(name: "local")])
+        let tower = FlagPole(DemoFlags.self, sources: [SnapshotSource(name: "local")])
         let resolution = tower.resolution(for: tower.flags.$newOnboarding)
 
         XCTAssertNil(resolution.sourceName)
@@ -114,7 +114,7 @@ final class SignalTowerTests: XCTestCase {
         try local.setBox(.string("nonsense"), for: "max-items")
         try remote.setBox(.int(3), for: "max-items")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local, remote])
+        let tower = FlagPole(DemoFlags.self, sources: [local, remote])
         XCTAssertEqual(tower.resolution(for: tower.flags.$maxItems).sourceName, "remote")
     }
 
@@ -125,7 +125,7 @@ final class SignalTowerTests: XCTestCase {
         try local.setBox(.bool(true), for: "new-onboarding")
         try local.setBox(.bool(true), for: "checkout.apple-pay")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
         XCTAssertEqual(
             tower.overrides,
             ["new-onboarding": .bool(true), "checkout.apple-pay": .bool(true)]
@@ -133,13 +133,13 @@ final class SignalTowerTests: XCTestCase {
     }
 
     func testOverridesIsEmptyWhenEverythingIsDefault() {
-        let tower = SignalTower(DemoFlags.self, sources: [SnapshotSource(name: "local")])
+        let tower = FlagPole(DemoFlags.self, sources: [SnapshotSource(name: "local")])
         XCTAssertTrue(tower.overrides.isEmpty)
     }
 
     func testSettingAnOverrideThroughTheAccessorTakesEffect() throws {
         let local = SnapshotSource(name: "local")
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
 
         try tower.setOverride(true, for: tower.flags.$newOnboarding)
         XCTAssertTrue(tower.flags.newOnboarding)
@@ -147,7 +147,7 @@ final class SignalTowerTests: XCTestCase {
 
     func testRemovingAnOverrideRestoresTheDefault() throws {
         let local = SnapshotSource(name: "local")
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
 
         try tower.setOverride(true, for: tower.flags.$newOnboarding)
         try tower.removeOverride(for: tower.flags.$newOnboarding)
@@ -159,7 +159,7 @@ final class SignalTowerTests: XCTestCase {
         try local.setBox(.bool(true), for: "new-onboarding")
         try local.setBox(.string("unrelated"), for: "someone-elses-key")
 
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
         try tower.removeAllOverrides()
 
         XCTAssertFalse(tower.flags.newOnboarding)
@@ -170,7 +170,7 @@ final class SignalTowerTests: XCTestCase {
 
     func testObjectWillChangeFiresWhenASourceChanges() throws {
         let local = SnapshotSource(name: "local")
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
 
         let fired = expectation(description: "objectWillChange")
         tower.objectWillChange
@@ -182,7 +182,7 @@ final class SignalTowerTests: XCTestCase {
     }
 
     func testFlagPublisherEmitsTheCurrentValueImmediately() {
-        let tower = SignalTower(DemoFlags.self, sources: [SnapshotSource(name: "local")])
+        let tower = FlagPole(DemoFlags.self, sources: [SnapshotSource(name: "local")])
 
         var received: [Bool] = []
         tower.flags.$newOnboarding.publisher
@@ -194,7 +194,7 @@ final class SignalTowerTests: XCTestCase {
 
     func testFlagPublisherEmitsOnChange() throws {
         let local = SnapshotSource(name: "local")
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
 
         var received: [Bool] = []
         tower.flags.$newOnboarding.publisher
@@ -207,7 +207,7 @@ final class SignalTowerTests: XCTestCase {
 
     func testFlagPublisherIgnoresUnrelatedKeys() throws {
         let local = SnapshotSource(name: "local")
-        let tower = SignalTower(DemoFlags.self, sources: [local])
+        let tower = FlagPole(DemoFlags.self, sources: [local])
 
         var received: [Bool] = []
         tower.flags.$newOnboarding.publisher

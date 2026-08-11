@@ -120,7 +120,7 @@ final class FlagSchemaTests: XCTestCase {
     // MARK: - Publishing
 
     func testPublishingWritesASchemaTheCompanionCanRead() throws {
-        let tower = SignalTower(DemoFlags.self, sources: [])
+        let tower = FlagPole(DemoFlags.self, sources: [])
         let url = try tower.publishSchema(inDirectory: directory)
 
         XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
@@ -130,7 +130,7 @@ final class FlagSchemaTests: XCTestCase {
     }
 
     func testPublishingOverwritesAnEarlierSchema() throws {
-        let tower = SignalTower(DemoFlags.self, sources: [])
+        let tower = FlagPole(DemoFlags.self, sources: [])
         _ = try tower.publishSchema(inDirectory: directory)
         _ = try tower.publishSchema(inDirectory: directory)
 

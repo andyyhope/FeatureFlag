@@ -178,7 +178,7 @@ final class RemoteOverrideTests: XCTestCase {
         let remote = makeSource()
         _ = try remote.apply(json(#"{"featureToggles": {"onboarding": {"v2": true}}}"#), format: .json)
 
-        let tower = SignalTower(DemoFlags.self, sources: [local, remote])
+        let tower = FlagPole(DemoFlags.self, sources: [local, remote])
         XCTAssertTrue(tower.flags.newOnboarding)
 
         try local.setBox(.bool(false), for: "new-onboarding")
@@ -188,7 +188,7 @@ final class RemoteOverrideTests: XCTestCase {
 
     func testApplyingAPayloadNotifiesTheTower() throws {
         let remote = makeSource()
-        let tower = SignalTower(DemoFlags.self, sources: [remote])
+        let tower = FlagPole(DemoFlags.self, sources: [remote])
 
         let changed = expectation(description: "objectWillChange")
         let cancellable = tower.objectWillChange.sink { _ in changed.fulfill() }

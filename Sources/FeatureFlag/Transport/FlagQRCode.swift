@@ -205,9 +205,9 @@ extension FlagQRCode {
     }
 }
 
-// MARK: - Tower conveniences
+// MARK: - Pole conveniences
 
-extension SignalTower {
+extension FlagPole {
 
     /// The current overrides, encoded for a QR code.
     public func qrCodeString() throws -> String {

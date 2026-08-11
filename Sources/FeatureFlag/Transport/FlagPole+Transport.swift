@@ -1,10 +1,10 @@
 import Foundation
 
-extension SignalTower {
+extension FlagPole {
 
     // MARK: - Schema
 
-    /// This tower's flag tree, described so a companion app can render it without ever
+    /// This pole's flag tree, described so a companion app can render it without ever
     /// seeing `Root`.
     public var schema: FlagSchema {
         FlagSchema(

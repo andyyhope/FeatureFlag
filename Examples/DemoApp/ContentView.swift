@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ContentView: View {
 
-    @EnvironmentObject private var flags: SignalTower<AppFlags>
+    @EnvironmentObject private var flags: FlagPole<AppFlags>
 
     var body: some View {
         NavigationStack {

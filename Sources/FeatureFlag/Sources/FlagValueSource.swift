@@ -18,9 +18,9 @@ public enum FlagChange: Hashable, Sendable {
     }
 }
 
-/// Supplies flag values to a ``SignalTower``.
+/// Supplies flag values to a ``FlagPole``.
 ///
-/// A tower holds an ordered stack of these and asks each in turn, so the order of the
+/// A pole holds an ordered stack of these and asks each in turn, so the order of the
 /// stack *is* the precedence.
 public protocol FlagValueSource: AnyObject, Sendable {
 

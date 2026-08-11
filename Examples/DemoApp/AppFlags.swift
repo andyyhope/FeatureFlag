@@ -62,19 +62,19 @@ public struct ExpressFlags {
     public var confirmationDelay: Double
 }
 
-extension SignalTower where Root == AppFlags {
+extension FlagPole where Root == AppFlags {
 
-    /// The tower the demo app uses.
+    /// The pole the demo app uses.
     ///
     /// Order is the precedence: overrides set in the companion app beat anything the
     /// backend sends, so a value set by hand for testing stays set.
-    public static func demo() -> SignalTower<AppFlags> {
+    public static func demo() -> FlagPole<AppFlags> {
         var sources: [any FlagValueSource] = []
         if let shared = UserDefaultsSource(appGroup: demoAppGroup, name: "Companion") {
             sources.append(shared)
         }
         sources.append(RemoteOverrideSource(AppFlags.self))
 
-        return SignalTower(AppFlags.self, sources: sources)
+        return FlagPole(AppFlags.self, sources: sources)
     }
 }

@@ -32,7 +32,7 @@ extension FlagKey: Codable {
 /// The position of a flag in its container tree, recorded as raw Swift property names.
 ///
 /// The macro emits paths rather than finished keys because key encoding is configured
-/// at runtime on the tower, and compile-time metadata cannot know it.
+/// at runtime on the pole, and compile-time metadata cannot know it.
 public struct FlagKeyPath: Hashable, Sendable {
 
     public let propertyNames: [String]

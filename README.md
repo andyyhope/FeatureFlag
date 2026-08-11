@@ -16,7 +16,7 @@ struct AppFlags {
     var checkout: CheckoutFlags
 }
 
-let flags = SignalTower(
+let flags = FlagPole(
     AppFlags.self,
     sources: [UserDefaultsSource(appGroup: "group.example.flags")!,
               RemoteOverrideSource(AppFlags.self)]
@@ -87,7 +87,7 @@ One deliberate allowance — JSON has a single number type, so a whole number sa
 
 ## Reading from other threads
 
-`SignalTower` is not `@MainActor`. Reads are lock-protected and safe from any thread,
+`FlagPole` is not `@MainActor`. Reads are lock-protected and safe from any thread,
 because apps read flags off the main thread constantly. Only `objectWillChange` is
 delivered on the main thread, so SwiftUI observation stays correct.
 

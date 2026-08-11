@@ -4,7 +4,7 @@ import Foundation
 /// An in-memory set of flag values.
 ///
 /// Useful as the top of a stack in tests and previews, as the landing place for an
-/// imported payload, and as a way to capture the current state of a tower.
+/// imported payload, and as a way to capture the current state of a pole.
 public final class SnapshotSource: MutableFlagValueSource, @unchecked Sendable {
 
     public let sourceName: String

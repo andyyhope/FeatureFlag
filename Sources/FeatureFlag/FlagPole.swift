@@ -4,12 +4,12 @@ import Foundation
 /// Reads feature flags, resolving each one through an ordered stack of sources.
 ///
 /// ```swift
-/// let tower = SignalTower(
+/// let pole = FlagPole(
 ///     AppFlags.self,
 ///     sources: [UserDefaultsSource(appGroup: "group.com.example.flags")!, remote]
 /// )
 ///
-/// if tower.checkout.applePay { ... }
+/// if pole.checkout.applePay { ... }
 /// ```
 ///
 /// The stack order *is* the precedence. The recommended arrangement puts local
@@ -20,9 +20,9 @@ import Foundation
 /// thread constantly. Only `objectWillChange` is delivered on the main thread, so
 /// SwiftUI observation is always correct.
 @dynamicMemberLookup
-public final class SignalTower<Root: FlagContainer>: ObservableObject, @unchecked Sendable {
+public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked Sendable {
 
-    /// The flag tree. Use this to reach projected values: `tower.flags.$newOnboarding`.
+    /// The flag tree. Use this to reach projected values: `pole.flags.$newOnboarding`.
     public let flags: Root
 
     private let resolver: FlagResolver
@@ -43,7 +43,7 @@ public final class SignalTower<Root: FlagContainer>: ObservableObject, @unchecke
             .store(in: &cancellables)
     }
 
-    /// Reads a flag without going through ``flags``: `tower.newOnboarding`.
+    /// Reads a flag without going through ``flags``: `pole.newOnboarding`.
     public subscript<Value>(dynamicMember keyPath: KeyPath<Root, Value>) -> Value {
         flags[keyPath: keyPath]
     }
@@ -67,7 +67,7 @@ public final class SignalTower<Root: FlagContainer>: ObservableObject, @unchecke
 
     // MARK: - Overrides
 
-    /// Every flag this tower knows about, flattened out of the container tree.
+    /// Every flag this pole knows about, flattened out of the container tree.
     public var descriptors: [FlagDescriptor] { Root.flagDescriptors.flattened() }
 
     /// The key each flag resolves against, in declaration order.
@@ -102,7 +102,7 @@ public final class SignalTower<Root: FlagContainer>: ObservableObject, @unchecke
         try resolver.setOverride(nil, for: accessor.key)
     }
 
-    /// Clears overrides for every flag this tower knows about.
+    /// Clears overrides for every flag this pole knows about.
     ///
     /// Only declared flags are touched, so unrelated values sharing the store — an
     /// App Group suite holds more than flags — are left alone.

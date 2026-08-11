@@ -40,7 +40,7 @@ public struct Flag<Value: FlagValue>: Sendable {
     ///
     /// `lookup` and `keyPath` are supplied by generated container code. Omitting them
     /// yields a detached flag that always reports its default, which is what makes
-    /// previews and unit tests work without a tower.
+    /// previews and unit tests work without a pole.
     public init(
         default defaultValue: Value,
         description: String,

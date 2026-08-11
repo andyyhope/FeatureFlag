@@ -83,7 +83,7 @@ public struct RemoteApplyResult: Sendable, Equatable {
 ///
 /// ```swift
 /// let remote = RemoteOverrideSource(AppFlags.self)
-/// let tower = SignalTower(AppFlags.self, sources: [local, remote])
+/// let pole = FlagPole(AppFlags.self, sources: [local, remote])
 ///
 /// let data = try await fetchConfiguration()
 /// try remote.apply(data, format: .json)
@@ -109,7 +109,7 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
     }
 
     /// Builds a source for a container, describing it with the same key encoding the
-    /// tower will use.
+    /// pole will use.
     public convenience init<Root: FlagContainer>(
         _ type: Root.Type = Root.self,
         keyEncoding: KeyEncoding = .kebabcase,

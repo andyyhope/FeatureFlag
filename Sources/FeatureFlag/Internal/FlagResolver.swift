@@ -3,7 +3,7 @@ import Foundation
 
 /// Walks the source stack to answer "what is this flag's value, and who supplied it?".
 ///
-/// Kept separate from ``SignalTower`` so the tower can hand a fully formed lookup to
+/// Kept separate from ``FlagPole`` so the pole can hand a fully formed lookup to
 /// its container at initialisation without any two-phase or force-unwrapped storage.
 final class FlagResolver: FlagLookup, @unchecked Sendable {
 

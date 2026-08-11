@@ -11,7 +11,7 @@ because a SwiftUI `App` needs a real Xcode app target.
 
 | File | Belongs to | Purpose |
 |---|---|---|
-| `DemoApp/AppFlags.swift` | host | The flag tree, and the tower that reads it |
+| `DemoApp/AppFlags.swift` | host | The flag tree, and the pole that reads it |
 | `DemoApp/ContentView.swift` | host | Shows live values and where each came from |
 | `DemoApp/DemoApp.swift` | host | `@main`; publishes the schema on launch |
 | `DemoCompanion/CompanionRootView.swift` | companion | Loads the schema, renders the editor |
@@ -52,7 +52,7 @@ way to learn what flags exist.
 
 ```swift
 let remote = RemoteOverrideSource(AppFlags.self)
-let tower = SignalTower(AppFlags.self, sources: [shared, remote])
+let pole = FlagPole(AppFlags.self, sources: [shared, remote])
 
 let (data, _) = try await URLSession.shared.data(from: configURL)
 try remote.apply(data, format: .json)

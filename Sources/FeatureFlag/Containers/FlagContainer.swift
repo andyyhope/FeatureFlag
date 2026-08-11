@@ -2,7 +2,7 @@ import Combine
 
 /// Supplies flag values to a container tree.
 ///
-/// A ``SignalTower`` is the production implementation; tests and previews can supply
+/// A ``FlagPole`` is the production implementation; tests and previews can supply
 /// their own, implementing only ``box(for:as:)`` and ``keyEncoding``.
 public protocol FlagLookup: AnyObject, Sendable {
 

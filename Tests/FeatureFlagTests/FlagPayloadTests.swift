@@ -4,8 +4,8 @@ import XCTest
 
 final class FlagPayloadTests: XCTestCase {
 
-    private func makeTower() -> SignalTower<DemoFlags> {
-        SignalTower(DemoFlags.self, sources: [SnapshotSource(name: "local")])
+    private func makeTower() -> FlagPole<DemoFlags> {
+        FlagPole(DemoFlags.self, sources: [SnapshotSource(name: "local")])
     }
 
     // MARK: - Export
@@ -40,7 +40,7 @@ final class FlagPayloadTests: XCTestCase {
     func testDatesDataAndURLsExportAsPlainStrings() throws {
         // No "$type" wrappers: the schema already says what each key is, so the JSON
         // stays something a person can read and edit.
-        let tower = SignalTower(TransportFlags.self, sources: [SnapshotSource(name: "local")])
+        let tower = FlagPole(TransportFlags.self, sources: [SnapshotSource(name: "local")])
         try tower.setOverride(Date(timeIntervalSince1970: 0), for: tower.flags.$launchedAt)
         try tower.setOverride(URL(string: "https://example.com")!, for: tower.flags.$endpoint)
         try tower.setOverride(Data([0x01, 0x02]), for: tower.flags.$blob)
@@ -58,7 +58,7 @@ final class FlagPayloadTests: XCTestCase {
     // MARK: - Round trips
 
     func testJSONRoundTripsEveryOverride() throws {
-        let source = SignalTower(TransportFlags.self, sources: [SnapshotSource(name: "local")])
+        let source = FlagPole(TransportFlags.self, sources: [SnapshotSource(name: "local")])
         try source.setOverride(Date(timeIntervalSince1970: 1_000), for: source.flags.$launchedAt)
         try source.setOverride(URL(string: "https://example.com/a?b=c")!, for: source.flags.$endpoint)
         try source.setOverride(Data([0x01, 0xFF]), for: source.flags.$blob)
@@ -66,7 +66,7 @@ final class FlagPayloadTests: XCTestCase {
         try source.setOverride(["a": 1], for: source.flags.$limits)
         try source.setOverride(2.5 as Float, for: source.flags.$ratio)
 
-        let destination = SignalTower(
+        let destination = FlagPole(
             TransportFlags.self, sources: [SnapshotSource(name: "local")]
         )
         _ = try destination.importPayload(try source.export(as: .json), as: .json)
@@ -75,12 +75,12 @@ final class FlagPayloadTests: XCTestCase {
     }
 
     func testPLISTRoundTripsEveryOverride() throws {
-        let source = SignalTower(TransportFlags.self, sources: [SnapshotSource(name: "local")])
+        let source = FlagPole(TransportFlags.self, sources: [SnapshotSource(name: "local")])
         try source.setOverride(Date(timeIntervalSince1970: 1_000), for: source.flags.$launchedAt)
         try source.setOverride(Data([0x01, 0xFF]), for: source.flags.$blob)
         try source.setOverride(["x"], for: source.flags.$tags)
 
-        let destination = SignalTower(
+        let destination = FlagPole(
             TransportFlags.self, sources: [SnapshotSource(name: "local")]
         )
         _ = try destination.importPayload(try source.export(as: .plist), as: .plist)
