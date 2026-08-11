@@ -49,6 +49,10 @@ public struct FlagBrowserView: View {
             }
             .searchable(text: $store.searchText, prompt: "Search flags")
             .navigationTitle(store.schema.applicationName ?? "Feature Flags")
+            #if os(iOS) || os(tvOS)
+                // A large title costs half a screen that is better spent on flags.
+                .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar { toolbar }
             .sheet(item: $sheet) { sheet in
                 switch sheet {

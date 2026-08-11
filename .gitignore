@@ -6,3 +6,6 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
+
+# XcodeGen regenerates the example project from Examples/project.yml, but it is
+# checked in so the examples can be opened and run without installing anything.

@@ -44,6 +44,10 @@ let package = Package(
             path: "Examples",
             exclude: [
                 "README.md",
+                "project.yml",
+                "FeatureFlagExamples.xcodeproj",
+                "DemoApp/DemoApp.entitlements",
+                "DemoCompanion/DemoCompanion.entitlements",
                 "DemoApp/DemoApp.swift",
                 "DemoCompanion/DemoCompanionApp.swift",
             ]

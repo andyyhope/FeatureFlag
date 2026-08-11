@@ -1,0 +1,82 @@
+name: FeatureFlagExamples
+
+options:
+  bundleIdPrefix: com.andyyhope.featureflag
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  FeatureFlag:
+    path: ..
+
+settings:
+  base:
+    # Ad-hoc signing, which a simulator accepts without a team. It matters that this
+    # is not simply disabled: with signing off, entitlements are never embedded and
+    # the App Group container does not exist, so the two apps cannot share anything.
+    # Set a DEVELOPMENT_TEAM to run on a device.
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGNING_REQUIRED: "YES"
+    CODE_SIGNING_ALLOWED: "YES"
+    SWIFT_VERSION: "5.0"
+    GENERATE_INFOPLIST_FILE: "YES"
+
+targets:
+  DemoApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: DemoApp
+    dependencies:
+      # The host app links the framework only. No editor code ships in it.
+      - package: FeatureFlag
+        product: FeatureFlag
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.andyyhope.featureflag.demoapp
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        INFOPLIST_KEY_CFBundleDisplayName: Demo
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+    entitlements:
+      path: DemoApp/DemoApp.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.andyyhope.featureflag.demo
+
+  DemoCompanion:
+    type: application
+    platform: iOS
+    sources:
+      - path: DemoCompanion
+    dependencies:
+      - package: FeatureFlag
+        product: FeatureFlag
+      - package: FeatureFlag
+        product: FeatureFlagUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.andyyhope.featureflag.democompanion
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        INFOPLIST_KEY_CFBundleDisplayName: Flags
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+    entitlements:
+      path: DemoCompanion/DemoCompanion.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.andyyhope.featureflag.demo
+
+schemes:
+  DemoApp:
+    build:
+      targets:
+        DemoApp: all
+    run:
+      config: Debug
+  DemoCompanion:
+    build:
+      targets:
+        DemoCompanion: all
+    run:
+      config: Debug

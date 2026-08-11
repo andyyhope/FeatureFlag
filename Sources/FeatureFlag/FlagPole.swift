@@ -35,10 +35,13 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
     private let resolver: FlagResolver
     private var cancellables: Set<AnyCancellable> = []
 
+    /// - Parameter applicationName: What a companion app calls this app. Defaults to
+    ///   the bundle's display name, falling back to its name and then its identifier.
     public init(
         _ rootType: Root.Type = Root.self,
         sources: [any FlagValueSource],
-        keyEncoding: KeyEncoding = .kebabcase
+        keyEncoding: KeyEncoding = .kebabcase,
+        applicationName: String? = nil
     ) {
         let resolver = FlagResolver(sources: sources, keyEncoding: keyEncoding)
         self.resolver = resolver
@@ -46,7 +49,7 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
         self.schema = FlagSchema(
             Root.self,
             keyEncoding: keyEncoding,
-            applicationName: Bundle.main.bundleIdentifier
+            applicationName: applicationName ?? Bundle.main.flagDisplayName
         )
 
         resolver.changes
@@ -130,5 +133,18 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
         for key in keys {
             try resolver.setOverride(nil, for: key)
         }
+    }
+}
+
+extension Bundle {
+
+    /// What to call this app in a companion's UI.
+    ///
+    /// A bundle identifier is a poor heading — it is long, and truncates to something
+    /// unreadable — so the display name comes first.
+    var flagDisplayName: String? {
+        object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? bundleIdentifier
     }
 }

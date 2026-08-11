@@ -112,5 +112,6 @@ fully qualified, so nothing else can be shadowed.
 
 ## Getting started
 
-See [`Examples/`](Examples/README.md) for a host app and companion app sharing one App
-Group, including the Xcode setup.
+Open `Examples/FeatureFlagExamples.xcodeproj` for two iOS apps sharing one App Group —
+a host that declares flags and a companion that edits them without linking any of the
+host's code. See [`Examples/`](Examples/README.md).

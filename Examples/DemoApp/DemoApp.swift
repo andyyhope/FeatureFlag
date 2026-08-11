@@ -16,7 +16,7 @@ struct DemoApp: App {
                     // The companion app is a separate binary and has no idea this flag
                     // tree exists until it is published. Do this on every launch so a
                     // newly added flag shows up straight away.
-                    try? flags.publishSchema(appGroup: demoAppGroup)
+                    _ = try? flags.publishSchema(appGroup: demoAppGroup)
                 }
         }
     }
