@@ -4,16 +4,6 @@ extension FlagPole {
 
     // MARK: - Schema
 
-    /// This pole's flag tree, described so a companion app can render it without ever
-    /// seeing `Root`.
-    public var schema: FlagSchema {
-        FlagSchema(
-            Root.self,
-            keyEncoding: keyEncoding,
-            applicationName: Bundle.main.bundleIdentifier
-        )
-    }
-
     /// Writes the schema where a companion app can find it.
     ///
     /// Call this on launch. The companion has no other way to learn what flags exist,

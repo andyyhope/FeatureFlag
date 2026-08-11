@@ -91,6 +91,19 @@ One deliberate allowance — JSON has a single number type, so a whole number sa
 because apps read flags off the main thread constantly. Only `objectWillChange` is
 delivered on the main thread, so SwiftUI observation stays correct.
 
+## Two things worth knowing
+
+**Export spans the whole stack.** `overrides` and everything built on it — JSON, PLIST,
+QR — carry any value that is not the compiled default, including one a remote payload
+supplied. Exporting from a device with remote config and importing elsewhere therefore
+turns those into local overrides on the receiving device. That is usually what you want
+from "reproduce this device's state", but it is worth knowing before you share a code.
+
+**`pole.someFlag` is a convenience, not the whole API.** Real members win over dynamic
+member lookup, so a flag named `flags`, `keys`, `schema`, `overrides` or `descriptors` is
+reached as `pole.flags.yourFlag` rather than `pole.yourFlag`. Everything still works;
+only the shorthand is unavailable for those five names.
+
 ## A note on `Flag`
 
 If your own module declares a type called `Flag`, write `@FeatureFlag.Flag` instead. A

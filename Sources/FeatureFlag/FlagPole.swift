@@ -25,6 +25,13 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
     /// The flag tree. Use this to reach projected values: `pole.flags.$newOnboarding`.
     public let flags: Root
 
+    /// This pole's flag tree, described so a companion app can render it without ever
+    /// seeing `Root`.
+    ///
+    /// Built once. `Root.flagDescriptors` rebuilds the whole tree on every access, and
+    /// import alone would otherwise walk it twice.
+    public let schema: FlagSchema
+
     private let resolver: FlagResolver
     private var cancellables: Set<AnyCancellable> = []
 
@@ -36,6 +43,11 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
         let resolver = FlagResolver(sources: sources, keyEncoding: keyEncoding)
         self.resolver = resolver
         self.flags = Root(_lookup: resolver, _keyPrefix: .root)
+        self.schema = FlagSchema(
+            Root.self,
+            keyEncoding: keyEncoding,
+            applicationName: Bundle.main.bundleIdentifier
+        )
 
         resolver.changes
             .receive(on: DispatchQueue.main)
@@ -71,16 +83,18 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
     public var descriptors: [FlagDescriptor] { Root.flagDescriptors.flattened() }
 
     /// The key each flag resolves against, in declaration order.
-    public var keys: [FlagKey] { descriptors.map { keyEncoding.key(for: $0.keyPath) } }
+    public var keys: [FlagKey] { schema.flags.map(\.key) }
 
     /// Every flag some source supplies a value for — everything that is not simply its
     /// compiled default.
+    ///
+    /// Note that this spans the whole stack, not just local overrides: a value a remote
+    /// payload supplied is included, and exporting therefore carries it too.
     public var overrides: [FlagKey: FlagValueBox] {
         var result = [FlagKey: FlagValueBox]()
-        for descriptor in descriptors {
-            let key = keyEncoding.key(for: descriptor.keyPath)
-            if let box = resolver.box(for: key, as: descriptor.valueType) {
-                result[key] = box
+        for entry in schema.flags {
+            if let box = resolver.box(for: entry.key, as: entry.valueType) {
+                result[entry.key] = box
             }
         }
         return result
