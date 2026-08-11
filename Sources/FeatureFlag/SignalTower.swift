@@ -91,6 +91,12 @@ public final class SignalTower<Root: FlagContainer>: ObservableObject, @unchecke
         try resolver.setOverride(value.box, for: accessor.key)
     }
 
+    /// Writes an already-boxed override. Used by import, which works from a schema
+    /// rather than from typed accessors.
+    public func setOverride(_ box: FlagValueBox?, for key: FlagKey) throws {
+        try resolver.setOverride(box, for: key)
+    }
+
     /// Clears a flag's override, restoring whatever the sources beneath it say.
     public func removeOverride<Value>(for accessor: FlagAccessor<Value>) throws {
         try resolver.setOverride(nil, for: accessor.key)

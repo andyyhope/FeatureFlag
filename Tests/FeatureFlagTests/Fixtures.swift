@@ -25,7 +25,7 @@ struct DemoCheckoutFlags {
     @FlagGroup(description: "Express")
     var express: DemoExpressFlags
 
-    @Flag(default: DemoTier.free, description: "DemoTier")
+    @Flag(default: DemoTier.free, description: "Tier")
     var tier: DemoTier
 }
 
