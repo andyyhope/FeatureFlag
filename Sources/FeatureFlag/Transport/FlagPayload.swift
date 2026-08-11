@@ -64,11 +64,24 @@ public struct FlagImportResult: Sendable, Equatable {
 
 // MARK: - Serialisation
 
+/// Something that cannot be written out.
+public enum FlagSerializationError: Error, Equatable {
+
+    /// A flag holds an infinity or a NaN, which JSON cannot represent.
+    ///
+    /// Handing one to `JSONSerialization` raises an Objective-C exception that Swift
+    /// cannot catch, so the process would die. This is thrown first instead.
+    case nonFiniteNumber(FlagKey)
+}
+
 extension FlagPayload {
 
     public func encoded(as format: FlagPayloadFormat) throws -> Data {
         switch format {
         case .json:
+            if let key = values.first(where: { $0.value.containsNonFiniteNumber })?.key {
+                throw FlagSerializationError.nonFiniteNumber(key)
+            }
             return try JSONSerialization.data(
                 withJSONObject: object(using: \.jsonValue),
                 options: [.prettyPrinted, .sortedKeys]

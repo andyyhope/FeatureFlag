@@ -53,13 +53,23 @@ final class FlagResolver: FlagLookup, @unchecked Sendable {
 
     /// Writes to the highest-priority source that accepts writes.
     func setOverride(_ box: FlagValueBox?, for key: FlagKey) throws {
+        guard let mutable = topMutableSource else { throw FlagError.noMutableSource }
+        try mutable.setBox(box, for: key)
+    }
+
+    /// What the source ``setOverride(_:for:)`` writes to currently holds.
+    ///
+    /// Needed to undo a partly applied import, which has to read back exactly the
+    /// source it wrote to rather than the resolved value.
+    func currentOverride(for key: FlagKey, as type: FlagValueType) -> FlagValueBox? {
+        topMutableSource?.box(for: key, as: type)
+    }
+
+    private var topMutableSource: (any MutableFlagValueSource)? {
         for source in sources {
-            if let mutable = source as? any MutableFlagValueSource {
-                try mutable.setBox(box, for: key)
-                return
-            }
+            if let mutable = source as? any MutableFlagValueSource { return mutable }
         }
-        throw FlagError.noMutableSource
+        return nil
     }
 }
 

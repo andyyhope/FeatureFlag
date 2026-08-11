@@ -20,6 +20,22 @@ public enum FlagValueBox: Hashable, Sendable {
 
 extension FlagValueBox {
 
+    /// Whether this value holds an infinity or a NaN, anywhere inside it.
+    ///
+    /// JSON cannot represent either, and `JSONSerialization` reacts by raising an
+    /// Objective-C exception rather than throwing a Swift error — which no `try` can
+    /// catch, so it terminates the process. Serialisation checks this first and throws
+    /// something catchable instead.
+    public var containsNonFiniteNumber: Bool {
+        switch self {
+        case let .double(value): return value.isFinite == false
+        case let .float(value): return value.isFinite == false
+        case let .array(boxes): return boxes.contains { $0.containsNonFiniteNumber }
+        case let .dictionary(boxes): return boxes.values.contains { $0.containsNonFiniteNumber }
+        default: return false
+        }
+    }
+
     /// Whether this box holds the type a flag declared.
     ///
     /// The resolver skips values that do not match rather than surfacing them, so a

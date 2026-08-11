@@ -187,10 +187,23 @@ public final class FlagEditingStore: ObservableObject {
         try apply(try FlagQRCode.decode(scanned, valueTypes: schema.valueTypes))
     }
 
+    /// Applies a payload, undoing what it managed if a write fails partway.
     private func apply(_ payload: FlagPayload) throws {
         objectWillChange.send()
-        for (key, box) in payload.values {
-            try source.setBox(box, for: key)
+        let types = schema.valueTypes
+        var undo: [(FlagKey, FlagValueBox?)] = []
+
+        do {
+            for (key, box) in payload.values {
+                let previous = types[key].flatMap { source.box(for: key, as: $0) }
+                try source.setBox(box, for: key)
+                undo.append((key, previous))
+            }
+        } catch {
+            for (key, previous) in undo.reversed() {
+                try? source.setBox(previous, for: key)
+            }
+            throw error
         }
     }
 }

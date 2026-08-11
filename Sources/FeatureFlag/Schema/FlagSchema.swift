@@ -164,7 +164,12 @@ public enum FlagSchemaError: Error, Equatable {
 extension FlagSchema {
 
     public func jsonData() throws -> Data {
-        try JSONSerialization.data(
+        // A non-finite default would make JSONSerialization raise an Objective-C
+        // exception, killing the process instead of throwing.
+        if let entry = flags.first(where: { $0.defaultValue.containsNonFiniteNumber }) {
+            throw FlagSerializationError.nonFiniteNumber(entry.key)
+        }
+        return try JSONSerialization.data(
             withJSONObject: jsonObject,
             options: [.prettyPrinted, .sortedKeys]
         )

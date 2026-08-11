@@ -97,6 +97,12 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
         try resolver.setOverride(box, for: key)
     }
 
+    /// What the source writes go to currently holds for a key, ignoring the sources
+    /// beneath it. Used to undo a partly applied import.
+    public func currentOverride(for key: FlagKey, as type: FlagValueType) -> FlagValueBox? {
+        resolver.currentOverride(for: key, as: type)
+    }
+
     /// Clears a flag's override, restoring whatever the sources beneath it say.
     public func removeOverride<Value>(for accessor: FlagAccessor<Value>) throws {
         try resolver.setOverride(nil, for: accessor.key)

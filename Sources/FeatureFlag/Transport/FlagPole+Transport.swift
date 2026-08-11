@@ -62,11 +62,31 @@ extension FlagPole {
     }
 
     /// Applies an already-decoded payload as local overrides.
+    ///
+    /// If a write fails partway, the ones already made are undone. Decoding catches
+    /// every problem it can see up front, but a source can still refuse a value, and
+    /// "all-or-nothing" has to hold then too.
+    ///
+    /// The undo is best effort. A source that has stopped accepting writes altogether
+    /// will refuse the undo as well, and nothing can be done about that.
     @discardableResult
     public func apply(_ payload: FlagPayload) throws -> FlagImportResult {
-        for (key, box) in payload.values {
-            try setOverride(box, for: key)
+        let types = schema.valueTypes
+        var undo: [(FlagKey, FlagValueBox?)] = []
+
+        do {
+            for (key, box) in payload.values {
+                let previous = types[key].flatMap { currentOverride(for: key, as: $0) }
+                try setOverride(box, for: key)
+                undo.append((key, previous))
+            }
+        } catch {
+            for (key, previous) in undo.reversed() {
+                try? setOverride(previous, for: key)
+            }
+            throw error
         }
+
         return FlagImportResult(
             appliedKeys: payload.values.keys.sorted { $0.rawValue < $1.rawValue }
         )

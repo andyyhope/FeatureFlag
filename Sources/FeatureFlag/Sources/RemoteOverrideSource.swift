@@ -46,6 +46,12 @@ public struct RemoteOverrideProblem: Hashable, Sendable {
         case typeMismatch
         /// The value is not one of the enum's cases.
         case unknownCase
+        /// The mapper produced a key no flag in this app has.
+        ///
+        /// ``DotPathMapper`` cannot cause this, since it only ever emits keys it read
+        /// from the schema. A custom mapper with a typo can, and silently doing nothing
+        /// would look exactly like a backend that sent no overrides.
+        case unknownFlag
     }
 
     public let key: FlagKey
@@ -170,7 +176,12 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
         var problems = [RemoteOverrideProblem]()
 
         for (key, remoteValue) in mapped {
-            guard let entry = entries[key] else { continue }
+            guard let entry = entries[key] else {
+                problems.append(
+                    RemoteOverrideProblem(key: key, remoteKey: key.rawValue, kind: .unknownFlag)
+                )
+                continue
+            }
 
             guard let box = remoteValue.box(as: entry.valueType) else {
                 problems.append(
