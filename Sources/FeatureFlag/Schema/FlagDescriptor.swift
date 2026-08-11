@@ -109,6 +109,22 @@ public enum FlagSchemaNode: Hashable, Sendable {
     }
 }
 
+extension Array where Element == FlagSchemaNode {
+
+    /// Every flag in the tree, depth first, in declaration order.
+    ///
+    /// Group children are already re-rooted, so the key paths that come back are
+    /// complete.
+    public func flattened() -> [FlagDescriptor] {
+        flatMap { node -> [FlagDescriptor] in
+            switch node {
+            case let .flag(descriptor): return [descriptor]
+            case let .group(group): return group.children.flattened()
+            }
+        }
+    }
+}
+
 extension FlagDescriptor {
 
     func prefixed(by component: String) -> FlagDescriptor {

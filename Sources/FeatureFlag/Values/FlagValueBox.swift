@@ -17,3 +17,28 @@ public enum FlagValueBox: Hashable, Sendable {
     case array([FlagValueBox])
     case dictionary([String: FlagValueBox])
 }
+
+extension FlagValueBox {
+
+    /// Whether this box holds the type a flag declared.
+    ///
+    /// The resolver skips values that do not match rather than surfacing them, so a
+    /// stale or hand-edited store degrades to the next source instead of to a crash.
+    /// An empty collection matches any collection of that shape.
+    public func matches(_ type: FlagValueType) -> Bool {
+        switch (self, type) {
+        case (.bool, .bool), (.int, .int), (.double, .double), (.float, .float),
+            (.string, .string), (.data, .data), (.date, .date), (.url, .url):
+            return true
+
+        case let (.array(boxes), .array(element)):
+            return boxes.allSatisfy { $0.matches(element) }
+
+        case let (.dictionary(boxes), .dictionary(value)):
+            return boxes.values.allSatisfy { $0.matches(value) }
+
+        default:
+            return false
+        }
+    }
+}

@@ -167,7 +167,7 @@ private final class StubLookup: FlagLookup, @unchecked Sendable {
         self.boxes = boxes
     }
 
-    func box(for key: FlagKey) -> FlagValueBox? {
+    func box(for key: FlagKey, as type: FlagValueType) -> FlagValueBox? {
         boxes[key]
     }
 }

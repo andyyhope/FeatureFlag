@@ -1,3 +1,5 @@
+import Combine
+
 /// Declares a feature flag.
 ///
 /// ```swift
@@ -9,7 +11,11 @@
 /// back to `default` when nothing is stored — or when what is stored has the wrong
 /// type, since a malformed store should never crash a running app.
 ///
-/// The projected value (`$newOnboarding`) exposes the flag's key and metadata.
+/// The projected value (`$newOnboarding`) exposes the flag's key, its metadata and a
+/// Combine publisher.
+///
+/// If your own module declares a type called `Flag`, write `@FeatureFlag.Flag`
+/// instead: a local `Flag` makes the bare attribute fail before any macro runs.
 @propertyWrapper
 public struct Flag<Value: FlagValue>: Sendable {
 
@@ -51,8 +57,7 @@ public struct Flag<Value: FlagValue>: Sendable {
     }
 
     public var wrappedValue: Value {
-        guard let box = lookup?.box(for: key) else { return defaultValue }
-        return Value(box: box) ?? defaultValue
+        FlagAccessor.resolve(lookup: lookup, key: key, default: defaultValue)
     }
 
     public var projectedValue: FlagAccessor<Value> {
@@ -61,7 +66,8 @@ public struct Flag<Value: FlagValue>: Sendable {
             keyPath: keyPath,
             description: flagDescription,
             defaultValue: defaultValue,
-            remoteKey: remoteKey
+            remoteKey: remoteKey,
+            lookup: lookup
         )
     }
 }
@@ -83,4 +89,52 @@ public struct FlagAccessor<Value: FlagValue>: Sendable {
 
     /// Dot path into a remote payload, if this flag can be remotely overridden.
     public let remoteKey: String?
+
+    private let lookup: (any FlagLookup)?
+
+    init(
+        key: FlagKey,
+        keyPath: FlagKeyPath,
+        description: String,
+        defaultValue: Value,
+        remoteKey: String?,
+        lookup: (any FlagLookup)?
+    ) {
+        self.key = key
+        self.keyPath = keyPath
+        self.description = description
+        self.defaultValue = defaultValue
+        self.remoteKey = remoteKey
+        self.lookup = lookup
+    }
+
+    /// The flag's value right now.
+    public var currentValue: Value {
+        Self.resolve(lookup: lookup, key: key, default: defaultValue)
+    }
+
+    /// Emits the current value immediately, then again whenever it changes.
+    ///
+    /// Values arrive on whichever thread made the change. Add `.receive(on:)` if you
+    /// need them somewhere specific.
+    public var publisher: AnyPublisher<Value, Never> {
+        guard let lookup else {
+            return Just(defaultValue).eraseToAnyPublisher()
+        }
+        let key = key
+        let defaultValue = defaultValue
+        let resolve = { Self.resolve(lookup: lookup, key: key, default: defaultValue) }
+
+        return lookup.changePublisher(for: key)
+            .map { _ in resolve() }
+            .prepend(resolve())
+            .eraseToAnyPublisher()
+    }
+
+    static func resolve(lookup: (any FlagLookup)?, key: FlagKey, default defaultValue: Value)
+        -> Value
+    {
+        guard let box = lookup?.box(for: key, as: Value.flagValueType) else { return defaultValue }
+        return Value(box: box) ?? defaultValue
+    }
 }

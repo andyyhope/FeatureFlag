@@ -1,14 +1,38 @@
+import Combine
+
 /// Supplies flag values to a container tree.
 ///
 /// A ``SignalTower`` is the production implementation; tests and previews can supply
-/// their own without pulling in any storage.
+/// their own, implementing only ``box(for:as:)`` and ``keyEncoding``.
 public protocol FlagLookup: AnyObject, Sendable {
 
     /// How property-name paths become the keys this lookup stores values under.
     var keyEncoding: KeyEncoding { get }
 
-    /// The stored value for a key, or `nil` if no source provides one.
-    func box(for key: FlagKey) -> FlagValueBox?
+    /// The value for a key, or `nil` if nothing supplies one.
+    ///
+    /// `type` is the flag's declared type, so a lookup backed by a loosely typed
+    /// medium can decode exactly rather than guess.
+    func box(for key: FlagKey, as type: FlagValueType) -> FlagValueBox?
+
+    /// Emits whenever the value for `key` may have changed.
+    func changePublisher(for key: FlagKey) -> AnyPublisher<Void, Never>
+
+    /// Stores an override, or removes it when `box` is `nil`.
+    func setOverride(_ box: FlagValueBox?, for key: FlagKey) throws
+}
+
+extension FlagLookup {
+
+    /// A lookup with nothing to observe never emits.
+    public func changePublisher(for key: FlagKey) -> AnyPublisher<Void, Never> {
+        Empty(completeImmediately: false).eraseToAnyPublisher()
+    }
+
+    /// A read-only lookup rejects writes.
+    public func setOverride(_ box: FlagValueBox?, for key: FlagKey) throws {
+        throw FlagError.noMutableSource
+    }
 }
 
 /// A type that groups flags, and optionally further containers.

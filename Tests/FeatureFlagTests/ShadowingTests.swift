@@ -84,7 +84,7 @@ private final class ShadowStubLookup: FeatureFlag.FlagLookup, @unchecked Sendabl
         self.boxes = boxes
     }
 
-    func box(for key: FeatureFlag.FlagKey) -> FeatureFlag.FlagValueBox? {
+    func box(for key: FeatureFlag.FlagKey, as type: FeatureFlag.FlagValueType) -> FeatureFlag.FlagValueBox? {
         boxes[key]
     }
 }
