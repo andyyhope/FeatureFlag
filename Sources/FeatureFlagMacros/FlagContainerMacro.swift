@@ -22,14 +22,32 @@ extension FlagContainerMacro: MemberMacro {
         }
 
         let declarations = parse(declaration, in: context)
+        let access = accessLevel(of: declaration)
 
         return [
-            initialiser(for: declarations),
-            descriptors(for: declarations),
+            initialiser(for: declarations, access: access),
+            descriptors(for: declarations, access: access),
         ]
     }
 
-    private static func initialiser(for declarations: [FlagDeclaration]) -> DeclSyntax {
+    /// The modifier generated members need to carry.
+    ///
+    /// `FlagContainer` is a public protocol, so a public container's generated members
+    /// must be public too or they cannot satisfy it.
+    private static func accessLevel(of declaration: some DeclGroupSyntax) -> String {
+        for modifier in declaration.modifiers {
+            switch modifier.name.tokenKind {
+            case .keyword(.public), .keyword(.open): return "public "
+            case .keyword(.package): return "package "
+            default: continue
+            }
+        }
+        return ""
+    }
+
+    private static func initialiser(for declarations: [FlagDeclaration], access: String)
+        -> DeclSyntax
+    {
         let assignments = declarations.map { declaration -> String in
             switch declaration {
             case let .flag(flag):
@@ -54,13 +72,15 @@ extension FlagContainerMacro: MemberMacro {
         }
 
         return """
-            init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+            \(raw: access)init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
             \(raw: assignments.joined(separator: "\n"))
             }
             """
     }
 
-    private static func descriptors(for declarations: [FlagDeclaration]) -> DeclSyntax {
+    private static func descriptors(for declarations: [FlagDeclaration], access: String)
+        -> DeclSyntax
+    {
         let nodes = declarations.map { declaration -> String in
             switch declaration {
             case let .flag(flag):
@@ -97,7 +117,7 @@ extension FlagContainerMacro: MemberMacro {
         }
 
         return """
-            static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+            \(raw: access)static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
                 [
             \(raw: nodes.joined(separator: ",\n"))
                 ]
@@ -141,7 +161,8 @@ extension FlagContainerMacro {
         _ declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) -> [FlagDeclaration] {
-        declaration.memberBlock.members.compactMap { member in            guard
+        declaration.memberBlock.members.compactMap { member in
+            guard
                 let variable = member.decl.as(VariableDeclSyntax.self),
                 let attribute = variable.flagAttribute
             else { return nil }

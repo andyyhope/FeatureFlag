@@ -18,7 +18,7 @@ extension FlagValueBox {
     ///
     /// Dates carry second precision. Anything finer is not meaningful for a feature
     /// flag and would only make the output harder to read.
-    var jsonValue: Any {
+    public var jsonValue: Any {
         switch self {
         case let .bool(value): return value
         case let .int(value): return value
@@ -37,7 +37,7 @@ extension FlagValueBox {
     ///
     /// Returns `nil` when the value cannot be read as that type, which is what makes
     /// import strict.
-    init?(jsonValue object: Any, as type: FlagValueType) {
+    public init?(jsonValue object: Any, as type: FlagValueType) {
         switch type {
         // JSON booleans and numbers are both NSNumber once parsed, so `true` and `1`
         // need telling apart the same way they do in a property list.

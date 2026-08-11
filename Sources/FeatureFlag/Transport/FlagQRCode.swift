@@ -2,6 +2,7 @@ import Compression
 import Foundation
 
 #if canImport(CoreImage)
+    import CoreGraphics
     import CoreImage
 #endif
 

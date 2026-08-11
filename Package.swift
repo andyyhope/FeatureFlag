@@ -36,6 +36,18 @@ let package = Package(
             name: "FeatureFlagUI",
             dependencies: ["FeatureFlag"]
         ),
+        // Built but not shipped, so the example sources cannot silently rot. Only the
+        // two @main entry points are excluded — those need real Xcode app targets.
+        .target(
+            name: "DemoExamples",
+            dependencies: ["FeatureFlag", "FeatureFlagUI"],
+            path: "Examples",
+            exclude: [
+                "README.md",
+                "DemoApp/DemoApp.swift",
+                "DemoCompanion/DemoCompanionApp.swift",
+            ]
+        ),
         .testTarget(
             name: "FeatureFlagTests",
             dependencies: ["FeatureFlag"]

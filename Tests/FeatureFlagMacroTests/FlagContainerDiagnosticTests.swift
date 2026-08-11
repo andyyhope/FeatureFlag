@@ -35,6 +35,52 @@ final class FlagContainerDiagnosticTests: XCTestCase {
         )
     }
 
+    func testGeneratedMembersMatchAPublicContainersAccessLevel() {
+        // FlagContainer is a public protocol, so internal members cannot satisfy it.
+        // Any framework exposing its flags publicly hits this on the first build.
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            public struct AppFlags {
+                @Flag(default: false, description: "New onboarding")
+                public var newOnboarding: Bool
+            }
+            """,
+            expandedSource: """
+                public struct AppFlags {
+                    @Flag(default: false, description: "New onboarding")
+                    public var newOnboarding: Bool
+
+                    public init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                        _newOnboarding = FeatureFlag.Flag(
+                            default: false,
+                            description: "New onboarding",
+                            lookup: _lookup,
+                            keyPath: _keyPrefix.appending("newOnboarding")
+                        )
+                    }
+
+                    public static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+                            .flag(
+                                FeatureFlag.FlagDescriptor(
+                                    propertyName: "newOnboarding",
+                                    keyPath: FeatureFlag.FlagKeyPath(["newOnboarding"]),
+                                    description: "New onboarding",
+                                    valueType: Bool.flagValueType,
+                                    defaultValue: (false as Bool).box,
+                                    cases: FeatureFlag._flagValueCases(of: Bool.self),
+                                    remoteKey: nil
+                                )
+                            )
+                        ]
+                    }
+                }
+                """,
+            macros: testMacros
+        )
+    }
+
     func testFlagWithoutATypeAnnotationIsDiagnosed() {
         assertMacroExpansion(
             """
