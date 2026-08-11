@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import Semaphore
+@testable import FeatureFlag
 
 /// Behavioural counterpart to `FlagContainerTests`: identical expectations, but the
 /// conformance is generated rather than hand-written. If these two files ever

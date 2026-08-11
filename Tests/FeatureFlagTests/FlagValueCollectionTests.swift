@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import Semaphore
+@testable import FeatureFlag
 
 final class FlagValueCollectionTests: XCTestCase {
 

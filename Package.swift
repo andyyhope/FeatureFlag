@@ -4,7 +4,7 @@ import CompilerPluginSupport
 import PackageDescription
 
 let package = Package(
-    name: "Semaphore",
+    name: "FeatureFlag",
     platforms: [
         .iOS(.v16),
         .macOS(.v13),
@@ -12,15 +12,15 @@ let package = Package(
         .watchOS(.v9),
     ],
     products: [
-        .library(name: "Semaphore", targets: ["Semaphore"]),
-        .library(name: "SemaphoreUI", targets: ["SemaphoreUI"]),
+        .library(name: "FeatureFlag", targets: ["FeatureFlag"]),
+        .library(name: "FeatureFlagUI", targets: ["FeatureFlagUI"]),
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0" ..< "605.0.0"),
     ],
     targets: [
         .macro(
-            name: "SemaphoreMacros",
+            name: "FeatureFlagMacros",
             dependencies: [
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
@@ -29,27 +29,27 @@ let package = Package(
             ]
         ),
         .target(
-            name: "Semaphore",
-            dependencies: ["SemaphoreMacros"]
+            name: "FeatureFlag",
+            dependencies: ["FeatureFlagMacros"]
         ),
         .target(
-            name: "SemaphoreUI",
-            dependencies: ["Semaphore"]
+            name: "FeatureFlagUI",
+            dependencies: ["FeatureFlag"]
         ),
         .testTarget(
-            name: "SemaphoreTests",
-            dependencies: ["Semaphore"]
+            name: "FeatureFlagTests",
+            dependencies: ["FeatureFlag"]
         ),
         .testTarget(
-            name: "SemaphoreMacroTests",
+            name: "FeatureFlagMacroTests",
             dependencies: [
-                "SemaphoreMacros",
+                "FeatureFlagMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
         ),
         .testTarget(
-            name: "SemaphoreUITests",
-            dependencies: ["SemaphoreUI"]
+            name: "FeatureFlagUITests",
+            dependencies: ["FeatureFlagUI"]
         ),
     ]
 )

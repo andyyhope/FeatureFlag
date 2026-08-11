@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import Semaphore
+@testable import FeatureFlag
 
 /// The boxed representation is the single canonical form that feeds UserDefaults,
 /// JSON, PLIST and QR. Every supported type must survive a round trip through it.

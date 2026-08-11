@@ -35,7 +35,7 @@ extension FlagContainerMacro: MemberMacro {
             case let .flag(flag):
                 let remoteKey = flag.remoteKey.map { "remoteKey: \($0.trimmedDescription), " } ?? ""
                 return """
-                        _\(flag.propertyName) = Flag(
+                        _\(flag.propertyName) = FeatureFlag.Flag(
                             default: \(flag.defaultValue.trimmedDescription),
                             description: \(flag.description.trimmedDescription),
                             \(remoteKey)lookup: _lookup,
@@ -54,7 +54,7 @@ extension FlagContainerMacro: MemberMacro {
         }
 
         return """
-            init(_lookup: any FlagLookup, _keyPrefix: FlagKeyPath) {
+            init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
             \(raw: assignments.joined(separator: "\n"))
             }
             """
@@ -67,13 +67,13 @@ extension FlagContainerMacro: MemberMacro {
                 let type = flag.valueType.trimmedDescription
                 return """
                             .flag(
-                                FlagDescriptor(
+                                FeatureFlag.FlagDescriptor(
                                     propertyName: "\(flag.propertyName)",
-                                    keyPath: FlagKeyPath(["\(flag.propertyName)"]),
+                                    keyPath: FeatureFlag.FlagKeyPath(["\(flag.propertyName)"]),
                                     description: \(flag.description.trimmedDescription),
                                     valueType: \(type).flagValueType,
                                     defaultValue: (\(flag.defaultValue.trimmedDescription) as \(type)).box,
-                                    cases: _flagValueCases(of: \(type).self),
+                                    cases: FeatureFlag._flagValueCases(of: \(type).self),
                                     remoteKey: \(flag.remoteKey?.trimmedDescription ?? "nil")
                                 )
                             )
@@ -83,9 +83,9 @@ extension FlagContainerMacro: MemberMacro {
                 let type = group.containerType.trimmedDescription
                 return """
                             .group(
-                                FlagGroupDescriptor(
+                                FeatureFlag.FlagGroupDescriptor(
                                     propertyName: "\(group.propertyName)",
-                                    keyPath: FlagKeyPath(["\(group.propertyName)"]),
+                                    keyPath: FeatureFlag.FlagKeyPath(["\(group.propertyName)"]),
                                     description: \(group.description.trimmedDescription),
                                     children: \(type).flagDescriptors.map {
                                         $0.prefixed(by: "\(group.propertyName)")
@@ -97,7 +97,7 @@ extension FlagContainerMacro: MemberMacro {
         }
 
         return """
-            static var flagDescriptors: [FlagSchemaNode] {
+            static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
                 [
             \(raw: nodes.joined(separator: ",\n"))
                 ]
@@ -120,8 +120,12 @@ extension FlagContainerMacro: ExtensionMacro {
         // Empty when the type already declares the conformance itself.
         guard protocols.isEmpty == false else { return [] }
 
+        // The member macro has already diagnosed this; adding a conformance the type
+        // cannot satisfy would bury that message under follow-on errors.
+        guard declaration.is(StructDeclSyntax.self) else { return [] }
+
         let extensionDeclaration: DeclSyntax = """
-            extension \(type.trimmed): FlagContainer {}
+            extension \(type.trimmed): FeatureFlag.FlagContainer {}
             """
         return [extensionDeclaration.cast(ExtensionDeclSyntax.self)]
     }
@@ -137,8 +141,7 @@ extension FlagContainerMacro {
         _ declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) -> [FlagDeclaration] {
-        declaration.memberBlock.members.compactMap { member in
-            guard
+        declaration.memberBlock.members.compactMap { member in            guard
                 let variable = member.decl.as(VariableDeclSyntax.self),
                 let attribute = variable.flagAttribute
             else { return nil }
@@ -225,6 +228,6 @@ enum FlagContainerDiagnostic: String, DiagnosticMessage {
     var severity: DiagnosticSeverity { .error }
 
     var diagnosticID: MessageID {
-        MessageID(domain: "SemaphoreMacros", id: rawValue)
+        MessageID(domain: "FeatureFlagMacros", id: rawValue)
     }
 }

@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import Semaphore
+@testable import FeatureFlag
 
 /// The containers here are written by hand. That is deliberate: this file is the
 /// specification for what the `@FlagContainer` macro must generate in Phase 1c.

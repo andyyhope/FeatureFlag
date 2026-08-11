@@ -1,0 +1,183 @@
+import SwiftSyntaxMacros
+import SwiftSyntaxMacrosTestSupport
+import XCTest
+
+@testable import FeatureFlagMacros
+
+private let testMacros: [String: Macro.Type] = [
+    "FlagContainer": FlagContainerMacro.self,
+    "FlagGroup": FlagGroupMacro.self,
+]
+
+/// Misuse should be explained at the point of the mistake. Without these, a missing
+/// type annotation surfaces as a wall of errors inside generated code.
+final class FlagContainerDiagnosticTests: XCTestCase {
+
+    func testNonStructIsRejectedWithoutAddingAConformance() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            class AppFlags {
+            }
+            """,
+            expandedSource: """
+                class AppFlags {
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "'@FlagContainer' can only be applied to a struct",
+                    line: 1,
+                    column: 1
+                )
+            ],
+            macros: testMacros
+        )
+    }
+
+    func testFlagWithoutATypeAnnotationIsDiagnosed() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                @Flag(default: false, description: "New onboarding")
+                var newOnboarding
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    @Flag(default: false, description: "New onboarding")
+                    var newOnboarding
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message:
+                        "flags need an explicit type annotation, for example 'var newOnboarding: Bool'",
+                    line: 3,
+                    column: 5
+                )
+            ],
+            macros: testMacros
+        )
+    }
+
+    func testFlagWithAnInitialValueIsDiagnosed() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                @Flag(default: false, description: "New onboarding")
+                var newOnboarding: Bool = false
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    @Flag(default: false, description: "New onboarding")
+                    var newOnboarding: Bool = false
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message:
+                        "flags must be simple stored properties, without an initial value or accessors",
+                    line: 3,
+                    column: 5
+                )
+            ],
+            macros: testMacros
+        )
+    }
+
+    func testFlagWithoutADefaultIsDiagnosed() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                @Flag(description: "New onboarding")
+                var newOnboarding: Bool
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    @Flag(description: "New onboarding")
+                    var newOnboarding: Bool
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "'@Flag' needs a 'default' value to fall back to",
+                    line: 3,
+                    column: 5
+                )
+            ],
+            macros: testMacros
+        )
+    }
+
+    func testFlagWithoutADescriptionIsDiagnosed() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                @Flag(default: false)
+                var newOnboarding: Bool
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    @Flag(default: false)
+                    var newOnboarding: Bool
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "flags need a 'description' so the companion app can explain them",
+                    line: 3,
+                    column: 5
+                )
+            ],
+            macros: testMacros
+        )
+    }
+}

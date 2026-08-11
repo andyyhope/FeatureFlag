@@ -30,9 +30,21 @@ enum FlagDeclaration {
 
 extension AttributeSyntax {
 
-    /// The identifier of the attribute, e.g. `Flag` for `@Flag(default: false)`.
+    /// The trailing identifier of the attribute: `Flag` for both `@Flag(...)` and
+    /// `@FeatureFlag.Flag(...)`.
+    ///
+    /// The qualified form is not exotic. A host app that declares its own `Flag` type
+    /// *must* write `@FeatureFlag.Flag`, because a local `Flag` makes the bare
+    /// attribute fail before any macro runs. Matching only the unqualified spelling
+    /// silently drops those properties from the container.
     var identifier: String? {
-        attributeName.as(IdentifierTypeSyntax.self)?.name.text
+        if let simple = attributeName.as(IdentifierTypeSyntax.self) {
+            return simple.name.text
+        }
+        if let qualified = attributeName.as(MemberTypeSyntax.self) {
+            return qualified.name.text
+        }
+        return nil
     }
 
     /// The expression passed for a labelled argument, if present.

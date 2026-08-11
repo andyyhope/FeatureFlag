@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import Semaphore
+@testable import FeatureFlag
 
 /// Keys are derived, not stored. The macro records raw Swift property names, and the
 /// encoding configured on the tower turns a path into the string a source sees. That

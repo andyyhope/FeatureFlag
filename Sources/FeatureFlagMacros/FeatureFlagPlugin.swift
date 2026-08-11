@@ -2,7 +2,7 @@ import SwiftCompilerPlugin
 import SwiftSyntaxMacros
 
 @main
-struct SemaphorePlugin: CompilerPlugin {
+struct FeatureFlagPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         FlagContainerMacro.self,
         FlagGroupMacro.self,
