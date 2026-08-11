@@ -98,11 +98,29 @@ public final class FlagEditingStore: ObservableObject {
 
     /// The value in effect: the override if there is one, otherwise the default.
     public func value(for entry: FlagSchema.Entry) -> FlagValueBox {
-        source.box(for: entry.key, as: entry.valueType) ?? entry.defaultValue
+        usableOverride(for: entry) ?? entry.defaultValue
     }
 
     public func isOverridden(_ entry: FlagSchema.Entry) -> Bool {
-        source.box(for: entry.key, as: entry.valueType) != nil
+        usableOverride(for: entry) != nil
+    }
+
+    /// The stored value, but only if the host app would actually use it.
+    ///
+    /// A shared suite can hold a stale or hand-edited value of the wrong type, or an
+    /// enum case this build no longer has. The host skips those and falls back to its
+    /// default, so the editor has to as well — otherwise it shows an override the app
+    /// is quietly ignoring, and binds a control to a value it cannot render.
+    private func usableOverride(for entry: FlagSchema.Entry) -> FlagValueBox? {
+        guard
+            let box = source.box(for: entry.key, as: entry.valueType),
+            box.matches(entry.valueType)
+        else { return nil }
+
+        if let cases = entry.cases, cases.isEmpty == false, cases.contains(box) == false {
+            return nil
+        }
+        return box
     }
 
     /// Every flag currently overridden, in schema order.

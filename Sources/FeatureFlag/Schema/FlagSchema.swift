@@ -37,12 +37,35 @@ public struct FlagSchema: Sendable, Equatable {
         /// Every case, when the type is a `CaseIterable` enum. Editors show a picker.
         public let cases: [FlagValueBox]?
         public let remoteKey: String?
+
+        public init(
+            key: FlagKey,
+            propertyPath: [String],
+            description: String,
+            valueType: FlagValueType,
+            defaultValue: FlagValueBox,
+            cases: [FlagValueBox]? = nil,
+            remoteKey: String? = nil
+        ) {
+            self.key = key
+            self.propertyPath = propertyPath
+            self.description = description
+            self.valueType = valueType
+            self.defaultValue = defaultValue
+            self.cases = cases
+            self.remoteKey = remoteKey
+        }
     }
 
     /// One nested container. Groups namespace their children and nothing else.
     public struct Group: Hashable, Sendable {
         public let propertyPath: [String]
         public let description: String
+
+        public init(propertyPath: [String], description: String) {
+            self.propertyPath = propertyPath
+            self.description = description
+        }
     }
 
     /// Describes a container without needing an instance of it.
@@ -61,6 +84,26 @@ public struct FlagSchema: Sendable, Equatable {
         self.applicationName = applicationName
         self.flags = flags
         self.groups = groups
+    }
+
+    /// Assembles a schema from entries directly.
+    ///
+    /// Most callers describe a container instead. This exists for the cases that have
+    /// no container to describe — a test fixture, or flags defined somewhere other than
+    /// a `@FlagContainer`.
+    public init(
+        flags: [Entry],
+        groups: [Group] = [],
+        applicationName: String? = nil,
+        generatedAt: Date = Date()
+    ) {
+        self.init(
+            formatVersion: Self.currentFormatVersion,
+            generatedAt: generatedAt,
+            applicationName: applicationName,
+            flags: flags,
+            groups: groups
+        )
     }
 
     init(formatVersion: Int, generatedAt: Date, applicationName: String?, flags: [Entry], groups: [Group]) {
@@ -229,8 +272,15 @@ extension FlagSchema.Group {
 extension FlagSchema {
 
     /// Writes the schema into a directory, where a companion app can find it.
+    ///
+    /// The directory is created if it does not exist. An App Group container exists
+    /// already on iOS, but on unsandboxed macOS the path is only realised on first use.
     @discardableResult
     public func write(toDirectory directory: URL) throws -> URL {
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
         let url = directory.appendingPathComponent(Self.fileName)
         try jsonData().write(to: url, options: .atomic)
         return url
@@ -245,8 +295,13 @@ extension FlagSchema {
         try self.init(jsonData: data)
     }
 
-    /// The shared container for an App Group, or `nil` when the group is missing from
-    /// the target's entitlements.
+    /// The shared container for an App Group.
+    ///
+    /// Returns `nil` where the platform checks the group against the process's
+    /// entitlements — iOS, and sandboxed macOS. Unsandboxed macOS performs no such
+    /// check and hands back a constructed path under `~/Library/Group Containers`
+    /// whether or not the group exists, so a non-`nil` result is not proof the group is
+    /// configured correctly.
     public static func containerURL(forAppGroup groupIdentifier: String) -> URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupIdentifier)
     }
