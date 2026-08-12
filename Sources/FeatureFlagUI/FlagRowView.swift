@@ -97,7 +97,10 @@ public struct FlagRowView: View {
         FlagTextField(
             text: store.value(for: entry).displayString,
             keyboard: keyboard,
-            isMultiline: entry.editorKind == .json
+            // Base64 is long and opaque; a single line can only ever show a fragment of
+            // it. The wrapping block shows the whole value and comes with a copy button,
+            // which is the only sane way to get bytes out of an editor by hand.
+            isMultiline: entry.editorKind.wantsWrappingEditor
         ) { edited in
             // Refuse an edit that does not parse rather than guessing at intent; the
             // field snaps back to the value still in effect.
@@ -163,7 +166,10 @@ struct FlagTextField: View {
             // edge — so a longer payload becomes hard to scan when pushed right.
             .multilineTextAlignment(.leading)
             .scrollContentBackground(.hidden)
-            .padding(.horizontal, 8)
+            .padding(.leading, 8)
+            // Room for the copy button, so a long unbroken value — base64 has no
+            // spaces to wrap at — does not run underneath it.
+            .padding(.trailing, 36)
             .padding(.vertical, 6)
             .background(Color.primary.opacity(0.04))
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -212,6 +218,12 @@ struct FlagTextField: View {
                     // stops a 1 and an l, or a 0 and an O, resolving to whichever the
                     // reader expected.
                     .font(.body.monospaced())
+                    // Shrink before truncating. A truncated endpoint is worse than a
+                    // small one: you cannot tell two staging URLs apart by their heads,
+                    // and SwiftUI abandons the trailing alignment once text overflows,
+                    // so the column goes ragged as well as unreadable.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     #if os(iOS) || os(tvOS)
                         .keyboardType(keyboard.uiKeyboardType)
                         .autocorrectionDisabled()

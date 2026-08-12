@@ -136,3 +136,54 @@ final class FlagEditorValueTests: XCTestCase {
         )
     }
 }
+
+extension FlagEditorValueTests {
+
+    /// Data is base64: long, opaque, and impossible to verify a fragment of. It belongs
+    /// in the wrapping block, which shows the whole value and carries a copy button.
+    func testDataIsEditedAsABlockRatherThanASingleLine() {
+        let data = FlagSchema.Entry(
+            key: "blob",
+            propertyPath: ["blob"],
+            description: "",
+            valueType: .data,
+            defaultValue: .data(Data())
+        )
+        XCTAssertEqual(data.editorKind, .data)
+        XCTAssertTrue(data.editorKind.wantsWrappingEditor)
+    }
+
+    func testCollectionsAlsoUseTheWrappingEditor() {
+        for type in [FlagValueType.array(.string), .dictionary(.int)] {
+            let entry = FlagSchema.Entry(
+                key: "k", propertyPath: ["k"], description: "",
+                valueType: type, defaultValue: .array([])
+            )
+            XCTAssertTrue(entry.editorKind.wantsWrappingEditor, "\(type)")
+        }
+    }
+
+    func testScalarsStayOnASingleLine() {
+        let scalars: [(FlagValueType, FlagValueBox)] = [
+            (.string, .string("")), (.int, .int(0)), (.double, .double(0)),
+            (.float, .float(0)), (.url, .url(URL(string: "https://a.example")!)),
+            (.date, .date(Date())), (.bool, .bool(false)),
+        ]
+        for (type, value) in scalars {
+            let entry = FlagSchema.Entry(
+                key: "k", propertyPath: ["k"], description: "",
+                valueType: type, defaultValue: value
+            )
+            XCTAssertFalse(entry.editorKind.wantsWrappingEditor, "\(type) should stay inline")
+        }
+    }
+
+    func testAPickerIsNeverAWrappingEditor() {
+        let entry = FlagSchema.Entry(
+            key: "tier", propertyPath: ["tier"], description: "",
+            valueType: .string, defaultValue: .string("free"),
+            cases: [.string("free"), .string("pro")]
+        )
+        XCTAssertFalse(entry.editorKind.wantsWrappingEditor)
+    }
+}
