@@ -11,6 +11,7 @@ struct ContentView: View {
                 Section("Live flag values") {
                     LabeledContent("New onboarding", value: "\(flags.newOnboarding)")
                     LabeledContent("Page size", value: "\(flags.pageSize)")
+                    LabeledContent("Markets", value: flags.markets.joined(separator: ", "))
                     LabeledContent("Apple Pay", value: "\(flags.checkout.applePay)")
                     LabeledContent("Tier", value: flags.checkout.tier.rawValue)
                     LabeledContent("One tap", value: "\(flags.checkout.express.oneTap)")

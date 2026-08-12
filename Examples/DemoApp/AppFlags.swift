@@ -24,6 +24,9 @@ public struct AppFlags {
     @Flag(default: 10, description: "How many items to show per page")
     public var pageSize: Int
 
+    @Flag(default: ["AU", "NZ"], description: "Markets the app is live in")
+    public var markets: [String]
+
     @FlagGroup(description: "Checkout")
     public var checkout: CheckoutFlags
 }

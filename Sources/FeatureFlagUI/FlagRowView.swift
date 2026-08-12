@@ -156,6 +156,7 @@ struct FlagTextField: View {
                 TextEditor(text: $draft)
                     .frame(minHeight: 60)
                     .font(.body.monospaced())
+                    .multilineTextAlignment(.trailing)
             } else {
                 TextField("", text: $draft)
                     .textFieldStyle(.roundedBorder)
