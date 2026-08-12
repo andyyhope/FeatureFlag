@@ -32,7 +32,10 @@ public enum DarwinNotificationCenter {
 }
 
 /// Keeps a Darwin observation alive. Releasing it stops the handler being called.
-public final class DarwinNotificationObserver {
+///
+/// Sendable because everything it holds is immutable; the mutable state lives in the
+/// registry behind a lock.
+public final class DarwinNotificationObserver: Sendable {
 
     let id = UUID()
     let name: String

@@ -14,6 +14,7 @@ struct ContentView: View {
                 liveValues
                 remoteConfiguration
                 provenance
+                events
                 combine
             }
             .navigationTitle("Demo")
@@ -123,6 +124,23 @@ struct ContentView: View {
             Text("Where each value came from")
         } footer: {
             Text("resolution(for:) — the answer to “why is this flag false?”")
+        }
+    }
+
+    // MARK: - Events
+
+    private var events: some View {
+        Section {
+            LabeledContent("Last event received", value: model.lastEvent?.rawValue ?? "—")
+                .font(.caption.monospaced())
+        } header: {
+            Text("Events from the companion")
+        } footer: {
+            Text(
+                "The companion can ask this app to do something, not only change what it "
+                    + "reads. iOS will not wake a closed app for another app, so an event "
+                    + "sent while this one is not running is lost rather than queued."
+            )
         }
     }
 
