@@ -153,14 +153,26 @@ struct FlagTextField: View {
     var body: some View {
         Group {
             if isMultiline {
+                // Presented as a code block, because that is what it is. The tinted
+                // ground and border mark where the editable region begins and ends,
+                // which a bare TextEditor does not.
                 TextEditor(text: $draft)
-                    .frame(minHeight: 60)
-                    .font(.body.monospaced())
+                    .frame(minHeight: 54)
+                    .font(.system(.footnote, design: .monospaced))
                     // Explicit, because the field beside it is trailing. JSON is
                     // structurally left-anchored — brackets, keys and indentation all
                     // read from the leading edge — so a longer payload becomes hard to
                     // scan when it is pushed right.
                     .multilineTextAlignment(.leading)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(Color.primary.opacity(0.04))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.12))
+                    }
             } else {
                 TextField("", text: $draft)
                     .textFieldStyle(.roundedBorder)
