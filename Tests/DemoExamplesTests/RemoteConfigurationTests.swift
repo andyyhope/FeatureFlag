@@ -14,8 +14,12 @@ final class RemoteConfigurationTests: XCTestCase {
         return (FlagPole(AppFlags.self, sources: [local, remote]), remote, local)
     }
 
+    private var allConfigurations: [RemoteConfiguration] {
+        DemoEnvironment.allCases.map(RemoteConfiguration.forEnvironment) + [.malformed]
+    }
+
     func testEveryBundledPayloadIsValidJSON() throws {
-        for configuration in RemoteConfiguration.all {
+        for configuration in allConfigurations {
             XCTAssertNoThrow(
                 try JSONSerialization.jsonObject(with: configuration.data),
                 "\(configuration.name) is not valid JSON"
@@ -23,7 +27,7 @@ final class RemoteConfigurationTests: XCTestCase {
         }
     }
 
-    func testStagingRolloutReachesEveryFlagItClaimsTo() throws {
+    func testStagingReachesEveryFlagItClaimsTo() throws {
         let (pole, remote, _) = makePole()
         let result = try remote.apply(RemoteConfiguration.staging.data, format: .json)
 
@@ -39,12 +43,12 @@ final class RemoteConfigurationTests: XCTestCase {
         XCTAssertEqual(pole.checkout.endpoint.host(), "staging.api.example.com")
     }
 
-    func testKillswitchTurnsThingsOff() throws {
+    func testProductionTurnsThingsOff() throws {
         let (pole, remote, _) = makePole()
         try remote.apply(RemoteConfiguration.staging.data, format: .json)
         XCTAssertTrue(pole.checkout.applePay)
 
-        let result = try remote.apply(RemoteConfiguration.killswitch.data, format: .json)
+        let result = try remote.apply(RemoteConfiguration.production.data, format: .json)
         XCTAssertTrue(result.absentKeys.isEmpty)
         XCTAssertFalse(pole.checkout.applePay)
         XCTAssertFalse(pole.newOnboarding)
@@ -67,10 +71,11 @@ final class RemoteConfigurationTests: XCTestCase {
         XCTAssertFalse(pole.checkout.applePay, "all-or-nothing means nothing")
     }
 
-    func testTheMalformedPayloadIsLabelledAsSuchInTheUI() {
+    func testOnlyTheMalformedPayloadIsLabelledBroken() {
         XCTAssertTrue(RemoteConfiguration.malformed.isDeliberatelyBroken)
-        XCTAssertFalse(RemoteConfiguration.staging.isDeliberatelyBroken)
-        XCTAssertFalse(RemoteConfiguration.killswitch.isDeliberatelyBroken)
+        for environment in DemoEnvironment.allCases {
+            XCTAssertFalse(RemoteConfiguration.forEnvironment(environment).isDeliberatelyBroken)
+        }
     }
 
     /// The demo's headline claim, and the reason for the source ordering.
@@ -78,7 +83,7 @@ final class RemoteConfigurationTests: XCTestCase {
         let (pole, remote, local) = makePole()
 
         try local.setBox(.bool(true), for: "checkout.apple-pay")
-        try remote.apply(RemoteConfiguration.killswitch.data, format: .json)
+        try remote.apply(RemoteConfiguration.production.data, format: .json)
 
         XCTAssertTrue(pole.checkout.applePay, "a hand-set override outranks the backend")
         XCTAssertEqual(

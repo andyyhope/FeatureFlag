@@ -5,6 +5,17 @@ import Foundation
 /// entitlements. Change this to one your team owns.
 public let demoAppGroup = "group.com.andyyhope.featureflag.demo"
 
+/// Which backend this build talks to.
+///
+/// Ordinary enum, ordinary flag. What makes it behave like an "environment" is not a
+/// special type — it is that it has no `remoteKey`, so nothing the backend sends can
+/// change it. See `DemoModel.switchTo(_:)` for why that matters.
+public enum DemoEnvironment: String, FlagValue, CaseIterable, FlagValueCases {
+    case production
+    case staging
+    case local
+}
+
 public enum CheckoutTier: String, FlagValue, CaseIterable, FlagValueCases {
     case free
     case pro
@@ -13,6 +24,11 @@ public enum CheckoutTier: String, FlagValue, CaseIterable, FlagValueCases {
 
 @FlagContainer
 public struct AppFlags {
+
+    /// Deliberately no `remoteKey`: this flag decides which payload gets fetched, so a
+    /// payload must not be able to decide it back.
+    @Flag(default: DemoEnvironment.production, description: "Which backend this build talks to")
+    public var environment: DemoEnvironment
 
     @Flag(
         default: false,

@@ -46,24 +46,44 @@ The companion reads that file and builds its editor from it. `cases` is why the 
 gets a picker instead of a text field. One companion build works for **any** app that
 publishes a schema to the same group.
 
-## Remote configuration, without a backend
+## The environment flag drives the remote config
 
-The framework decodes; it never fetches. `DemoApp` ships three payloads that stand in for
-what your app would download, so the whole path runs on a simulator with no network:
+`DemoApp` has an `environment` flag — an ordinary `RawRepresentable` enum, not a special
+type. Changing it applies that environment's payload:
 
-| Payload | What it shows |
-|---|---|
-| **Staging rollout** | Dot-path mapping — `featureToggles.onboarding.v2` finds `new-onboarding` |
-| **Killswitch** | A backend turning things off, and a companion override outranking it |
-| **Malformed payload** | One bad field rejects the whole thing; the valid field beside it is *not* applied |
+```swift
+flags.flags.$environment.publisher
+    .removeDuplicates()
+    .sink { [weak self] environment in self?.switchTo(environment) }
+```
 
-The most instructive sequence: set Apple Pay in the companion, come back, apply
-**Killswitch**. The flag stays on, and "Where each value came from" says `Companion`.
-Clear the override and it flips to `Remote`. That is the source ordering doing its job.
+Two details carry the whole pattern.
 
-`Tests/DemoExamplesTests` checks these payloads against the real flag tree, because a
+**The environment flag has no `remoteKey`.** If it did, a staging payload could set the
+environment to production — which would mean a different payload should have been fetched,
+and applying *that* could set it back. Nothing in the framework stops you wiring that loop;
+leaving the key off is what prevents it. A test asserts the key stays absent, and another
+fires a payload that tries to set `environment` and checks it is ignored.
+
+**The old environment's values are cleared before the new ones are applied.** That leaves a
+brief window on compiled defaults, which is deliberate: an app labelled *staging* still
+running yesterday's production values looks fine and is wrong, which is worse than one
+running its own defaults.
+
+Overrides still outrank everything. Set Apple Pay in the companion, then switch
+environment — the override survives, and "Where each value came from" says `Companion`.
+Clear it and the environment's value shows through.
+
+## Rejecting a bad payload
+
+One button applies a deliberately malformed payload: `onboarding.v2` sends `"yes"` where a
+boolean belongs. It is rejected in full, and the valid `applePay` beside it is not applied
+either.
+
+`Tests/DemoExamplesTests` checks every payload against the real flag tree, because a
 mistyped dot path fails silently as "the backend sent nothing" — the exact bug the demo
-exists to make visible.
+exists to make visible. The tests assert `absentKeys` is empty so a wrong path fails
+loudly.
 
 ## Things to try
 

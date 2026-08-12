@@ -1,6 +1,6 @@
 import Foundation
 
-/// A remote payload the demo can apply on demand.
+/// A remote payload the demo can apply.
 ///
 /// The framework never fetches, so these stand in for whatever your app would download.
 /// Shipping them in the binary keeps the demo runnable on a simulator with no network
@@ -19,35 +19,27 @@ struct RemoteConfiguration: Identifiable, Hashable {
     var data: Data { Data(json.utf8) }
 }
 
+// MARK: - Driven by the environment
+
 extension RemoteConfiguration {
 
-    static let all: [RemoteConfiguration] = [staging, killswitch, malformed]
-
-    /// Turns everything on and points the app at a different backend.
-    static let staging = RemoteConfiguration(
-        id: "staging",
-        name: "Staging rollout",
-        summary: "Onboarding and Apple Pay on, pointed at the staging backend",
-        json: """
-            {
-              "featureToggles": {
-                "onboarding": { "v2": true },
-                "checkout": { "applePay": true }
-              },
-              "config": { "apiEndpoint": "https://staging.api.example.com" }
-            }
-            """,
-        isDeliberatelyBroken: false
-    )
-
-    /// The production incident case: turn a feature off from the backend.
+    /// The payload an app would fetch for a given environment.
     ///
-    /// Worth applying *after* setting an override in the companion — a local override
-    /// sits above remote, so it survives, which is the whole point of the ordering.
-    static let killswitch = RemoteConfiguration(
-        id: "killswitch",
-        name: "Killswitch",
-        summary: "Everything off, as a backend would send during an incident",
+    /// In a real app this is the URL you would hit, not a constant — but the shape of
+    /// the problem is identical, and everything interesting about it happens after the
+    /// bytes arrive.
+    static func forEnvironment(_ environment: DemoEnvironment) -> RemoteConfiguration {
+        switch environment {
+        case .production: return production
+        case .staging: return staging
+        case .local: return local
+        }
+    }
+
+    static let production = RemoteConfiguration(
+        id: "production",
+        name: "Production",
+        summary: "Conservative: new work off, live backend",
         json: """
             {
               "featureToggles": {
@@ -60,8 +52,48 @@ extension RemoteConfiguration {
         isDeliberatelyBroken: false
     )
 
-    /// One bad field. Applying is all-or-nothing, so Apple Pay below it is *not*
-    /// applied either — the app never runs on half a configuration.
+    static let staging = RemoteConfiguration(
+        id: "staging",
+        name: "Staging",
+        summary: "Everything on, pointed at the staging backend",
+        json: """
+            {
+              "featureToggles": {
+                "onboarding": { "v2": true },
+                "checkout": { "applePay": true }
+              },
+              "config": { "apiEndpoint": "https://staging.api.example.com" }
+            }
+            """,
+        isDeliberatelyBroken: false
+    )
+
+    static let local = RemoteConfiguration(
+        id: "local",
+        name: "Local",
+        summary: "Everything on, pointed at a machine on your desk",
+        json: """
+            {
+              "featureToggles": {
+                "onboarding": { "v2": true },
+                "checkout": { "applePay": true }
+              },
+              "config": { "apiEndpoint": "http://localhost:8080" }
+            }
+            """,
+        isDeliberatelyBroken: false
+    )
+}
+
+// MARK: - Applied by hand
+
+extension RemoteConfiguration {
+
+    /// Offered as a button rather than reached through an environment, because the
+    /// point of it is the failure.
+    ///
+    /// One bad field. Applying is all-or-nothing, so the valid `applePay` beside it is
+    /// not applied either — the app never runs on half a configuration.
     static let malformed = RemoteConfiguration(
         id: "malformed",
         name: "Malformed payload",

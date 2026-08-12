@@ -2,22 +2,21 @@ import Combine
 import FeatureFlag
 import Foundation
 
-/// Holds everything the demo screen needs: the pole, the remote source it can feed, and
-/// a Combine subscription so the framework's publishers are shown rather than described.
+/// Holds everything the demo screen needs: the pole, the remote source it feeds, and the
+/// Combine subscription that lets the environment flag drive which payload is applied.
 @MainActor
 final class DemoModel: ObservableObject {
 
     let flags: FlagPole<AppFlags>
 
-    /// Which bundled payload is currently applied, if any.
+    /// Which payload is currently applied, if any.
     @Published private(set) var appliedConfiguration: RemoteConfiguration?
 
-    /// Why the last apply was rejected. Import and remote payloads are both
-    /// all-or-nothing, so this is the whole story, not the first line of it.
+    /// Why the last apply was rejected. Remote payloads are all-or-nothing, so this is
+    /// the whole story rather than the first line of it.
     @Published private(set) var rejection: String?
 
-    /// Proof the Combine publishers work: every change to one flag, counted as it
-    /// arrives rather than read on redraw.
+    /// Proof the publishers work: changes counted as they arrive, not read on redraw.
     @Published private(set) var onboardingChanges = 0
 
     private let remote: RemoteOverrideSource
@@ -27,21 +26,59 @@ final class DemoModel: ObservableObject {
         let remote = RemoteOverrideSource(AppFlags.self, name: "Remote")
         self.remote = remote
 
-        // Order is the precedence. The companion's overrides sit above the backend, so
-        // a value set by hand for testing survives the next payload.
+        // Order is the precedence. Overrides sit above the backend, so a value set by
+        // hand for testing survives the next payload.
         var sources: [any FlagValueSource] = []
         if let shared = UserDefaultsSource(appGroup: demoAppGroup, name: "Companion") {
             sources.append(shared)
+        } else {
+            // Keeps the demo usable if the App Group is unavailable; the companion app
+            // simply will not see anything.
+            sources.append(SnapshotSource(name: "Local"))
         }
         sources.append(remote)
 
         self.flags = FlagPole(AppFlags.self, sources: sources, applicationName: "Demo")
 
+        // The environment flag drives which payload is applied. `publisher` replays the
+        // current value on subscribe, so this also performs the initial fetch.
+        flags.flags.$environment.publisher
+            .removeDuplicates()
+            .sink { [weak self] environment in self?.switchTo(environment) }
+            .store(in: &cancellables)
+
         flags.flags.$newOnboarding.publisher
-            .dropFirst()  // the publisher replays the current value on subscribe
+            .dropFirst()
             .sink { [weak self] _ in self?.onboardingChanges += 1 }
             .store(in: &cancellables)
     }
+
+    // MARK: - Environment
+
+    /// Fetches and applies the payload for an environment.
+    ///
+    /// Two things here are the whole reason this is worth playing out.
+    ///
+    /// The environment flag has no `remoteKey`. If it did, a staging payload could set
+    /// the environment to production, which would mean the app should have fetched a
+    /// different payload — and applying *that* could set it back. Nothing in the
+    /// framework stops you wiring that loop; leaving the key off is what prevents it.
+    ///
+    /// The old environment's values are cleared before the new ones are applied. That
+    /// leaves a brief window on compiled defaults, which is deliberate: if the fetch
+    /// fails, an app labelled "staging" running yesterday's production values is worse
+    /// than one running its own defaults, because nothing about it looks wrong.
+    func switchTo(_ environment: DemoEnvironment) {
+        remote.clear()
+        apply(.forEnvironment(environment))
+    }
+
+    var environment: DemoEnvironment {
+        get { flags.environment }
+        set { try? flags.setOverride(newValue, for: flags.flags.$environment) }
+    }
+
+    // MARK: - Applying
 
     /// Stands in for "your app downloaded a config and handed over the bytes".
     func apply(_ configuration: RemoteConfiguration) {

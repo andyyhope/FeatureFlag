@@ -10,12 +10,39 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             List {
+                environment
                 liveValues
                 remoteConfiguration
                 provenance
                 combine
             }
             .navigationTitle("Demo")
+        }
+    }
+
+    // MARK: - Environment
+
+    private var environment: some View {
+        Section {
+            Picker("Environment", selection: $model.environment) {
+                ForEach(DemoEnvironment.allCases, id: \.self) { environment in
+                    Text(environment.rawValue.capitalized).tag(environment)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if let applied = model.appliedConfiguration {
+                LabeledContent("Payload applied", value: applied.name)
+                    .font(.caption.monospaced())
+            }
+        } header: {
+            Text("Environment")
+        } footer: {
+            Text(
+                "Changing this fetches and applies that environment's payload. The flag "
+                    + "carries no remoteKey, so nothing a payload contains can change it "
+                    + "back — otherwise the two would drive each other in a loop."
+            )
         }
     }
 
@@ -37,28 +64,22 @@ struct ContentView: View {
 
     private var remoteConfiguration: some View {
         Section {
-            ForEach(RemoteConfiguration.all) { configuration in
-                Button {
-                    model.apply(configuration)
-                } label: {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(configuration.name)
-                            Text(configuration.summary)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer(minLength: 8)
-                        if model.appliedConfiguration == configuration {
-                            Image(systemName: "checkmark")
-                        } else if configuration.isDeliberatelyBroken {
-                            Image(systemName: "exclamationmark.triangle")
-                                .foregroundStyle(.orange)
-                        }
+            Button {
+                model.apply(.malformed)
+            } label: {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(RemoteConfiguration.malformed.name)
+                        Text(RemoteConfiguration.malformed.summary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                    Spacer(minLength: 8)
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
                 }
-                .buttonStyle(.plain)
             }
+            .buttonStyle(.plain)
 
             if model.appliedConfiguration != nil {
                 Button("Clear remote payload", role: .destructive) { model.clearRemote() }
@@ -74,12 +95,12 @@ struct ContentView: View {
                 .foregroundStyle(.red)
             }
         } header: {
-            Text("Remote configuration")
+            Text("Rejecting a bad payload")
         } footer: {
             Text(
-                "The framework decodes; it never fetches. These stand in for payloads "
-                    + "your app would download. Set an override in the companion first, "
-                    + "then apply one — a local override sits above remote and survives."
+                "One field of the wrong type rejects the whole payload — the valid "
+                    + "applePay beside it is not applied either. Nothing runs on half a "
+                    + "configuration."
             )
         }
     }
