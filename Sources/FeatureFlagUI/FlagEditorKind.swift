@@ -17,6 +17,20 @@ public enum FlagEditorKind: Hashable, Sendable {
     case json
 }
 
+extension FlagEditorKind {
+
+    /// Whether this editor needs a wrapping block rather than a single line.
+    ///
+    /// Base64 and JSON are both long and read structurally; a single line can only ever
+    /// show a fragment. Everything else is a value that fits.
+    public var wantsWrappingEditor: Bool {
+        switch self {
+        case .data, .json: return true
+        default: return false
+        }
+    }
+}
+
 extension FlagSchema.Entry {
 
     /// The control this flag should be edited with.
