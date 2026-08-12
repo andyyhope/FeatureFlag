@@ -207,6 +207,11 @@ struct FlagTextField: View {
                 TextField("", text: $draft)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing)
+                    // Flag values are identifiers, numbers, URLs and base64 — strings
+                    // read character by character rather than as words. Monospacing
+                    // stops a 1 and an l, or a 0 and an O, resolving to whichever the
+                    // reader expected.
+                    .font(.body.monospaced())
                     #if os(iOS) || os(tvOS)
                         .keyboardType(keyboard.uiKeyboardType)
                         .autocorrectionDisabled()
