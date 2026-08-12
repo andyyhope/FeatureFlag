@@ -1,3 +1,9 @@
+// The editor is an iOS and macOS surface. watchOS has no Menu, TextEditor or
+// bordered text field, and a flag-editing companion on a watch is not a real use case;
+// tvOS has no text entry worth the name. The core FeatureFlag module supports every
+// platform — this is only the UI.
+#if os(iOS) || os(macOS)
+
 import FeatureFlag
 import SwiftUI
 
@@ -198,4 +204,6 @@ struct FlagTextField: View {
             }
         }
     }
+#endif
+
 #endif

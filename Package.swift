@@ -45,6 +45,7 @@ let package = Package(
             exclude: [
                 "README.md",
                 "project.yml",
+                "Screenshots",
                 "FeatureFlagExamples.xcodeproj",
                 "DemoApp/DemoApp.entitlements",
                 "DemoCompanion/DemoCompanion.entitlements",

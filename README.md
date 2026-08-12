@@ -1,5 +1,6 @@
 # FeatureFlag
 
+[![CI](https://github.com/andyyhope/FeatureFlag/actions/workflows/ci.yml/badge.svg)](https://github.com/andyyhope/FeatureFlag/actions/workflows/ci.yml)
 [![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%2016%20%7C%20macOS%2013%20%7C%20tvOS%2016%20%7C%20watchOS%209-lightgrey.svg)](#requirements)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -63,6 +64,10 @@ app — your shipping app never needs it, and never links it in the example.
 
 Swift 5.9+, iOS 16 / macOS 13 / tvOS 16 / watchOS 9. Builds in Swift 5 language mode, so
 adopting it does not drag you through a Swift 6 concurrency migration.
+
+`FeatureFlagUI` is iOS and macOS only. watchOS has no `Menu`, `TextEditor` or bordered
+text field, and a flag editor on a watch is not a real use case, so on other platforms it
+compiles to nothing rather than pretending. The core module supports all four.
 
 ## What you get
 
