@@ -54,8 +54,11 @@ if flags.checkout.applePay { … }
 Add the package in Xcode via **File → Add Package Dependencies**, or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/andyyhope/FeatureFlag.git", from: "0.1.0")
+.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.1.0"))
 ```
+
+Pre-1.0, `from:` would accept every breaking `0.x` bump. While the API is still moving,
+`.upToNextMinor` is the constraint that matches what this package promises.
 
 Then add `FeatureFlag` to your app target. Add `FeatureFlagUI` **only** to a companion
 app — your shipping app never needs it, and never links it in the example.
