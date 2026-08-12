@@ -5,6 +5,7 @@ import SwiftUI
 struct CompanionRootView: View {
 
     @StateObject private var loader = CompanionLoader()
+    @State private var selection = 0
 
     var body: some View {
         switch loader.state {
@@ -12,8 +13,23 @@ struct CompanionRootView: View {
             ProgressView().task { loader.load() }
 
         case let .ready(store):
-            FlagBrowserView(store: store)
-                .safeAreaInset(edge: .bottom) { EventBar() }
+            // Three jobs, three tabs. Flags and signals are different in kind — one
+            // changes what the app reads, the other asks it to act — and environment is
+            // pulled out of the flag list because it is the switch you reach for first
+            // and the one that moves everything else.
+            TabView(selection: $selection) {
+                FlagBrowserView(store: store)
+                    .tabItem { Label("Flags", systemImage: "flag") }
+                    .tag(0)
+
+                EnvironmentTab(store: store)
+                    .tabItem { Label("Environment", systemImage: "server.rack") }
+                    .tag(1)
+
+                SignalsTab()
+                    .tabItem { Label("Signals", systemImage: "dot.radiowaves.left.and.right") }
+                    .tag(2)
+            }
 
         case let .failed(message):
             VStack(spacing: 12) {
@@ -39,70 +55,18 @@ final class CompanionLoader: ObservableObject {
 
     @Published private(set) var state: State = .loading
 
-    private let appGroup = "group.com.andyyhope.featureflag.demo"
+    static let appGroup = "group.com.andyyhope.featureflag.demo"
 
     func load() {
         do {
-            state = .ready(try FlagEditingStore(appGroup: appGroup))
+            state = .ready(try FlagEditingStore(appGroup: Self.appGroup))
         } catch {
             state = .failed(
                 """
                 Launch the demo app at least once so it can publish its flags, and check \
-                that both targets have the \(appGroup) App Group in their entitlements.
+                that both targets have the \(Self.appGroup) App Group in their entitlements.
                 """
             )
-        }
-    }
-}
-
-
-/// Sends events to the host app.
-///
-/// Deliberately uses the acknowledged form: a Darwin notification has no delivery
-/// receipt, so without waiting for the host to confirm, a button press into a closed app
-/// would look exactly like a successful one.
-struct EventBar: View {
-
-    @State private var status: String?
-    @State private var isSending = false
-
-    private let channel = FlagEventChannel(appGroup: "group.com.andyyhope.featureflag.demo")
-
-    var body: some View {
-        VStack(spacing: 6) {
-            HStack {
-                ForEach(AppEvent.allCases, id: \.self) { event in
-                    Button(event.eventDescription) { send(event) }
-                        .buttonStyle(.bordered)
-                        .font(.caption)
-                }
-            }
-            .disabled(isSending || channel == nil)
-
-            if let status {
-                Text(status)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
-        .background(.bar)
-    }
-
-    private func send(_ event: AppEvent) {
-        guard let channel else { return }
-        isSending = true
-        status = nil
-
-        Task {
-            do {
-                try await channel.send(event, timeout: 2)
-                status = "\(event.eventDescription) — handled"
-            } catch {
-                status = "No response — is the Demo app open?"
-            }
-            isSending = false
         }
     }
 }
