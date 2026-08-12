@@ -148,7 +148,53 @@ struct FlagTextField: View {
 
     @State private var draft: String = ""
     @State private var isRejected = false
+    @State private var hasCopied = false
     @FocusState private var isFocused: Bool
+
+    /// Presented as a code block, because that is what it is. The tinted ground and
+    /// border mark where the editable region begins and ends, which a bare TextEditor
+    /// does not.
+    private var codeBlock: some View {
+        TextEditor(text: $draft)
+            .frame(minHeight: 54)
+            .font(.system(.footnote, design: .monospaced))
+            // Explicit, because the field beside it is trailing. JSON is structurally
+            // left-anchored — brackets, keys and indentation all read from the leading
+            // edge — so a longer payload becomes hard to scan when pushed right.
+            .multilineTextAlignment(.leading)
+            .scrollContentBackground(.hidden)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.primary.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.12))
+            }
+            .overlay(alignment: .topTrailing) {
+                copyButton
+            }
+    }
+
+    private var copyButton: some View {
+        Button {
+            FlagPasteboard.copy(draft)
+            withAnimation(.easeOut(duration: 0.15)) { hasCopied = true }
+            // Long enough to read, short enough not to lie about the state.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+                withAnimation(.easeIn(duration: 0.2)) { hasCopied = false }
+            }
+        } label: {
+            Image(systemName: hasCopied ? "checkmark" : "doc.on.doc")
+                .font(.caption)
+                .foregroundStyle(hasCopied ? Color.green : Color.secondary)
+                .padding(6)
+                .background(.background.opacity(0.75), in: RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+        .padding(4)
+        .accessibilityLabel(hasCopied ? "Copied" : "Copy value")
+    }
 
     var body: some View {
         Group {
@@ -156,23 +202,7 @@ struct FlagTextField: View {
                 // Presented as a code block, because that is what it is. The tinted
                 // ground and border mark where the editable region begins and ends,
                 // which a bare TextEditor does not.
-                TextEditor(text: $draft)
-                    .frame(minHeight: 54)
-                    .font(.system(.footnote, design: .monospaced))
-                    // Explicit, because the field beside it is trailing. JSON is
-                    // structurally left-anchored — brackets, keys and indentation all
-                    // read from the leading edge — so a longer payload becomes hard to
-                    // scan when it is pushed right.
-                    .multilineTextAlignment(.leading)
-                    .scrollContentBackground(.hidden)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .background(Color.primary.opacity(0.04))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.12))
-                    }
+                codeBlock
             } else {
                 TextField("", text: $draft)
                     .textFieldStyle(.roundedBorder)
