@@ -190,3 +190,35 @@ private final class MinimalLookup: FlagLookup, @unchecked Sendable {
         key == "max-items" ? .int(99) : nil
     }
 }
+
+extension FlagPoleEdgeCaseTests {
+
+    func testResolutionByKeyMatchesTheTypedForm() throws {
+        let local = SnapshotSource(name: "local")
+        try local.setBox(.bool(true), for: "new-onboarding")
+        let pole = FlagPole(DemoFlags.self, sources: [local])
+
+        let typed = pole.resolution(for: pole.flags.$newOnboarding)
+        let byKey = pole.resolution(for: "new-onboarding", as: .bool)
+
+        XCTAssertEqual(byKey, typed)
+        XCTAssertEqual(byKey.sourceName, "local")
+    }
+
+    func testResolutionByKeyFillsInTheCompiledDefault() {
+        let pole = FlagPole(DemoFlags.self, sources: [])
+        let resolution = pole.resolution(for: "max-items", as: .int)
+
+        XCTAssertTrue(resolution.isDefault)
+        XCTAssertEqual(resolution.box, .int(10), "should report the value in effect")
+    }
+
+    func testEveryFlagCanBeExplainedInALoop() {
+        // The point of the key-based form: a diagnostics screen over the whole schema.
+        let pole = FlagPole(DemoFlags.self, sources: [SnapshotSource(name: "local")])
+        let explained = pole.schema.flags.map { pole.resolution(for: $0.key, as: $0.valueType) }
+
+        XCTAssertEqual(explained.count, 5)
+        XCTAssertTrue(explained.allSatisfy { $0.box != nil }, "every flag has a value in effect")
+    }
+}

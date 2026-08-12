@@ -54,6 +54,10 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "DemoExamplesTests",
+            dependencies: ["DemoExamples", "FeatureFlag"]
+        ),
+        .testTarget(
             name: "FeatureFlagTests",
             dependencies: ["FeatureFlag"]
         ),

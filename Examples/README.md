@@ -46,6 +46,25 @@ The companion reads that file and builds its editor from it. `cases` is why the 
 gets a picker instead of a text field. One companion build works for **any** app that
 publishes a schema to the same group.
 
+## Remote configuration, without a backend
+
+The framework decodes; it never fetches. `DemoApp` ships three payloads that stand in for
+what your app would download, so the whole path runs on a simulator with no network:
+
+| Payload | What it shows |
+|---|---|
+| **Staging rollout** | Dot-path mapping — `featureToggles.onboarding.v2` finds `new-onboarding` |
+| **Killswitch** | A backend turning things off, and a companion override outranking it |
+| **Malformed payload** | One bad field rejects the whole thing; the valid field beside it is *not* applied |
+
+The most instructive sequence: set Apple Pay in the companion, come back, apply
+**Killswitch**. The flag stays on, and "Where each value came from" says `Companion`.
+Clear the override and it flips to `Remote`. That is the source ordering doing its job.
+
+`Tests/DemoExamplesTests` checks these payloads against the real flag tree, because a
+mistyped dot path fails silently as "the backend sent nothing" — the exact bug the demo
+exists to make visible.
+
 ## Things to try
 
 - **Toggle a flag in the companion, switch back to the host.** The value has changed. While
@@ -59,13 +78,17 @@ publishes a schema to the same group.
   overrides travel, deflate-compressed.
 - **Import something wrong** — paste `{"formatVersion":1,"values":{"nope":true}}`. It is
   rejected outright with a reason, rather than partly applied.
+- **Watch the Combine counter.** The bottom section counts `$newOnboarding.publisher` as
+  changes arrive, whether from the companion app or a remote payload.
 
 ## Files
 
 | File | Target | Purpose |
 |---|---|---|
 | `DemoApp/AppFlags.swift` | host | The flag tree and the `FlagPole` that reads it |
-| `DemoApp/ContentView.swift` | host | Live values, and where each came from |
+| `DemoApp/ContentView.swift` | host | Live values, remote payloads, provenance, Combine |
+| `DemoApp/DemoModel.swift` | host | Owns the pole and the remote source it feeds |
+| `DemoApp/RemoteConfigurations.swift` | host | The bundled payloads |
 | `DemoApp/DemoApp.swift` | host | `@main`; publishes the schema on launch |
 | `DemoCompanion/CompanionRootView.swift` | companion | Loads the schema, renders the editor |
 | `DemoCompanion/DemoCompanionApp.swift` | companion | `@main` |

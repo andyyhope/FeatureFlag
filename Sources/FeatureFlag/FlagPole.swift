@@ -80,6 +80,19 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
         return FlagResolution(key: accessor.key, sourceName: nil, box: accessor.defaultValue.box)
     }
 
+    /// Which source supplied a value, addressed by key rather than by a typed accessor.
+    ///
+    /// The generic form needs one call site per flag, which makes a diagnostics screen
+    /// — "where did every value come from?" — impossible to write as a loop. This takes
+    /// what a schema entry already carries.
+    public func resolution(for key: FlagKey, as type: FlagValueType) -> FlagResolution {
+        let resolution = resolver.resolution(for: key, as: type)
+        guard resolution.isDefault else { return resolution }
+
+        let fallback = schema.flags.first { $0.key == key }?.defaultValue
+        return FlagResolution(key: key, sourceName: nil, box: fallback)
+    }
+
     // MARK: - Overrides
 
     /// Every flag this pole knows about, flattened out of the container tree.

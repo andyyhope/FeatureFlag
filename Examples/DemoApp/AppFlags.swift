@@ -64,20 +64,3 @@ public struct ExpressFlags {
     @Flag(default: 3.0, description: "Seconds before the order is placed")
     public var confirmationDelay: Double
 }
-
-extension FlagPole where Root == AppFlags {
-
-    /// The pole the demo app uses.
-    ///
-    /// Order is the precedence: overrides set in the companion app beat anything the
-    /// backend sends, so a value set by hand for testing stays set.
-    public static func demo() -> FlagPole<AppFlags> {
-        var sources: [any FlagValueSource] = []
-        if let shared = UserDefaultsSource(appGroup: demoAppGroup, name: "Companion") {
-            sources.append(shared)
-        }
-        sources.append(RemoteOverrideSource(AppFlags.self))
-
-        return FlagPole(AppFlags.self, sources: sources)
-    }
-}
