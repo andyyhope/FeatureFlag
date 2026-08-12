@@ -156,7 +156,11 @@ struct FlagTextField: View {
                 TextEditor(text: $draft)
                     .frame(minHeight: 60)
                     .font(.body.monospaced())
-                    .multilineTextAlignment(.trailing)
+                    // Explicit, because the field beside it is trailing. JSON is
+                    // structurally left-anchored — brackets, keys and indentation all
+                    // read from the leading edge — so a longer payload becomes hard to
+                    // scan when it is pushed right.
+                    .multilineTextAlignment(.leading)
             } else {
                 TextField("", text: $draft)
                     .textFieldStyle(.roundedBorder)
