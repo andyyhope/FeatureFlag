@@ -26,7 +26,7 @@ public struct FlagRowView: View {
             case .toggle:
                 Toggle(isOn: boolBinding) { Text(entry.description) }
                     .labelsHidden()
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
 
             case let .picker(cases):
                 Picker(entry.description, selection: pickerBinding) {
@@ -36,12 +36,12 @@ public struct FlagRowView: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .trailing)
 
             case .date:
                 DatePicker(entry.description, selection: dateBinding)
                     .labelsHidden()
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
 
             case .integer, .decimal:
                 textField(keyboard: .numbersAndPunctuation)
@@ -159,6 +159,7 @@ struct FlagTextField: View {
             } else {
                 TextField("", text: $draft)
                     .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
                     #if os(iOS) || os(tvOS)
                         .keyboardType(keyboard.uiKeyboardType)
                         .autocorrectionDisabled()
