@@ -53,7 +53,7 @@ if flags.checkout.applePay { … }
 Add the package in Xcode via **File → Add Package Dependencies**, or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/<owner>/FeatureFlag.git", from: "0.1.0")
+.package(url: "https://github.com/andyyhope/FeatureFlag.git", from: "0.1.0")
 ```
 
 Then add `FeatureFlag` to your app target. Add `FeatureFlagUI` **only** to a companion
