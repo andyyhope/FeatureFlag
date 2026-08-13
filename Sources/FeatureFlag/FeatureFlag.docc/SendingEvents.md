@@ -1,0 +1,118 @@
+# Sending events to the host app
+
+Telling a running app to *do* something — re-fetch its configuration, purge a cache —
+from the companion.
+
+## Overview
+
+Flags are state. Some things are not: "re-fetch the remote config now" is a verb, and
+there is no value to store for it.
+
+``FlagEventChannel`` carries those one way, from a companion app to its host. iOS gives
+third-party apps no XPC and no way to wake another app, so this is built from the two
+things that do cross the sandbox: an App Group both apps can read, and a Darwin
+notification that carries no payload but does cross process boundaries. The event name
+goes in the shared store; the notification rings the bell.
+
+### Declaring the events
+
+An enum, shared between both apps — a small file both targets compile, or a tiny module
+they both import:
+
+```swift
+enum AppEvent: String, FlagEvent {
+    case refetchRemoteConfiguration
+    case purgeImageCache
+    case signOut
+}
+```
+
+Declaring it as an enum is what gives the host an exhaustive `switch`: add a case, and
+the compiler shows you every place that has to handle it.
+
+Give the cases readable labels by implementing `eventDescription`, which is what a
+companion app puts on the button:
+
+```swift
+enum AppEvent: String, FlagEvent {
+    case refetchRemoteConfiguration
+    case purgeImageCache
+
+    var eventDescription: String {
+        switch self {
+        case .refetchRemoteConfiguration: return "Re-fetch remote config"
+        case .purgeImageCache: return "Purge image cache"
+        }
+    }
+}
+```
+
+### Receiving, in the host
+
+```swift
+let channel = FlagEventChannel(appGroup: "group.com.example.flags")!
+
+let subscription = channel.observe(AppEvent.self) { event in
+    switch event {
+    case .refetchRemoteConfiguration: Task { await refetchConfiguration() }
+    case .purgeImageCache: imageCache.removeAll()
+    case .signOut: session.signOut()
+    }
+}
+```
+
+Hold the subscription for as long as you want delivery — releasing it stops delivery.
+Handlers are called on the main queue.
+
+### Sending, from the companion
+
+```swift
+channel.send(AppEvent.refetchRemoteConfiguration)
+```
+
+That form reports nothing, because a Darwin notification has no delivery receipt. When
+the person pressing the button needs to know whether anything happened, wait for an
+acknowledgement:
+
+```swift
+do {
+    try await channel.send(AppEvent.refetchRemoteConfiguration, timeout: 2)
+    // the host confirmed it handled this
+} catch FlagEventError.notAcknowledged {
+    // it did not — see below
+}
+```
+
+### Events reach a running host only
+
+A suspended or terminated app cannot receive a Darwin notification, and nothing in iOS
+will wake it. An event sent to an app that is not running is **lost, not queued**.
+
+In practice that means switching apps to press the button is the problem. The host is
+usually still running for a while after being backgrounded and will receive the event;
+once the system suspends it, nothing arrives. The example companion app handles this with
+a delay — pick an event, choose three seconds, switch to the host, and the event fires
+while it is in front of you.
+
+``FlagEventError/notAcknowledged`` is deliberately not called `hostNotRunning`. A missing
+acknowledgement is also what you see if the host is running but slow, still launching, or
+the notification was coalesced. Reporting it as certainty would be a lie the caller then
+shows someone.
+
+### Events carry no payload
+
+That is a limit on purpose rather than a feature not yet built. State belongs in flags,
+which the companion can already edit. "Re-fetch for staging" is the `environment` flag
+plus a bare `refetch` — set the flag, then send the event — not an event with an argument
+and its own parallel way of describing values.
+
+### Delivery details
+
+Each event gets a sequence number, and the host records the highest it has handled before
+running the handler. A Darwin notification can arrive more than once for a single post,
+and re-running "purge the cache" because the OS coalesced differently would be its own
+kind of bug.
+
+An event this build cannot represent — a newer companion sending a case that does not
+exist here — is skipped and deliberately left unacknowledged, so the sender learns it was
+not handled rather than being told it was.

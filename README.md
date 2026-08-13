@@ -95,6 +95,36 @@ whose types it has never seen. One companion build works for any app that publis
 schema. Remote key mapping, strict payload validation and editor selection all read the
 same descriptors.
 
+## Documentation
+
+The detailed docs are DocC catalogs, with a worked example for every feature. Read them in
+Xcode (**Product → Build Documentation**) or right here on GitHub:
+
+| | |
+|---|---|
+| [Getting started](Sources/FeatureFlag/FeatureFlag.docc/GettingStarted.md) | Empty project to a flag you can toggle from a second app |
+| [Declaring flags](Sources/FeatureFlag/FeatureFlag.docc/DeclaringFlags.md) | Containers, nesting, keys, and flags with no pole behind them |
+| [Flag values](Sources/FeatureFlag/FeatureFlag.docc/FlagValues.md) | The types a flag can hold, enums, and conforming your own |
+| [Sources and precedence](Sources/FeatureFlag/FeatureFlag.docc/SourcesAndPrecedence.md) | Stacking sources, and finding out which one won |
+| [Observing changes](Sources/FeatureFlag/FeatureFlag.docc/ObservingChanges.md) | Combine publishers, SwiftUI, and changes from another process |
+| [Remote overrides](Sources/FeatureFlag/FeatureFlag.docc/RemoteOverrides.md) | Dot paths, custom mappers, and why a bad field rejects everything |
+| [Sharing with a companion app](Sources/FeatureFlag/FeatureFlag.docc/SharingWithACompanionApp.md) | What the schema carries, and what it costs |
+| [Exporting and importing](Sources/FeatureFlag/FeatureFlag.docc/ExportingAndImporting.md) | JSON, property lists and QR codes |
+| [Sending events to the host](Sources/FeatureFlag/FeatureFlag.docc/SendingEvents.md) | One-way instructions from the companion to a running app |
+| [Building a companion app](Sources/FeatureFlagUI/FeatureFlagUI.docc/BuildingACompanionApp.md) | An editor for another app's flags, in about thirty lines |
+| [Troubleshooting](Sources/FeatureFlag/FeatureFlag.docc/Troubleshooting.md) | The failures worth recognising on sight |
+
+Every sample in those articles is compiled and run by the test suite. Documentation that
+has drifted from the API is worse than none, and nothing else would notice.
+
+To build the archives yourself:
+
+```sh
+swift package generate-documentation --target FeatureFlag --target FeatureFlagUI
+```
+
+The rest of this README is the shape of the thing. The articles are where the detail is.
+
 ## Precedence
 
 Sources are asked in order, so the order of the stack *is* the precedence:
@@ -130,12 +160,13 @@ Flags say where they live in the payload with `remoteKey`, read as a dot path
 records, say — implement `RemoteOverrideMapper`.
 
 Applying is strict and all-or-nothing: one bad field rejects the payload and reports every
-problem at once, rather than leaving your app running on half a configuration. Enum flags
-are checked against their cases, so a backend sending a value you cannot represent fails
-loudly instead of silently falling back on every read.
+problem at once, rather than leaving your app running on half a configuration.
 
 One deliberate allowance: JSON has a single number type, so a whole number satisfies a
 `Double` flag. That is exact widening, not coercion — `"true"` is still not a boolean.
+
+→ [Remote overrides](Sources/FeatureFlag/FeatureFlag.docc/RemoteOverrides.md) covers
+custom mappers, the enum-case check, and what a successful apply reports.
 
 ## The companion app
 
@@ -158,13 +189,25 @@ Edits reach your running app through a Darwin notification, because
 Sources also re-read on foreground, covering the case where your app was suspended and
 missed one.
 
+There is a second screen, `FlagOverridesView`, listing only what has been changed — with
+the JSON, the QR code, import and reset. Put one in each tab and they share a store.
+
+→ [Building a companion app](Sources/FeatureFlagUI/FeatureFlagUI.docc/BuildingACompanionApp.md)
+has the whole app, and
+[Sharing with a companion app](Sources/FeatureFlag/FeatureFlag.docc/SharingWithACompanionApp.md)
+explains what the schema carries.
+
+The companion can also send one-way instructions — "re-fetch the remote config", "purge
+the cache" — to a running host: see
+[Sending events to the host](Sources/FeatureFlag/FeatureFlag.docc/SendingEvents.md).
+
 ## Reading from other threads
 
 `FlagPole` is not `@MainActor`. Reads are lock-protected and safe from any thread, because
 apps read flags off the main thread constantly. Only `objectWillChange` is delivered on
 the main thread, so SwiftUI observation stays correct.
 
-## Two things worth knowing
+## Three things worth knowing
 
 **Export spans the whole stack.** `overrides`, and everything built on it, carries any
 value that is not the compiled default — including one a remote payload supplied.
@@ -180,6 +223,10 @@ unavailable for those five names.
 **If your own module declares a type called `Flag`**, write `@FeatureFlag.Flag` instead. A
 local `Flag` makes the bare attribute fail before any macro runs. Everything generated is
 fully qualified, so nothing else can be shadowed.
+
+→ [Troubleshooting](Sources/FeatureFlag/FeatureFlag.docc/Troubleshooting.md) has the rest,
+including the `UserDefaults` type-caching behaviour that only bites if a flag changes its
+Swift type while keeping its key.
 
 ## Example
 
@@ -219,7 +266,7 @@ shows having to survive a trip through JSON.
 
 ## Status and contributing
 
-Early. 360 tests, but the API may still move before 1.0. Issues and pull requests are
+Early. 473 tests, but the API may still move before 1.0. Issues and pull requests are
 welcome — if you are reporting a bug, a failing test says more than a description.
 
 ## License

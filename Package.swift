@@ -17,6 +17,9 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0" ..< "605.0.0"),
+        // Build-time only: `swift package generate-documentation`, and how Swift Package
+        // Index builds the hosted documentation. Nothing links it at runtime.
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin.git", from: "1.4.3"),
     ],
     targets: [
         .macro(

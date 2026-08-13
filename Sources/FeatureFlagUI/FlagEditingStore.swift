@@ -9,8 +9,8 @@ import Foundation
 /// Drives a companion app's editor from a published schema and a shared store.
 ///
 /// It never sees the host app's Swift types. Everything it renders comes from the
-/// ``FlagSchema`` the host published; everything it changes goes into a
-/// ``MutableFlagValueSource`` the two processes share.
+/// `FlagSchema` the host published; everything it changes goes into a
+/// `MutableFlagValueSource` the two processes share.
 public final class FlagEditingStore: ObservableObject {
 
     public let schema: FlagSchema
