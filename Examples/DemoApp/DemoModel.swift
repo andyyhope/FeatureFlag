@@ -135,7 +135,7 @@ final class DemoModel: ObservableObject {
                     return "\(problem.remoteKey) — wrong type for \(problem.key)"
                 case .unknownCase:
                     return "\(problem.remoteKey) — not a case \(problem.key) can represent"
-                case .unknownFlag:
+                case .unknownKey:
                     return "\(problem.key) — no such flag in this app"
                 }
             }

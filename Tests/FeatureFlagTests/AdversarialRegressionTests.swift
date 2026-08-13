@@ -90,7 +90,7 @@ final class AdversarialRegressionTests: XCTestCase {
             XCTAssertEqual(
                 error as? RemoteOverrideError,
                 .rejected([
-                    RemoteOverrideProblem(key: "rat1o", remoteKey: "rat1o", kind: .unknownFlag)
+                    RemoteOverrideProblem(key: "rat1o", remoteKey: "rat1o", kind: .unknownKey)
                 ])
             )
         }

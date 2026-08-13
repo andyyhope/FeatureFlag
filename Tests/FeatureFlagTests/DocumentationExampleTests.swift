@@ -461,7 +461,7 @@ final class DocumentationExampleTests: XCTestCase {
             guard case let .rejected(problems) = error as? RemoteOverrideError else {
                 return XCTFail("expected .rejected, got \(error)")
             }
-            XCTAssertEqual(problems.map(\.kind), [.unknownFlag])
+            XCTAssertEqual(problems.map(\.kind), [.unknownKey])
         }
     }
 
