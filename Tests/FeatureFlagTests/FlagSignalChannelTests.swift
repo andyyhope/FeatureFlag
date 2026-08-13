@@ -30,7 +30,7 @@ final class FlagSignalChannelTests: XCTestCase {
 
     // MARK: - Delivery
 
-    func testAnSignalReachesAnObserver() {
+    func testASignalReachesAnObserver() {
         let companion = makeChannel()
         let host = makeChannel()
 
@@ -161,7 +161,7 @@ final class FlagSignalChannelTests: XCTestCase {
         }
     }
 
-    func testAnSignalThisBuildCannotRepresentIsNotAcknowledged() async {
+    func testASignalThisBuildCannotRepresentIsNotAcknowledged() async {
         // A newer companion sending a case an older host does not have. Skipping it is
         // right — an app cannot perform a command it does not know — but telling the
         // sender it was handled would be a lie.

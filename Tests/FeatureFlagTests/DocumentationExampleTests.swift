@@ -680,7 +680,7 @@ final class DocumentationExampleTests: XCTestCase {
     }
 
     /// Sending and receiving, over a suite standing in for an App Group.
-    func testAnSignalReachesAnObserver() throws {
+    func testASignalReachesAnObserver() throws {
         let suiteName = "docs.signals.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
