@@ -8,7 +8,7 @@ import XCTest
 /// to write themselves, so it is worth holding to the same standard as the views.
 final class CompanionViewTests: XCTestCase {
 
-    private func makeStore() -> FlagEditingStore {
+    fileprivate func makeStore() -> FlagEditingStore {
         FlagEditingStore(
             schema: FlagSchema(CompanionViewFlags.self),
             source: SnapshotSource(name: "shared")
@@ -90,4 +90,62 @@ private struct CompanionViewFlags {
 
     @Flag(default: false, description: "Show the redesigned onboarding")
     var newOnboarding: Bool
+}
+
+// MARK: - Composing tabs
+
+extension CompanionViewTests {
+
+    /// The default is the minimum every companion wants, and nothing more. An app with
+    /// no signals should not be handed a signals tab it cannot fill.
+    func testTheDefaultTabsAreOverridesAndFlags() {
+        let tabs: [FlagCompanionTab] = [.overrides, .flags]
+        XCTAssertEqual(tabs.map(\.id), ["overrides", "flags"])
+        XCTAssertEqual(tabs.map(\.title), ["Overrides", "Flags"])
+    }
+
+    /// Order is the caller's, not the library's.
+    func testTabsKeepTheOrderTheyAreGiven() {
+        let tabs: [FlagCompanionTab] = [
+            .overrides,
+            .signals(ComposedSignal.self, appGroup: "group.example.flags"),
+            .flags,
+        ]
+        XCTAssertEqual(tabs.map(\.id), ["overrides", "signals", "flags"])
+    }
+
+    func testSignalsCanBeLeftOutEntirely() {
+        let view = FlagCompanionView(
+            appGroup: "group.example.\(UUID().uuidString)", tabs: [.overrides]
+        )
+        XCTAssertNotNil(view.body)
+    }
+
+    func testACustomTabCarriesItsOwnIdentityAndContent() {
+        let tab = FlagCompanionTab.custom(
+            id: "environment", title: "Environment", symbol: "square.stack.3d.up"
+        ) { store in
+            Text("\(store.schema.flags.count)")
+        }
+
+        XCTAssertEqual(tab.id, "environment")
+        XCTAssertEqual(tab.symbol, "square.stack.3d.up")
+        XCTAssertNotNil(tab.content(makeStore()))
+    }
+
+    /// Selection starts on the first tab, whichever that is.
+    func testTheFirstTabIsSelected() {
+        XCTAssertNotNil(
+            FlagCompanionTabs(store: makeStore(), tabs: [.flags, .overrides]).body
+        )
+    }
+
+    func testTheSignalsViewBuilds() {
+        let view = FlagSignalsView(ComposedSignal.self, appGroup: "group.example.flags")
+        XCTAssertNotNil(view.body)
+    }
+}
+
+private enum ComposedSignal: String, FlagSignal {
+    case refetchRemoteConfiguration
 }

@@ -74,43 +74,118 @@
 
     extension FlagCompanionView where Content == FlagCompanionTabs {
 
-        /// The zero-configuration companion: overrides, then the whole flag tree.
-        public init(appGroup: String) {
+        /// A companion built from a list of tabs.
+        ///
+        /// Defaults to overrides and the whole flag tree, which is every companion's
+        /// minimum. Add ``FlagCompanionTab/signals(_:appGroup:title:symbol:)`` if your app
+        /// has signals, leave it out if it does not, and put them in whatever order reads
+        /// best.
+        public init(appGroup: String, tabs: [FlagCompanionTab] = [.overrides, .flags]) {
             self.init(appGroup: appGroup) { store in
-                FlagCompanionTabs(store: store)
+                FlagCompanionTabs(store: store, tabs: tabs)
             }
+        }
+    }
+
+    // MARK: - Tabs
+
+    /// One tab in a companion, chosen rather than written.
+    ///
+    /// Companions differ in what they need: one app has signals to send, another has a
+    /// screen built around a single flag, most want neither. Composing a list keeps the
+    /// choice — and the order — yours without any of them reimplementing the shell:
+    ///
+    /// ```swift
+    /// FlagCompanionView(
+    ///     appGroup: "group.com.example.flags",
+    ///     tabs: [.overrides, .signals(AppSignal.self), .flags]
+    /// )
+    /// ```
+    public struct FlagCompanionTab: Identifiable {
+
+        public let id: String
+        let title: String
+        let symbol: String
+        let content: (FlagEditingStore) -> AnyView
+
+        init(
+            id: String,
+            title: String,
+            symbol: String,
+            content: @escaping (FlagEditingStore) -> AnyView
+        ) {
+            self.id = id
+            self.title = title
+            self.symbol = symbol
+            self.content = content
+        }
+    }
+
+    extension FlagCompanionTab {
+
+        /// What has been changed, and the ways it leaves the device.
+        public static var overrides: FlagCompanionTab {
+            FlagCompanionTab(id: "overrides", title: "Overrides", symbol: "dial.medium") {
+                AnyView(FlagOverridesView(store: $0))
+            }
+        }
+
+        /// Every flag the host published, grouped and searchable.
+        public static var flags: FlagCompanionTab {
+            FlagCompanionTab(id: "flags", title: "Flags", symbol: "flag") {
+                AnyView(FlagBrowserView(store: $0))
+            }
+        }
+
+        /// One-way instructions to a running host. Omit it if your app has none — the
+        /// tab needs your signal enum, so there is nothing sensible to show without one.
+        public static func signals<Signal: FlagSignal>(
+            _ type: Signal.Type,
+            appGroup: String,
+            title: String = "Signals",
+            symbol: String = "paperplane"
+        ) -> FlagCompanionTab {
+            FlagCompanionTab(id: "signals", title: title, symbol: symbol) { _ in
+                AnyView(FlagSignalsView(Signal.self, appGroup: appGroup))
+            }
+        }
+
+        /// Anything of your own, handed the same store the built-in tabs use.
+        public static func custom<Content: View>(
+            id: String,
+            title: String,
+            symbol: String,
+            @ViewBuilder content: @escaping (FlagEditingStore) -> Content
+        ) -> FlagCompanionTab {
+            FlagCompanionTab(id: id, title: title, symbol: symbol) { AnyView(content($0)) }
         }
     }
 
     // MARK: - The default layout
 
-    /// The two tabs every companion wants: what has changed, and what can change.
+    /// Renders a list of tabs, filled when selected and outlined otherwise.
     public struct FlagCompanionTabs: View {
 
-        private enum Tab: Hashable {
-            case overrides, flags
-        }
-
         private let store: FlagEditingStore
-        @State private var selection: Tab = .overrides
+        private let tabs: [FlagCompanionTab]
 
-        public init(store: FlagEditingStore) {
+        @State private var selection: String
+
+        public init(store: FlagEditingStore, tabs: [FlagCompanionTab] = [.overrides, .flags]) {
             self.store = store
+            self.tabs = tabs
+            self._selection = State(initialValue: tabs.first?.id ?? "")
         }
 
         public var body: some View {
             TabView(selection: $selection) {
-                FlagOverridesView(store: store)
-                    .flagCompanionTab(
-                        "Overrides", symbol: "dial.medium", isSelected: selection == .overrides
-                    )
-                    .tag(Tab.overrides)
-
-                FlagBrowserView(store: store)
-                    .flagCompanionTab(
-                        "Flags", symbol: "flag", isSelected: selection == .flags
-                    )
-                    .tag(Tab.flags)
+                ForEach(tabs) { tab in
+                    tab.content(store)
+                        .flagCompanionTab(
+                            tab.title, symbol: tab.symbol, isSelected: selection == tab.id
+                        )
+                        .tag(tab.id)
+                }
             }
         }
     }

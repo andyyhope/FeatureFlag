@@ -142,11 +142,22 @@ them — that is what the demo shows — but one iOS has since suspended will no
 | `DemoApp/RemoteConfigurations.swift` | host | The bundled payloads |
 | `DemoApp/AppSignals.swift` | both | The signal vocabulary, shared so both sides agree |
 | `DemoApp/DemoApp.swift` | host | `@main`; publishes the schema on launch |
-| `DemoCompanion/CompanionRootView.swift` | companion | Loads the schema, renders the editor |
+| `DemoCompanion/CompanionRootView.swift` | companion | Chooses which tabs the companion shows |
+| `DemoCompanion/EnvironmentTab.swift` | companion | The one screen only this app can supply |
 | `DemoCompanion/DemoCompanionApp.swift` | companion | `@main` |
 
 `DemoApp` links **FeatureFlag** only. `DemoCompanion` also links **FeatureFlagUI**. No
 editor code ships in the app people install.
+
+Note how little the companion is. `CompanionRootView` is a list of tabs — overrides,
+signals, flags, and the demo's own environment screen — because opening the shared store,
+handling the two ways that fails, and the overrides, flags and signals screens all come
+from `FlagCompanionView`. A companion with no signals and nothing bespoke needs no view
+at all:
+
+```swift
+FlagCompanionView(appGroup: "group.com.andyyhope.featureflag.demo")
+```
 
 Everything except the two `@main` entry points also builds under `swift build`, as the
 `DemoExamples` target, so the sources cannot silently rot.
