@@ -90,6 +90,8 @@ public struct FlagQRCodeView: View {
 
     @ObservedObject private var store: FlagEditingStore
     @Environment(\.dismiss) private var dismiss
+    @State private var hasCopied = false
+    @State private var savedFile: URL?
 
     public init(store: FlagEditingStore) {
         self.store = store
@@ -106,6 +108,8 @@ public struct FlagQRCodeView: View {
                             .scaledToFit()
                             .frame(maxWidth: 320)
                             .accessibilityLabel("QR code containing \(store.overriddenKeys.count) overrides")
+
+                        actions(for: image)
                     } else {
                         Text(unavailableMessage)
                             .multilineTextAlignment(.center)
@@ -126,6 +130,44 @@ public struct FlagQRCodeView: View {
             }
         }
     }
+
+    #if canImport(CoreImage)
+        /// A code nobody can get out of the sheet is a code you have to photograph with a
+        /// second phone. Copy puts the image on the pasteboard; Save hands it over as a
+        /// file, which is what makes "Save to Files" and "Save Image" appear without this
+        /// view needing a photo library permission from its host app.
+        @ViewBuilder
+        private func actions(for image: CGImage) -> some View {
+            HStack(spacing: 24) {
+                Button {
+                    FlagPasteboard.copy(image: image)
+                    withAnimation(.easeOut(duration: 0.15)) { hasCopied = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+                        withAnimation(.easeIn(duration: 0.2)) { hasCopied = false }
+                    }
+                } label: {
+                    Label(
+                        hasCopied ? "Copied" : "Copy",
+                        systemImage: hasCopied ? "checkmark" : "doc.on.doc"
+                    )
+                }
+                .foregroundStyle(hasCopied ? Color.green : Color.accentColor)
+
+                if let savedFile {
+                    ShareLink(item: savedFile) {
+                        Label("Save", systemImage: "square.and.arrow.down")
+                    }
+                }
+            }
+            .buttonStyle(.borderless)
+            .task(id: store.overriddenKeys) {
+                savedFile = FlagImageExport.temporaryPNG(
+                    for: image,
+                    named: "feature-flags-\(store.overriddenKeys.count)-overrides"
+                )
+            }
+        }
+    #endif
 
     /// The size limit is the failure people actually hit, so say what exceeded it and
     /// what to do rather than "could not generate".
