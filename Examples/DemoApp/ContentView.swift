@@ -14,7 +14,7 @@ struct ContentView: View {
                 liveValues
                 remoteConfiguration
                 provenance
-                events
+                signals
                 combine
             }
             .navigationTitle("Demo")
@@ -127,18 +127,18 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Events
+    // MARK: - Signals
 
-    private var events: some View {
+    private var signals: some View {
         Section {
-            LabeledContent("Last event received", value: model.lastEvent?.rawValue ?? "—")
+            LabeledContent("Last signal received", value: model.lastSignal?.rawValue ?? "—")
                 .font(.caption.monospaced())
         } header: {
-            Text("Events from the companion")
+            Text("Signals from the companion")
         } footer: {
             Text(
                 "The companion can ask this app to do something, not only change what it "
-                    + "reads. iOS will not wake a closed app for another app, so an event "
+                    + "reads. iOS will not wake a closed app for another app, so a signal "
                     + "sent while this one is not running is lost rather than queued."
             )
         }

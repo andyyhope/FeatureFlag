@@ -108,13 +108,13 @@ goes from an empty project to a flag you can toggle from a second app.
 - ``FlagQRCodeError``
 - ``FlagSerializationError``
 
-### Sending events to the host app
+### Sending signals to the host app
 
-- <doc:SendingEvents>
-- ``FlagEvent``
-- ``FlagEventChannel``
-- ``FlagEventSubscription``
-- ``FlagEventError``
+- <doc:SendingSignals>
+- ``FlagSignal``
+- ``FlagSignalChannel``
+- ``FlagSignalSubscription``
+- ``FlagSignalError``
 
 ### Keys and values
 

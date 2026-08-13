@@ -88,3 +88,42 @@ private final class ShadowStubLookup: FeatureFlag.FlagLookup, @unchecked Sendabl
         boxes[key]
     }
 }
+
+// MARK: - A consumer whose own type is called Signal
+
+/// `Signal` is a plausible name for a host app to use, and this package has already
+/// been bitten once by a name Darwin owned — `Semaphore` was unusable as a module name
+/// because `Darwin.Semaphore` shadowed it. Darwin has a `signal()` *function* but no
+/// `Signal` type, so this compiles; the test is here to notice if that ever changes.
+enum Signal: String, FlagSignal {
+    case refetch
+    case purge
+}
+
+extension ShadowingTests {
+
+    func testAConsumerTypeNamedSignalCanBeSentAndReceived() throws {
+        let suiteName = "shadowing.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let channel = FlagSignalChannel(defaults: defaults, notificationName: suiteName)
+
+        let arrived = expectation(description: "handled")
+        let subscription = channel.observe(Signal.self) { signal in
+            XCTAssertEqual(signal, .refetch)
+            arrived.fulfill()
+        }
+
+        channel.send(Signal.refetch)
+        wait(for: [arrived], timeout: 5)
+        _ = subscription
+    }
+
+    /// A local named `signal` shadows Darwin's `signal()`, which is harmless — but the
+    /// generated and framework code has to keep compiling around it.
+    func testALocalNamedSignalDoesNotBreakAnything() {
+        let signal = Signal.purge
+        XCTAssertEqual(signal.signalDescription, "purge")
+    }
+}

@@ -1,34 +1,34 @@
 import Foundation
 
-/// Carries events one way, from a companion app to its host.
+/// Carries signals one way, from a companion app to its host.
 ///
 /// iOS gives third-party apps no XPC and no way to wake another app, so this is built
 /// from the two things that do cross the sandbox: an App Group both apps can read, and
 /// a Darwin notification that carries no payload but does cross process boundaries. The
-/// event name goes in the shared store; the notification rings the bell.
+/// signal name goes in the shared store; the notification rings the bell.
 ///
-/// **Events reach a running host only.** A suspended or terminated app cannot receive a
-/// Darwin notification, and nothing in iOS will wake it, so an event sent to an app that
+/// **Signals reach a running host only.** A suspended or terminated app cannot receive a
+/// Darwin notification, and nothing in iOS will wake it, so a signal sent to an app that
 /// is not running is lost rather than queued. ``send(_:timeout:)`` is how you find out.
 ///
 /// ```swift
 /// // companion
-/// let channel = FlagEventChannel(appGroup: "group.example.flags")!
-/// try await channel.send(AppEvent.refetchRemoteConfiguration, timeout: 2)
+/// let channel = FlagSignalChannel(appGroup: "group.example.flags")!
+/// try await channel.send(AppSignal.refetchRemoteConfiguration, timeout: 2)
 ///
 /// // host
-/// let subscription = channel.observe(AppEvent.self) { event in
-///     switch event {
+/// let subscription = channel.observe(AppSignal.self) { signal in
+///     switch signal {
 ///     case .refetchRemoteConfiguration: …
 ///     }
 /// }
 /// ```
-public final class FlagEventChannel: @unchecked Sendable {
+public final class FlagSignalChannel: @unchecked Sendable {
 
     private enum Key {
-        static let event = "featureflag.event"
-        static let sequence = "featureflag.event.sequence"
-        static let handled = "featureflag.event.handled"
+        static let signal = "featureflag.signal"
+        static let sequence = "featureflag.signal.sequence"
+        static let handled = "featureflag.signal.handled"
     }
 
     private let defaults: UserDefaults
@@ -42,7 +42,7 @@ public final class FlagEventChannel: @unchecked Sendable {
     /// is missing from this target's entitlements.
     public convenience init?(appGroup groupIdentifier: String) {
         guard let defaults = UserDefaults(suiteName: groupIdentifier) else { return nil }
-        self.init(defaults: defaults, notificationName: "\(groupIdentifier).featureflag.event")
+        self.init(defaults: defaults, notificationName: "\(groupIdentifier).featureflag.signal")
     }
 
     public init(defaults: UserDefaults, notificationName: String) {
@@ -53,21 +53,21 @@ public final class FlagEventChannel: @unchecked Sendable {
 
     // MARK: - Sending
 
-    /// Sends an event without waiting to learn whether anything received it.
+    /// Sends a signal without waiting to learn whether anything received it.
     ///
     /// Nothing is thrown and nothing is reported: a Darwin notification has no delivery
     /// receipt. Use ``send(_:timeout:)`` when the caller needs to know.
-    public func send(_ event: some FlagEvent) {
-        _ = write(event)
+    public func send(_ signal: some FlagSignal) {
+        _ = write(signal)
         DarwinNotificationCenter.post(bell)
     }
 
-    /// Sends an event and waits for the host to confirm it handled it.
+    /// Sends a signal and waits for the host to confirm it handled it.
     ///
-    /// Throws ``FlagEventError/notAcknowledged`` if no confirmation arrives in time —
+    /// Throws ``FlagSignalError/notAcknowledged`` if no confirmation arrives in time —
     /// which usually means the host is not running, but see that case's note.
-    public func send(_ event: some FlagEvent, timeout: TimeInterval) async throws {
-        let sequence = write(event)
+    public func send(_ signal: some FlagSignal, timeout: TimeInterval) async throws {
+        let sequence = write(signal)
 
         try await withCheckedThrowingContinuation { continuation in
             let resumed = Resumed()
@@ -92,49 +92,49 @@ public final class FlagEventChannel: @unchecked Sendable {
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 _ = observer
                 if resumed.claim() {
-                    continuation.resume(throwing: FlagEventError.notAcknowledged)
+                    continuation.resume(throwing: FlagSignalError.notAcknowledged)
                 }
             }
         }
     }
 
-    /// Writes the event and returns the sequence number it was given.
+    /// Writes the signal and returns the sequence number it was given.
     @discardableResult
-    private func write(_ event: some FlagEvent) -> Int {
+    private func write(_ signal: some FlagSignal) -> Int {
         lock.lock()
         defer { lock.unlock() }
 
         let sequence = defaults.integer(forKey: Key.sequence) + 1
         defaults.set(sequence, forKey: Key.sequence)
-        defaults.set(["sequence": sequence, "name": event.rawValue], forKey: Key.event)
+        defaults.set(["sequence": sequence, "name": signal.rawValue], forKey: Key.signal)
         return sequence
     }
 
     // MARK: - Receiving
 
-    /// Calls `handler` on the main queue whenever the companion sends an event of this
+    /// Calls `handler` on the main queue whenever the companion sends a signal of this
     /// type, for as long as the returned subscription is held.
     ///
-    /// An event this build cannot represent — a newer companion sending a case that does
+    /// A signal this build cannot represent — a newer companion sending a case that does
     /// not exist here — is skipped and deliberately left unacknowledged, so the sender
     /// learns it was not handled rather than being told it was.
-    public func observe<Event: FlagEvent>(
-        _ type: Event.Type,
-        handler: @escaping @Sendable (Event) -> Void
-    ) -> FlagEventSubscription {
+    public func observe<Signal: FlagSignal>(
+        _ type: Signal.Type,
+        handler: @escaping @Sendable (Signal) -> Void
+    ) -> FlagSignalSubscription {
         let observer = DarwinNotificationCenter.observe(bell) { [weak self] in
             self?.drain(type, handler: handler)
         }
-        return FlagEventSubscription(observer: observer)
+        return FlagSignalSubscription(observer: observer)
     }
 
-    private func drain<Event: FlagEvent>(
-        _ type: Event.Type,
-        handler: @escaping @Sendable (Event) -> Void
+    private func drain<Signal: FlagSignal>(
+        _ type: Signal.Type,
+        handler: @escaping @Sendable (Signal) -> Void
     ) {
         lock.lock()
         guard
-            let record = defaults.dictionary(forKey: Key.event),
+            let record = defaults.dictionary(forKey: Key.signal),
             let sequence = record["sequence"] as? Int,
             let name = record["name"] as? String,
             sequence > defaults.integer(forKey: Key.handled)
@@ -149,10 +149,10 @@ public final class FlagEventChannel: @unchecked Sendable {
         defaults.set(sequence, forKey: Key.handled)
         lock.unlock()
 
-        guard let event = Event(rawValue: name) else { return }
+        guard let signal = Signal(rawValue: name) else { return }
 
         DispatchQueue.main.async {
-            handler(event)
+            handler(signal)
             DarwinNotificationCenter.post(self.acknowledgementBell)
         }
     }
@@ -165,8 +165,8 @@ public final class FlagEventChannel: @unchecked Sendable {
     }
 }
 
-/// Holds an event subscription open. Releasing it stops delivery.
-public final class FlagEventSubscription {
+/// Holds a signal subscription open. Releasing it stops delivery.
+public final class FlagSignalSubscription {
 
     private let observer: DarwinNotificationObserver
 

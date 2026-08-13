@@ -1,7 +1,7 @@
 /// An instruction a companion app can send to its host.
 ///
 /// ```swift
-/// enum AppEvent: String, FlagEvent {
+/// enum AppSignal: String, FlagSignal {
 ///     case refetchRemoteConfiguration
 ///     case purgeCache
 /// }
@@ -10,22 +10,22 @@
 /// Declaring it as an enum is what gives the host an exhaustive `switch`: add a case
 /// and the compiler shows you where to handle it.
 ///
-/// Events carry no payload. That is a deliberate limit rather than a missing feature —
-/// state belongs in flags, which the companion can already edit, and events are verbs.
-/// "Re-fetch for staging" is the `environment` flag plus a bare `refetch`, not an event
+/// Signals carry no payload. That is a deliberate limit rather than a missing feature —
+/// state belongs in flags, which the companion can already edit, and signals are verbs.
+/// "Re-fetch for staging" is the `environment` flag plus a bare `refetch`, not a signal
 /// with an argument.
-public protocol FlagEvent: RawRepresentable, CaseIterable, Hashable, Sendable
+public protocol FlagSignal: RawRepresentable, CaseIterable, Hashable, Sendable
 where RawValue == String {
 
     /// What to call this on a button. Defaults to the raw value.
-    var eventDescription: String { get }
+    var signalDescription: String { get }
 }
 
-extension FlagEvent {
-    public var eventDescription: String { rawValue }
+extension FlagSignal {
+    public var signalDescription: String { rawValue }
 }
 
-public enum FlagEventError: Error, Equatable {
+public enum FlagSignalError: Error, Equatable {
 
     /// The host did not confirm handling within the timeout.
     ///

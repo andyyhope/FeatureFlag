@@ -50,9 +50,9 @@ targets:
     platform: iOS
     sources:
       - path: DemoCompanion
-      # The event vocabulary is shared, so the companion sends typed cases and the host
+      # The signal vocabulary is shared, so the companion sends typed cases and the host
       # switches over them exhaustively.
-      - path: DemoApp/AppEvents.swift
+      - path: DemoApp/AppSignals.swift
     dependencies:
       - package: FeatureFlag
         product: FeatureFlag

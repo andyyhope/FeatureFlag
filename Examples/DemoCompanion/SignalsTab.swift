@@ -28,17 +28,17 @@ enum SignalDelay: TimeInterval, CaseIterable, Identifiable {
 struct SignalsTab: View {
 
     @State private var delay: SignalDelay = .instant
-    @State private var pending: AppEvent?
+    @State private var pending: AppSignal?
     @State private var countdown: Double = 0
     @State private var pendingTask: Task<Void, Never>?
-    @State private var inFlight: AppEvent?
+    @State private var inFlight: AppSignal?
     @State private var history: [Attempt] = []
 
-    private let channel = FlagEventChannel(appGroup: CompanionLoader.appGroup)
+    private let channel = FlagSignalChannel(appGroup: CompanionLoader.appGroup)
 
     private struct Attempt: Identifiable {
         let id = UUID()
-        let event: AppEvent
+        let signal: AppSignal
         let wasHandled: Bool
         let at: Date
     }
@@ -87,17 +87,17 @@ struct SignalsTab: View {
 
     private var signalsSection: some View {
         Section {
-            ForEach(AppEvent.allCases, id: \.self) { event in
+            ForEach(AppSignal.allCases, id: \.self) { signal in
                 Button {
-                    tapped(event)
+                    tapped(signal)
                 } label: {
                     HStack {
-                        Text(event.eventDescription)
+                        Text(signal.signalDescription)
                         Spacer(minLength: 8)
-                        trailing(for: event)
+                        trailing(for: signal)
                     }
                 }
-                .disabled(channel == nil || (inFlight != nil) || (pending != nil && pending != event))
+                .disabled(channel == nil || (inFlight != nil) || (pending != nil && pending != signal))
             }
         } header: {
             Text("Send to the app")
@@ -113,10 +113,10 @@ struct SignalsTab: View {
     }
 
     @ViewBuilder
-    private func trailing(for event: AppEvent) -> some View {
-        if inFlight == event {
+    private func trailing(for signal: AppSignal) -> some View {
+        if inFlight == signal {
             ProgressView()
-        } else if pending == event {
+        } else if pending == signal {
             Circle()
                 .trim(from: 0, to: countdown)
                 .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
@@ -139,7 +139,7 @@ struct SignalsTab: View {
                         .foregroundStyle(attempt.wasHandled ? .green : .orange)
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(attempt.event.eventDescription)
+                        Text(attempt.signal.signalDescription)
                         Text(attempt.at.formatted(date: .omitted, time: .standard))
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -159,18 +159,18 @@ struct SignalsTab: View {
 
     // MARK: - Sending
 
-    private func tapped(_ event: AppEvent) {
-        if pending == event {
+    private func tapped(_ signal: AppSignal) {
+        if pending == signal {
             cancelPending()
         } else if delay == .instant {
-            send(event)
+            send(signal)
         } else {
-            schedule(event)
+            schedule(signal)
         }
     }
 
-    private func schedule(_ event: AppEvent) {
-        pending = event
+    private func schedule(_ signal: AppSignal) {
+        pending = signal
         countdown = 0
         withAnimation(.linear(duration: delay.rawValue)) { countdown = 1 }
 
@@ -179,7 +179,7 @@ struct SignalsTab: View {
             guard Task.isCancelled == false else { return }
             pending = nil
             countdown = 0
-            send(event)
+            send(signal)
         }
     }
 
@@ -190,18 +190,18 @@ struct SignalsTab: View {
         withAnimation(.easeOut(duration: 0.15)) { countdown = 0 }
     }
 
-    private func send(_ event: AppEvent) {
+    private func send(_ signal: AppSignal) {
         guard let channel else { return }
-        inFlight = event
+        inFlight = signal
 
         Task {
             var handled = true
             do {
-                try await channel.send(event, timeout: 2)
+                try await channel.send(signal, timeout: 2)
             } catch {
                 handled = false
             }
-            history.insert(Attempt(event: event, wasHandled: handled, at: Date()), at: 0)
+            history.insert(Attempt(signal: signal, wasHandled: handled, at: Date()), at: 0)
             history = Array(history.prefix(5))
             inFlight = nil
         }

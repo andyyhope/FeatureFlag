@@ -85,29 +85,29 @@ mistyped dot path fails silently as "the backend sent nothing" — the exact bug
 exists to make visible. The tests assert `absentKeys` is empty so a wrong path fails
 loudly.
 
-## Events: asking the host to do something
+## Signals: asking the host to do something
 
-Flags let the companion change what the host *reads*. Events let it ask the host to *act*:
+Flags let the companion change what the host *reads*. Signals let it ask the host to *act*:
 
 ```swift
 // shared by both targets
-public enum AppEvent: String, FlagEvent {
+public enum AppSignal: String, FlagSignal {
     case refetchRemoteConfiguration
     case clearRemoteConfiguration
 }
 
 // companion
-try await channel.send(AppEvent.refetchRemoteConfiguration, timeout: 2)
+try await channel.send(AppSignal.refetchRemoteConfiguration, timeout: 2)
 
 // host — exhaustive, so adding a case shows you where to handle it
-channel.observe(AppEvent.self) { event in … }
+channel.observe(AppSignal.self) { signal in … }
 ```
 
 iOS gives third-party apps no XPC and no way to wake another app, so this is built from
 the App Group plus a Darwin notification — the notification carries no payload, so the
-event name travels in the shared store and the notification rings the bell.
+signal name travels in the shared store and the notification rings the bell.
 
-**Events reach a running host only.** An event sent to a suspended or terminated app is
+**Signals reach a running host only.** A signal sent to a suspended or terminated app is
 lost rather than queued, which is why the buttons use the acknowledged form: without
 waiting for the host to confirm, a press into a closed app would look exactly like a
 successful one. A host that was foregrounded moments ago is still alive and does receive
@@ -128,7 +128,7 @@ them — that is what the demo shows — but one iOS has since suspended will no
   rejected outright with a reason, rather than partly applied.
 - **Watch the Combine counter.** The bottom section counts `$newOnboarding.publisher` as
   changes arrive, whether from the companion app or a remote payload.
-- **Tap an event button** in the companion, having just come from the demo app. It reports
+- **Tap a signal button** in the companion, having just come from the demo app. It reports
   “handled”. Leave the demo closed, or wait for iOS to suspend it, and the same button
   reports that nothing answered.
 
@@ -140,7 +140,7 @@ them — that is what the demo shows — but one iOS has since suspended will no
 | `DemoApp/ContentView.swift` | host | Live values, remote payloads, provenance, Combine |
 | `DemoApp/DemoModel.swift` | host | Owns the pole and the remote source it feeds |
 | `DemoApp/RemoteConfigurations.swift` | host | The bundled payloads |
-| `DemoApp/AppEvents.swift` | both | The event vocabulary, shared so both sides agree |
+| `DemoApp/AppSignals.swift` | both | The signal vocabulary, shared so both sides agree |
 | `DemoApp/DemoApp.swift` | host | `@main`; publishes the schema on launch |
 | `DemoCompanion/CompanionRootView.swift` | companion | Loads the schema, renders the editor |
 | `DemoCompanion/DemoCompanionApp.swift` | companion | `@main` |
