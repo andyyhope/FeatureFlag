@@ -13,7 +13,7 @@ app when you need someone else to change a value on a device you are not holding
 In Xcode, **File → Add Package Dependencies**, or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.1.0"))
+.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.2.0"))
 ```
 
 Add `FeatureFlag` to your app target. Add `FeatureFlagUI` **only** to a companion app —
