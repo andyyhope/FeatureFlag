@@ -172,19 +172,56 @@
         @State private var selection: String
 
         public init(store: FlagEditingStore, tabs: [FlagCompanionTab] = [.overrides, .flags]) {
+            // A tab's id is what the TabView switches on, so two sharing one means one of
+            // them can never be shown — and `ForEach` has no identity to animate by
+            // either. There is no correct rendering to fall back to, and listing
+            // `.overrides` twice is an easy thing to do by accident.
+            precondition(
+                Self.duplicateID(in: tabs) == nil,
+                """
+                A companion cannot have two tabs with the id \
+                '\(Self.duplicateID(in: tabs) ?? "")'. Give one of them a different id, \
+                or drop it.
+                """
+            )
+
             self.store = store
             self.tabs = tabs
             self._selection = State(initialValue: tabs.first?.id ?? "")
         }
 
+        /// The first id claimed by more than one tab, if any.
+        static func duplicateID(in tabs: [FlagCompanionTab]) -> String? {
+            var seen = Set<String>()
+            for tab in tabs where seen.insert(tab.id).inserted == false {
+                return tab.id
+            }
+            return nil
+        }
+
+        /// Whether there is nothing to render. Exposed so the failure is testable rather
+        /// than something you notice by staring at a blank screen.
+        var isEmptyOfTabs: Bool { tabs.isEmpty }
+
         public var body: some View {
-            TabView(selection: $selection) {
-                ForEach(tabs) { tab in
-                    tab.content(store)
-                        .flagCompanionTab(
-                            tab.title, symbol: tab.symbol, isSelected: selection == tab.id
-                        )
-                        .tag(tab.id)
+            if isEmptyOfTabs {
+                // A TabView with no tabs draws nothing at all, which is indistinguishable
+                // from the app being broken. Say which it is.
+                FlagCompanionUnavailableView(
+                    title: "No tabs",
+                    message: "This companion was given an empty tab list, so there is "
+                        + "nothing to show. Pass at least one, or omit the argument for "
+                        + "the default two."
+                )
+            } else {
+                TabView(selection: $selection) {
+                    ForEach(tabs) { tab in
+                        tab.content(store)
+                            .flagCompanionTab(
+                                tab.title, symbol: tab.symbol, isSelected: selection == tab.id
+                            )
+                            .tag(tab.id)
+                    }
                 }
             }
         }
@@ -216,19 +253,22 @@
     /// Why a companion has nothing to show, and what to do about it.
     struct FlagCompanionUnavailableView: View {
 
+        var title: String = "No flags yet"
         let message: String
-        let retry: () -> Void
+        var retry: (() -> Void)?
 
         var body: some View {
             VStack(spacing: 8) {
                 Image(systemName: "flag.slash").font(.largeTitle)
-                Text("No flags yet").font(.headline)
+                Text(title).font(.headline)
                 Text(message)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                Button("Try again", action: retry)
-                    .padding(.top, 4)
+                if let retry {
+                    Button("Try again", action: retry)
+                        .padding(.top, 4)
+                }
             }
             .padding()
         }

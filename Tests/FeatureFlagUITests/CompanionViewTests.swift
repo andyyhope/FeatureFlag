@@ -149,3 +149,41 @@ extension CompanionViewTests {
 private enum ComposedSignal: String, FlagSignal {
     case refetchRemoteConfiguration
 }
+
+// MARK: - Malformed tab lists
+
+extension CompanionViewTests {
+
+    /// Two tabs sharing an id breaks both `ForEach` identity and selection — the tag is
+    /// what a `TabView` switches on, so one of them can never be shown. There is no
+    /// correct rendering to fall back to, so it has to be caught rather than guessed at.
+    func testADuplicateIdIsDetectedAndNamed() {
+        let duplicated = FlagCompanionTabs.duplicateID(in: [.overrides, .flags, .overrides])
+        XCTAssertEqual(duplicated, "overrides")
+
+        let custom = FlagCompanionTab.custom(id: "flags", title: "Mine", symbol: "flag") { _ in
+            Text("mine")
+        }
+        XCTAssertEqual(FlagCompanionTabs.duplicateID(in: [.flags, custom]), "flags")
+    }
+
+    func testAWellFormedListHasNoDuplicate() {
+        XCTAssertNil(
+            FlagCompanionTabs.duplicateID(
+                in: [.overrides, .signals(ComposedSignal.self, appGroup: "g"), .flags]
+            )
+        )
+    }
+
+    /// An empty list used to render a `TabView` with no tabs, which is a blank screen and
+    /// no clue as to why. Saying so costs nothing and cannot be missed.
+    func testAnEmptyListExplainsItselfRatherThanRenderingNothing() {
+        let view = FlagCompanionTabs(store: makeStore(), tabs: [])
+        XCTAssertTrue(view.isEmptyOfTabs)
+        XCTAssertNotNil(view.body)
+    }
+
+    func testAPopulatedListIsNotTreatedAsEmpty() {
+        XCTAssertFalse(FlagCompanionTabs(store: makeStore(), tabs: [.flags]).isEmptyOfTabs)
+    }
+}
