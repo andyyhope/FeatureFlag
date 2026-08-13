@@ -77,27 +77,32 @@
         private var overrides: some View {
             Section {
                 ForEach(overriddenEntries, id: \.key) { entry in
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.description)
-                            Text(entry.key.rawValue)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.description)
+                                Text(entry.key.rawValue)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer(minLength: 8)
+
+                            Button {
+                                try? store.reset(entry)
+                            } label: {
+                                Image(systemName: "arrow.uturn.backward")
+                            }
+                            .buttonStyle(.borderless)
                         }
 
-                        Spacer(minLength: 8)
-
+                        // On its own line, so it has the row's full width. Sharing a
+                        // line with the title meant a URL or an array had to shrink to
+                        // fit beside it, which is the value you most want to read.
                         Text(store.value(for: entry).displayString)
                             .font(.callout.monospaced())
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-
-                        Button {
-                            try? store.reset(entry)
-                        } label: {
-                            Image(systemName: "arrow.uturn.backward")
-                        }
-                        .buttonStyle(.borderless)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             } header: {
