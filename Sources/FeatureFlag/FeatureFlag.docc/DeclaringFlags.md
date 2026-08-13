@@ -106,6 +106,20 @@ Write your own if you have an existing key convention to match:
 let screaming = KeyEncoding(separator: "__") { $0.uppercased() }
 ```
 
+**An encoding has to keep every property distinct.** The one above does not: `oneTap` and
+`onetap` both become `ONETAP`. Two flags landing on one key is a declaration mistake with
+no runtime remedy — both want the same storage, and letting one quietly win would mean the
+other never takes effect — so building the pole traps immediately, naming both properties.
+It happens with the default encoding too: `useHTTPSOnly` and `useHttpsOnly` are both
+`use-https-only`.
+
+``FlagSchema/duplicateKeys`` reports them if you would rather assert in a test than find
+out on first launch:
+
+```swift
+XCTAssertTrue(FlagSchema(AppFlags.self).duplicateKeys.isEmpty)
+```
+
 Choose an encoding once, at the start. Changing it later renames every key, which means
 every stored override — on every tester's device — stops being found.
 
