@@ -54,7 +54,7 @@ if flags.checkout.applePay { … }
 Add the package in Xcode via **File → Add Package Dependencies**, or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.2.0"))
+.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.3.0"))
 ```
 
 Pre-1.0, `from:` would accept every breaking `0.x` bump. While the API is still moving,
@@ -287,7 +287,7 @@ shows having to survive a trip through JSON.
 
 ## Status and contributing
 
-Early. 492 tests, but the API may still move before 1.0. Issues and pull requests are
+Early. 509 tests, but the API may still move before 1.0. Issues and pull requests are
 welcome — if you are reporting a bug, a failing test says more than a description.
 
 ## License
