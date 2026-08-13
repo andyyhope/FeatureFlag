@@ -181,16 +181,37 @@ The companion renders it, linking none of your code:
 ```swift
 import FeatureFlagUI
 
-FlagBrowserView(store: try FlagEditingStore(appGroup: "group.example.flags"))
+@main
+struct CompanionApp: App {
+    var body: some Scene {
+        WindowGroup {
+            FlagCompanionView(appGroup: "group.example.flags")
+        }
+    }
+}
 ```
+
+That is the whole app, not a sketch of one. It opens the shared store, reports the two
+ways that can fail with something someone can act on, and gives you Overrides and Flags
+as tabs.
+
+Tabs are a list you compose, so a companion takes only what it needs:
+
+```swift
+FlagCompanionView(
+    appGroup: "group.example.flags",
+    tabs: [.overrides, .signals(AppSignal.self, appGroup: "group.example.flags"), .flags]
+)
+```
+
+`.signals` is opt-in — it needs your signal enum, so an app without one simply leaves it
+out. `.custom(id:title:symbol:)` puts your own screens in the same list, handed the same
+store.
 
 Edits reach your running app through a Darwin notification, because
 `UserDefaults.didChangeNotification` does **not** fire for writes made by another process.
 Sources also re-read on foreground, covering the case where your app was suspended and
 missed one.
-
-There is a second screen, `FlagOverridesView`, listing only what has been changed — with
-the JSON, the QR code, import and reset. Put one in each tab and they share a store.
 
 → [Building a companion app](Sources/FeatureFlagUI/FeatureFlagUI.docc/BuildingACompanionApp.md)
 has the whole app, and
