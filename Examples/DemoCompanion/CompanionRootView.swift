@@ -18,17 +18,24 @@ struct CompanionRootView: View {
             // pulled out of the flag list because it is the switch you reach for first
             // and the one that moves everything else.
             TabView(selection: $selection) {
+                // Overrides comes first: "what have I changed?" is the question you have
+                // before filing a bug or handing the device to someone else, and it is
+                // where the overrides leave the device.
+                FlagOverridesView(store: store)
+                    .tabItem { Label("Overrides", systemImage: "slider.horizontal.3") }
+                    .tag(0)
+
                 FlagBrowserView(store: store)
                     .tabItem { Label("Flags", systemImage: "flag") }
-                    .tag(0)
+                    .tag(1)
 
                 EnvironmentTab(store: store)
                     .tabItem { Label("Environment", systemImage: "server.rack") }
-                    .tag(1)
+                    .tag(2)
 
                 SignalsTab()
                     .tabItem { Label("Signals", systemImage: "dot.radiowaves.left.and.right") }
-                    .tag(2)
+                    .tag(3)
             }
 
         case let .failed(message):

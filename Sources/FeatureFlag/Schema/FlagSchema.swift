@@ -171,7 +171,7 @@ extension FlagSchema {
         }
         return try JSONSerialization.data(
             withJSONObject: jsonObject,
-            options: [.prettyPrinted, .sortedKeys]
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         )
     }
 

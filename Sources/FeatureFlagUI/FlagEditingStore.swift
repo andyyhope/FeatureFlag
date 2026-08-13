@@ -90,6 +90,15 @@ public final class FlagEditingStore: ObservableObject {
         }
     }
 
+    /// The flag tree, rebuilt from the flat schema so groups can be walked one screen
+    /// at a time rather than poured into a single list.
+    public var tree: FlagTreeNode { FlagTreeNode(schema: schema) }
+
+    /// Every flag beneath a node that currently carries an override.
+    public func overriddenCount(in node: FlagTreeNode) -> Int {
+        node.allFlags.filter(isOverridden).count
+    }
+
     public func entry(for key: FlagKey) -> FlagSchema.Entry? {
         schema.flags.first { $0.key == key }
     }

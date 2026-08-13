@@ -84,7 +84,7 @@ extension FlagPayload {
             }
             return try JSONSerialization.data(
                 withJSONObject: object(using: \.jsonValue),
-                options: [.prettyPrinted, .sortedKeys]
+                options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             )
         case .plist:
             return try PropertyListSerialization.data(

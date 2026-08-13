@@ -15,16 +15,6 @@ import SwiftUI
 public struct FlagBrowserView: View {
 
     @ObservedObject private var store: FlagEditingStore
-    @State private var sheet: Sheet?
-    @State private var errorMessage: String?
-
-    private enum Sheet: Identifiable {
-        case qrCode
-        case importText
-
-        var id: Int { hashValue }
-    }
-
     public init(store: FlagEditingStore) {
         self.store = store
     }
@@ -32,16 +22,10 @@ public struct FlagBrowserView: View {
     public var body: some View {
         NavigationStack {
             List {
-                ForEach(store.sections) { section in
-                    Section {
-                        ForEach(section.entries, id: \.key) { entry in
-                            FlagRowView(store: store, entry: entry)
-                        }
-                    } header: {
-                        if let title = section.title {
-                            Text(section.path.count > 1 ? section.pathDescription : title)
-                        }
-                    }
+                if store.searchText.isEmpty {
+                    tree
+                } else {
+                    matches
                 }
 
                 if store.sections.isEmpty {
@@ -49,74 +33,55 @@ public struct FlagBrowserView: View {
                         title: store.searchText.isEmpty ? "No flags" : "No matches",
                         message: store.searchText.isEmpty
                             ? "The app has not published any flags yet."
-                            : "No flag matches “\(store.searchText)”."
+                            : "No flag matches \u{201C}\(store.searchText)\u{201D}."
                     )
                 }
             }
             .searchable(text: $store.searchText, prompt: "Search flags")
             .navigationTitle(store.schema.applicationName ?? "Feature Flags")
-            #if os(iOS) || os(tvOS)
-                // A large title costs half a screen that is better spent on flags.
+            #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar { toolbar }
-            .sheet(item: $sheet) { sheet in
-                switch sheet {
-                case .qrCode: FlagQRCodeView(store: store)
-                case .importText: FlagImportView(store: store)
+        }
+    }
+
+    /// Flags declared at the root, then a way into each group.
+    @ViewBuilder
+    private var tree: some View {
+        let root = store.tree
+
+        if root.flags.isEmpty == false {
+            Section {
+                ForEach(root.flags, id: \.key) { entry in
+                    FlagRowView(store: store, entry: entry)
                 }
             }
-            .alert(
-                "Could not do that",
-                isPresented: Binding(
-                    get: { errorMessage != nil },
-                    set: { if $0 == false { errorMessage = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "")
+        }
+
+        if root.groups.isEmpty == false {
+            Section(root.flags.isEmpty ? "" : "Groups") {
+                ForEach(root.groups) { node in
+                    FlagGroupLink(store: store, node: node)
+                }
             }
         }
     }
 
-    @ToolbarContentBuilder
-    private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            Menu {
-                Button {
-                    sheet = .qrCode
-                } label: {
-                    Label("Show QR code", systemImage: "qrcode")
+    /// Searching flattens the tree. Someone looking for a key by name does not want to
+    /// guess which group it was filed under.
+    @ViewBuilder
+    private var matches: some View {
+        ForEach(store.sections) { section in
+            Section {
+                ForEach(section.entries, id: \.key) { entry in
+                    FlagRowView(store: store, entry: entry)
                 }
-
-                Button {
-                    sheet = .importText
-                } label: {
-                    Label("Import…", systemImage: "square.and.arrow.down")
+            } header: {
+                if let title = section.title {
+                    Text(section.path.count > 1 ? section.pathDescription : title)
                 }
-
-                ShareLink(item: exportedText) {
-                    Label("Export JSON", systemImage: "square.and.arrow.up")
-                }
-
-                Divider()
-
-                Button(role: .destructive) {
-                    do { try store.resetAll() } catch { errorMessage = "\(error)" }
-                } label: {
-                    Label("Reset all overrides", systemImage: "arrow.uturn.backward")
-                }
-                .disabled(store.overriddenKeys.isEmpty)
-            } label: {
-                Label("Actions", systemImage: "ellipsis.circle")
             }
         }
-    }
-
-    private var exportedText: String {
-        guard let data = try? store.export(as: .json) else { return "{}" }
-        return String(decoding: data, as: UTF8.self)
     }
 }
 
