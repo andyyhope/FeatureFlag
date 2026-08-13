@@ -73,7 +73,7 @@ do {
     try remote.apply(data, format: .json)
 } catch let RemoteOverrideError.rejected(problems) {
     for problem in problems {
-        print(problem.remoteKey, problem.kind)   // .typeMismatch, .unknownCase, .unknownFlag
+        print(problem.remoteKey, problem.kind)   // .typeMismatch, .unknownCase, .unknownKey
     }
 }
 ```
@@ -144,10 +144,16 @@ let remote = RemoteOverrideSource(AppFlags.self, mapper: ExperimentListMapper())
 ```
 
 A mapper that returns a key no flag has is reported as
-``RemoteOverrideProblem/Kind/unknownFlag`` rather than ignored. ``DotPathMapper`` cannot
+``RemoteOverrideProblem/Kind/unknownKey`` rather than ignored. ``DotPathMapper`` cannot
 cause that — it only ever emits keys it read from the schema — but a custom mapper with a
 typo can, and silently doing nothing would look exactly like a backend that sent no
 overrides at all.
+
+Worth knowing when you see it: this is the one problem kind that says something about
+*your* code rather than the payload. Everything else in the list means the backend sent
+something this build cannot use; `unknownKey` here means the mapper asked for a flag that
+does not exist. The identically named case on ``FlagImportProblem`` is the ordinary data
+version of the same idea — a document naming a flag this app does not have.
 
 ### Precedence
 

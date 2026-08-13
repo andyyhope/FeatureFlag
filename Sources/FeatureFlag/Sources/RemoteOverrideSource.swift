@@ -48,10 +48,15 @@ public struct RemoteOverrideProblem: Hashable, Sendable {
         case unknownCase
         /// The mapper produced a key no flag in this app has.
         ///
-        /// ``DotPathMapper`` cannot cause this, since it only ever emits keys it read
-        /// from the schema. A custom mapper with a typo can, and silently doing nothing
-        /// would look exactly like a backend that sent no overrides.
-        case unknownFlag
+        /// Unlike the identically named case on ``FlagImportProblem``, this one is not
+        /// a data problem. ``DotPathMapper`` cannot cause it, since it only ever emits
+        /// keys it read from the schema — so reaching it means a custom
+        /// ``RemoteOverrideMapper`` returned a key that does not exist, which is a bug
+        /// in that mapper rather than anything the backend sent.
+        ///
+        /// It is reported rather than skipped because silently doing nothing would look
+        /// exactly like a backend that sent no overrides at all.
+        case unknownKey
     }
 
     public let key: FlagKey
@@ -178,7 +183,7 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
         for (key, remoteValue) in mapped {
             guard let entry = entries[key] else {
                 problems.append(
-                    RemoteOverrideProblem(key: key, remoteKey: key.rawValue, kind: .unknownFlag)
+                    RemoteOverrideProblem(key: key, remoteKey: key.rawValue, kind: .unknownKey)
                 )
                 continue
             }
