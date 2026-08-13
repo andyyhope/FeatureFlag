@@ -175,7 +175,11 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
     @discardableResult
     public func apply(_ value: RemoteValue) throws -> RemoteApplyResult {
         let mapped = try mapper.map(value, schema: schema)
-        let entries = Dictionary(uniqueKeysWithValues: schema.flags.map { ($0.key, $0) })
+        // First wins on a duplicated key rather than trapping — a schema handed in
+        // directly is not guaranteed well formed the way one built from a container is.
+        let entries = Dictionary(
+            schema.flags.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first }
+        )
 
         var boxes = [FlagKey: FlagValueBox]()
         var problems = [RemoteOverrideProblem]()

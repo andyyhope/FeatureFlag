@@ -84,6 +84,18 @@ public struct FlagSchema: Sendable, Equatable {
         self.applicationName = applicationName
         self.flags = flags
         self.groups = groups
+
+        // Two flags sharing a key is a declaration mistake with no runtime remedy: both
+        // want the same storage, and quietly letting one win would mean the other never
+        // takes effect on any device. Failing here means failing on the first launch of
+        // the build that introduced it, rather than later on somebody else's phone.
+        precondition(
+            duplicateKeyDescription == nil,
+            """
+            Flags must resolve to unique keys, but \(duplicateKeyDescription ?? ""). \
+            Rename one of the properties, or use a KeyEncoding that tells them apart.
+            """
+        )
     }
 
     /// Assembles a schema from entries directly.
@@ -147,9 +159,47 @@ public struct FlagSchema: Sendable, Equatable {
         }
     }
 
+    /// Flags that resolve to the same key, mapped to the property paths that produced
+    /// them. Empty for any well-formed tree.
+    ///
+    /// Collisions are easier to write than they look: `useHTTPSOnly` and `useHttpsOnly`
+    /// both kebabcase to `use-https-only`, and any ``KeyEncoding`` that maps two names
+    /// onto one does it far more readily.
+    public var duplicateKeys: [FlagKey: [[String]]] {
+        Self.duplicateKeys(in: flags)
+    }
+
+    /// Every collision as one readable clause, or `nil` when there are none.
+    public var duplicateKeyDescription: String? {
+        let duplicates = duplicateKeys
+        guard duplicates.isEmpty == false else { return nil }
+
+        return
+            duplicates
+            .sorted { $0.key.rawValue < $1.key.rawValue }
+            .map { key, paths in
+                let names = paths.map { $0.joined(separator: ".") }.joined(separator: " and ")
+                return "'\(key.rawValue)' is claimed by \(names)"
+            }
+            .joined(separator: "; ")
+    }
+
+    static func duplicateKeys(in flags: [Entry]) -> [FlagKey: [[String]]] {
+        var paths = [FlagKey: [[String]]]()
+        for entry in flags {
+            paths[entry.key, default: []].append(entry.propertyPath)
+        }
+        return paths.filter { $0.value.count > 1 }
+    }
+
     /// The declared type of every flag, for validating an incoming payload.
+    ///
+    /// Deliberately tolerant of a key appearing twice — the first wins. A schema built
+    /// from a container cannot contain duplicates, but one decoded from a document or
+    /// assembled by hand can, and this is reached by every import and by the companion's
+    /// editor, where trapping would turn a bad document into a crash.
     public var valueTypes: [FlagKey: FlagValueType] {
-        Dictionary(uniqueKeysWithValues: flags.map { ($0.key, $0.valueType) })
+        Dictionary(flags.map { ($0.key, $0.valueType) }, uniquingKeysWith: { first, _ in first })
     }
 
     /// The permitted values of every enum flag, for validating an incoming payload.
@@ -160,7 +210,8 @@ public struct FlagSchema: Sendable, Equatable {
         var result = [FlagKey: [FlagValueBox]]()
         for entry in flags {
             guard let cases = entry.cases, cases.isEmpty == false else { continue }
-            result[entry.key] = cases
+            // First wins, as in `valueTypes`, so a duplicated key cannot trap here.
+            if result[entry.key] == nil { result[entry.key] = cases }
         }
         return result
     }
@@ -217,12 +268,22 @@ extension FlagSchema {
             throw FlagSchemaError.malformed("missing flags")
         }
 
+        let entries = try flagObjects.map(Entry.init(jsonObject:))
+
+        // A published document naming one key twice describes an editor with two rows
+        // fighting over the same storage. Saying so beats rendering it.
+        if let collision = Self.duplicateKeys(in: entries).keys.sorted(by: {
+            $0.rawValue < $1.rawValue
+        }).first {
+            throw FlagSchemaError.malformed("more than one flag uses the key '\(collision)'")
+        }
+
         self.init(
             formatVersion: version,
             generatedAt: (object["generatedAt"] as? String).flatMap(flagDateFormatter.date(from:))
                 ?? Date(timeIntervalSince1970: 0),
             applicationName: object["applicationName"] as? String,
-            flags: try flagObjects.map(Entry.init(jsonObject:)),
+            flags: entries,
             groups: (object["groups"] as? [[String: Any]] ?? []).compactMap(
                 Group.init(jsonObject:)
             )

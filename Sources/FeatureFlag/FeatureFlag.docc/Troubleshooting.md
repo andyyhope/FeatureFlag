@@ -82,6 +82,25 @@ pole.flags.schema        // your flag named "schema"
 pole.schema              // the pole's FlagSchema
 ```
 
+### "Flags must resolve to unique keys" on the first launch
+
+Two flags encode to the same storage key. The message names both properties:
+
+```
+Flags must resolve to unique keys, but 'use-https-only' is claimed by
+useHTTPSOnly and useHttpsOnly. Rename one of the properties, or use a
+KeyEncoding that tells them apart.
+```
+
+There is no runtime remedy — both flags want the same storage, and letting one win
+silently would mean the other never takes effect anywhere — so this traps when the schema
+is built rather than later. Renaming a property is usually the fix.
+
+The default encoding collides only when two names differ just in how an acronym is cased.
+A custom ``KeyEncoding`` collides far more easily: anything that maps two distinct
+property names onto one string will do it. ``FlagSchema/duplicateKeys`` reports them, so a
+test can assert there are none.
+
 ### The macro complains about a missing type annotation
 
 A macro sees syntax, not types, so it cannot infer one:
