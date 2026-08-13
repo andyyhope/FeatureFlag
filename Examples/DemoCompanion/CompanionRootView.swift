@@ -5,7 +5,25 @@ import SwiftUI
 struct CompanionRootView: View {
 
     @StateObject private var loader = CompanionLoader()
-    @State private var selection = 0
+    @State private var selection: Tab = .overrides
+
+    /// Ordered as the tab bar reads: what have I changed, what can I ask the app to do,
+    /// what can I change, and which backend is it all pointed at.
+    private enum Tab: Hashable {
+        case overrides, signals, flags, environment
+    }
+
+    /// The selected tab shows a filled glyph, the rest an outline.
+    ///
+    /// Two things this depends on. Each symbol must actually ship a `.fill` variant —
+    /// `slider.horizontal.3`, `server.rack` and `dot.radiowaves.left.and.right` do not,
+    /// which is why none of them are here. And every label needs
+    /// `.environment(\.symbolVariants, .none)`, because iOS fills tab bar glyphs for you
+    /// and would otherwise render the outline name filled anyway. Setting that on the
+    /// `TabView` is not enough; it has to be on the label inside `tabItem`.
+    private func symbol(_ base: String, for tab: Tab) -> String {
+        selection == tab ? base + ".fill" : base
+    }
 
     var body: some View {
         switch loader.state {
@@ -22,20 +40,35 @@ struct CompanionRootView: View {
                 // before filing a bug or handing the device to someone else, and it is
                 // where the overrides leave the device.
                 FlagOverridesView(store: store)
-                    .tabItem { Label("Overrides", systemImage: "slider.horizontal.3") }
-                    .tag(0)
-
-                FlagBrowserView(store: store)
-                    .tabItem { Label("Flags", systemImage: "flag") }
-                    .tag(1)
-
-                EnvironmentTab(store: store)
-                    .tabItem { Label("Environment", systemImage: "server.rack") }
-                    .tag(2)
+                    .tabItem {
+                        Label("Overrides", systemImage: symbol("dial.medium", for: .overrides))
+                            .environment(\.symbolVariants, .none)
+                    }
+                    .tag(Tab.overrides)
 
                 SignalsTab()
-                    .tabItem { Label("Signals", systemImage: "dot.radiowaves.left.and.right") }
-                    .tag(3)
+                    .tabItem {
+                        Label("Signals", systemImage: symbol("paperplane", for: .signals))
+                            .environment(\.symbolVariants, .none)
+                    }
+                    .tag(Tab.signals)
+
+                FlagBrowserView(store: store)
+                    .tabItem {
+                        Label("Flags", systemImage: symbol("flag", for: .flags))
+                            .environment(\.symbolVariants, .none)
+                    }
+                    .tag(Tab.flags)
+
+                EnvironmentTab(store: store)
+                    .tabItem {
+                        Label(
+                            "Environment",
+                            systemImage: symbol("square.stack.3d.up", for: .environment)
+                        )
+                        .environment(\.symbolVariants, .none)
+                    }
+                    .tag(Tab.environment)
             }
 
         case let .failed(message):
