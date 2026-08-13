@@ -664,36 +664,36 @@ final class DocumentationExampleTests: XCTestCase {
         }
     }
 
-    // MARK: - SendingEvents.md
+    // MARK: - SendingSignals.md
 
-    /// The event enum samples: the default label, and a custom one.
-    func testTheEventEnumSamples() {
+    /// The signal enum samples: the default label, and a custom one.
+    func testTheSignalEnumSamples() {
         XCTAssertEqual(
-            BareAppEvent.refetchRemoteConfiguration.eventDescription,
+            BareAppSignal.refetchRemoteConfiguration.signalDescription,
             "refetchRemoteConfiguration"
         )
         XCTAssertEqual(
-            LabelledAppEvent.refetchRemoteConfiguration.eventDescription,
+            LabelledAppSignal.refetchRemoteConfiguration.signalDescription,
             "Re-fetch remote config"
         )
-        XCTAssertEqual(BareAppEvent.allCases.count, 3)
+        XCTAssertEqual(BareAppSignal.allCases.count, 3)
     }
 
     /// Sending and receiving, over a suite standing in for an App Group.
-    func testAnEventReachesAnObserver() throws {
-        let suiteName = "docs.events.\(UUID().uuidString)"
+    func testAnSignalReachesAnObserver() throws {
+        let suiteName = "docs.signals.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let channel = FlagEventChannel(defaults: defaults, notificationName: suiteName)
+        let channel = FlagSignalChannel(defaults: defaults, notificationName: suiteName)
 
         let received = expectation(description: "handled")
-        let subscription = channel.observe(BareAppEvent.self) { event in
-            XCTAssertEqual(event, .refetchRemoteConfiguration)
+        let subscription = channel.observe(BareAppSignal.self) { signal in
+            XCTAssertEqual(signal, .refetchRemoteConfiguration)
             received.fulfill()
         }
 
-        channel.send(BareAppEvent.refetchRemoteConfiguration)
+        channel.send(BareAppSignal.refetchRemoteConfiguration)
 
         wait(for: [received], timeout: 5)
         _ = subscription
@@ -970,18 +970,18 @@ private struct DocsShadowingFlags {
     var schema: String
 }
 
-/// The event samples from SendingEvents.md.
-private enum BareAppEvent: String, FlagEvent {
+/// The signal samples from SendingSignals.md.
+private enum BareAppSignal: String, FlagSignal {
     case refetchRemoteConfiguration
     case purgeImageCache
     case signOut
 }
 
-private enum LabelledAppEvent: String, FlagEvent {
+private enum LabelledAppSignal: String, FlagSignal {
     case refetchRemoteConfiguration
     case purgeImageCache
 
-    var eventDescription: String {
+    var signalDescription: String {
         switch self {
         case .refetchRemoteConfiguration: return "Re-fetch remote config"
         case .purgeImageCache: return "Purge image cache"

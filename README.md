@@ -110,7 +110,7 @@ Xcode (**Product → Build Documentation**) or right here on GitHub:
 | [Remote overrides](Sources/FeatureFlag/FeatureFlag.docc/RemoteOverrides.md) | Dot paths, custom mappers, and why a bad field rejects everything |
 | [Sharing with a companion app](Sources/FeatureFlag/FeatureFlag.docc/SharingWithACompanionApp.md) | What the schema carries, and what it costs |
 | [Exporting and importing](Sources/FeatureFlag/FeatureFlag.docc/ExportingAndImporting.md) | JSON, property lists and QR codes |
-| [Sending events to the host](Sources/FeatureFlag/FeatureFlag.docc/SendingEvents.md) | One-way instructions from the companion to a running app |
+| [Sending signals to the host](Sources/FeatureFlag/FeatureFlag.docc/SendingSignals.md) | One-way instructions from the companion to a running app |
 | [Building a companion app](Sources/FeatureFlagUI/FeatureFlagUI.docc/BuildingACompanionApp.md) | An editor for another app's flags, in about thirty lines |
 | [Troubleshooting](Sources/FeatureFlag/FeatureFlag.docc/Troubleshooting.md) | The failures worth recognising on sight |
 
@@ -199,7 +199,7 @@ explains what the schema carries.
 
 The companion can also send one-way instructions — "re-fetch the remote config", "purge
 the cache" — to a running host: see
-[Sending events to the host](Sources/FeatureFlag/FeatureFlag.docc/SendingEvents.md).
+[Sending signals to the host](Sources/FeatureFlag/FeatureFlag.docc/SendingSignals.md).
 
 ## Reading from other threads
 

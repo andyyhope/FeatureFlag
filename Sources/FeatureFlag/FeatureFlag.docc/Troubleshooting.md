@@ -122,12 +122,12 @@ configuration; there is no partial-apply option, on purpose.
 so you can say what to remove. Data flags are the usual culprit: base64 does not compress,
 and one blob can exhaust the whole code. Export a document and share that instead.
 
-### `FlagEventChannel` reports `.notAcknowledged`
+### `FlagSignalChannel` reports `.notAcknowledged`
 
-Usually the host is not running — events reach a running app only, and nothing on iOS can
+Usually the host is not running — signals reach a running app only, and nothing on iOS can
 wake one. But it is also what you see if the host is slow, still launching, or the
 notification was coalesced, so do not present it as certainty. See
-[Sending events to the host app](doc:SendingEvents).
+[Sending signals to the host app](doc:SendingSignals).
 
 ### `FlagBrowserView` cannot be found on watchOS or tvOS
 

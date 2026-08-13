@@ -183,9 +183,9 @@ has; the host skips those and falls back to its default, so the editor has to as
 Showing it would be worse than useless — it would claim a value the app is quietly
 ignoring, and bind a control to something it cannot render.
 
-### Sending events as well as setting flags
+### Sending signals as well as setting flags
 
-Flags are state; some things are verbs. `FeatureFlag`'s `FlagEventChannel` carries
+Flags are state; some things are verbs. `FeatureFlag`'s `FlagSignalChannel` carries
 one-way instructions — "re-fetch the remote config", "purge the cache" — from the
 companion to a running host. That is core-module API, usable from a companion without any
-UI support: see `FeatureFlag`'s *Sending events to the host app* article.
+UI support: see `FeatureFlag`'s *Sending signals to the host app* article.

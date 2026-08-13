@@ -19,12 +19,12 @@ final class DemoModel: ObservableObject {
     /// Proof the publishers work: changes counted as they arrive, not read on redraw.
     @Published private(set) var onboardingChanges = 0
 
-    /// The last event the companion sent, so the demo can show it arriving.
-    @Published private(set) var lastEvent: AppEvent?
+    /// The last signal the companion sent, so the demo can show it arriving.
+    @Published private(set) var lastSignal: AppSignal?
 
     private let remote: RemoteOverrideSource
-    private let events: FlagEventChannel?
-    private var eventSubscription: FlagEventSubscription?
+    private let signals: FlagSignalChannel?
+    private var signalSubscription: FlagSignalSubscription?
     private var cancellables: Set<AnyCancellable> = []
 
     init() {
@@ -44,7 +44,7 @@ final class DemoModel: ObservableObject {
         sources.append(remote)
 
         self.flags = FlagPole(AppFlags.self, sources: sources, applicationName: "Demo")
-        self.events = FlagEventChannel(appGroup: demoAppGroup)
+        self.signals = FlagSignalChannel(appGroup: demoAppGroup)
 
         // The environment flag drives which payload is applied. `publisher` replays the
         // current value on subscribe, so this also performs the initial fetch.
@@ -59,16 +59,16 @@ final class DemoModel: ObservableObject {
             .store(in: &cancellables)
 
         // The companion can ask this app to do something, not just change what it reads.
-        eventSubscription = events?.observe(AppEvent.self) { [weak self] event in
-            MainActor.assumeIsolated { self?.handle(event) }
+        signalSubscription = signals?.observe(AppSignal.self) { [weak self] signal in
+            MainActor.assumeIsolated { self?.handle(signal) }
         }
     }
 
-    // MARK: - Events from the companion
+    // MARK: - Signals from the companion
 
-    private func handle(_ event: AppEvent) {
-        lastEvent = event
-        switch event {
+    private func handle(_ signal: AppSignal) {
+        lastSignal = signal
+        switch signal {
         case .refetchRemoteConfiguration:
             switchTo(flags.environment)
         case .clearRemoteConfiguration:
