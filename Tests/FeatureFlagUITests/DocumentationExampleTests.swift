@@ -46,6 +46,13 @@ final class UIDocumentationExampleTests: XCTestCase {
         XCTAssertNotNil(CompanionRootView(store: makeStore()).body)
     }
 
+    /// Step two's fallback, which has to compile at the package's deployment floor —
+    /// `ContentUnavailableView` is iOS 17 and macOS 14, and this package supports
+    /// iOS 16 and macOS 13.
+    func testTheUnavailableFallbackCompilesAtTheDeploymentFloor() {
+        XCTAssertNotNil(MissingStoreView().body)
+    }
+
     /// The "editing something other than an App Group" sample.
     func testAStoreCanBeBuiltFromASchemaOnDisk() throws {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -151,6 +158,21 @@ final class UIDocumentationExampleTests: XCTestCase {
 }
 
 // MARK: - Fixtures, as the articles write them
+
+/// The "no store yet" fallback from BuildingACompanionApp.md.
+private struct MissingStoreView: View {
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "flag.slash").font(.largeTitle)
+            Text("No flags yet").font(.headline)
+            Text("Run the host app once so it can publish its schema.")
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+    }
+}
 
 /// The tabbed root view from BuildingACompanionApp.md.
 private struct CompanionRootView: View {

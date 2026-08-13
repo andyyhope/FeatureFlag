@@ -47,7 +47,9 @@ extension FlagPole {
     public func importPayload(_ data: Data, as format: FlagPayloadFormat) throws
         -> FlagImportResult
     {
-        let payload = try FlagPayload.decode(data, as: format, valueTypes: schema.valueTypes)
+        let payload = try FlagPayload.decode(
+            data, as: format, valueTypes: schema.valueTypes, cases: schema.valueCases
+        )
         return try apply(payload)
     }
 

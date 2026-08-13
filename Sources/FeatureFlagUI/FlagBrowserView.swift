@@ -211,6 +211,7 @@ public struct FlagImportView: View {
                     switch problem.kind {
                     case .unknownKey: return "\(problem.key): not a flag in this app"
                     case .typeMismatch: return "\(problem.key): wrong type"
+                    case .unknownCase: return "\(problem.key): not one of its choices"
                     }
                 }
                 .joined(separator: "\n")

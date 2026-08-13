@@ -7,15 +7,21 @@ The failures worth recognising on sight, and what each one actually means.
 Most of these are properties of the platform rather than bugs in the framework, which is
 why they are documented rather than fixed.
 
-### `UserDefaultsSource(appGroup:)` returns nil
+### The two apps do not seem to share anything
 
-The suite could not be opened, which in practice means the App Group is missing from that
-target's entitlements. Check that **both** targets declare it and that the identifiers
-match exactly.
-
+Check that **both** targets declare the App Group and that the identifiers match exactly.
 On the simulator there is a second cause: if code signing is disabled for the build, the
 entitlements are never embedded, so no container exists. The example project signs
 ad-hoc (`CODE_SIGN_IDENTITY = "-"`) for exactly this reason.
+
+Do not rely on ``UserDefaultsSource/init(appGroup:name:)`` returning `nil` to tell you
+this. It returns `nil` when the suite cannot be opened, but a group the target is not
+entitled to use does not reliably produce that — on macOS it demonstrably does not — so
+the failure shows up as writes going nowhere rather than as an obvious `nil`.
+
+``FlagPole/publishSchema(appGroup:)`` is the reliable check. It goes through the
+container URL, which iOS does check against the entitlements, and throws
+``FlagSchemaError/notPublished`` when the group is not one this target may use.
 
 ### The companion says the host has not published a schema
 
@@ -62,12 +68,14 @@ var newOnboarding: Bool
 Everything the macro generates is already fully qualified, so nothing else can be
 shadowed this way.
 
-### `pole.someFlag` does not compile, but `pole.flags.someFlag` does
+### `pole.someFlag` gives you something other than your flag
 
 Real members win over dynamic member lookup. A flag named `flags`, `keys`, `schema`,
-`overrides` or `descriptors` collides with a property of ``FlagPole`` itself, so the
-shorthand is unavailable for those five names. Everything still works — reach it through
-the container:
+`overrides` or `descriptors` collides with a property of ``FlagPole`` itself, and the
+shorthand quietly resolves to the pole's member instead of yours. Depending on the types
+involved that is either a compile error at the use site or, worse, not an error at all.
+
+Everything still works — reach it through the container:
 
 ```swift
 pole.flags.schema        // your flag named "schema"
@@ -121,11 +129,12 @@ wake one. But it is also what you see if the host is slow, still launching, or t
 notification was coalesced, so do not present it as certainty. See
 [Sending events to the host app](doc:SendingEvents).
 
-### `FeatureFlagUI` will not build for watchOS
+### `FlagBrowserView` cannot be found on watchOS or tvOS
 
-It compiles to nothing on watchOS and tvOS. Those platforms have no `Menu`, `TextEditor`
-or bordered text field, and a flag editor on a watch is not a real use case, so the module
-is scoped to iOS and macOS rather than pretending. The core module supports all four.
+The module builds there but is empty: every view is behind `#if os(iOS) || os(macOS)`, so
+the symbols do not exist. Those platforms have no `Menu`, `TextEditor` or bordered text
+field, and a flag editor on a watch is not a real use case, so the module is scoped rather
+than pretending. The core `FeatureFlag` module supports all four platforms.
 
 ### Everything reverts when a config refresh lands
 

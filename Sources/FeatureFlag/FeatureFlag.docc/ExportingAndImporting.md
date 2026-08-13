@@ -41,21 +41,24 @@ let result = try flags.importPayload(data, as: .json)
 result.appliedKeys
 ```
 
-Import is strict and all-or-nothing. If any key is unknown to this app, or holds a value
-of the wrong type, **nothing** is applied and every problem is reported at once:
+Import is strict and all-or-nothing. If any key is unknown to this app, holds a value of
+the wrong type, or names an enum case this build does not have, **nothing** is applied
+and every problem is reported at once:
 
 ```swift
 do {
     try flags.importPayload(data, as: .json)
 } catch let FlagImportError.rejected(problems) {
     for problem in problems {
-        print(problem.key, problem.kind)     // .unknownKey or .typeMismatch
+        print(problem.key, problem.kind)   // .unknownKey, .typeMismatch, .unknownCase
     }
 }
 ```
 
-A document from a different app, or from a build where a flag has since changed type, is
-refused rather than half-applied.
+A document from a different app, or from a build where a flag has since changed type or
+lost an enum case, is refused rather than half-applied. The enum check matters more here
+than anywhere else: documents travel between builds by design, so the case that exists on
+the sending device and not the receiving one is the normal situation, not the exotic one.
 
 Values land in the highest-priority mutable source — the local override layer — so an
 imported value outranks anything a backend later sends, and stays until it is cleared.

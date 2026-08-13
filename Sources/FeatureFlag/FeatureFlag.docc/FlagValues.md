@@ -85,9 +85,10 @@ enum Tier: String, FlagValue, CaseIterable, FlagValueCases {
 }
 ```
 
-That list is also enforced. A remote payload sending `"platinum"` is rejected outright
-rather than silently falling back to the default on every read — the difference between
-a backend error you can see and a flag that mysteriously never takes effect.
+That list is also enforced, on every way a value can arrive: a `"platinum"` from your
+backend, from an imported document, or from a scanned code is rejected outright rather
+than stored and silently fallen back from on every read. That is the difference between
+an error you can see and a flag that mysteriously never takes effect.
 
 An `Int`-raw enum works the same way:
 

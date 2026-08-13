@@ -40,15 +40,22 @@ struct CompanionRootView: View {
         if let store {
             FlagOverridesView(store: store)
         } else {
-            ContentUnavailableView(
-                "No flags yet",
-                systemImage: "flag.slash",
-                description: Text("Run the host app once so it can publish its schema.")
-            )
+            VStack(spacing: 8) {
+                Image(systemName: "flag.slash").font(.largeTitle)
+                Text("No flags yet").font(.headline)
+                Text("Run the host app once so it can publish its schema.")
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
         }
     }
 }
 ```
+
+`ContentUnavailableView` would say this in one line, but it is iOS 17, and this package
+supports iOS 16. Use it if your companion's own minimum is high enough — a companion is
+an internal build, so it usually can be.
 
 ### 3. Put the screens in tabs
 

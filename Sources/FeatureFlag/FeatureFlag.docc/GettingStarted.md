@@ -100,9 +100,14 @@ other way to learn what flags exist, what they are called, or what types they ho
 never links your code.
 
 ``UserDefaultsSource/init(appGroup:name:)`` returns `nil` when the suite cannot be
-opened, which in practice means the group is missing from that target's entitlements.
-Force-unwrapping is reasonable in an app you control: if the entitlement is wrong you
-want to find out on the first launch, not from a flag that quietly never changes.
+opened. Force-unwrapping it is reasonable in an app you control, but do not read it as a
+check that the entitlement is right — a group the target may not use does not reliably
+come back `nil`, and the symptom you get instead is a companion whose edits never arrive.
+
+`publishSchema(appGroup:)` on the next line is the better canary. It goes through the
+container URL, which *is* checked against the entitlements on iOS, and throws
+``FlagSchemaError/notPublished`` when the group is not one this target may use. Let that
+throw be loud in a debug build.
 
 ### 5. Render it in the companion
 

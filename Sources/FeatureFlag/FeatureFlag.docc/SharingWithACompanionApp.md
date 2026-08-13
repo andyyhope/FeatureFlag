@@ -30,8 +30,11 @@ Publish every launch, not once. The schema describes the build that is running, 
 build with a new flag needs to say so.
 
 ``FlagPole/publishSchema(appGroup:)`` throws ``FlagSchemaError/notPublished`` when the
-group is missing from the target's entitlements. There is also a directory form, which is
-what tests and macOS tools use:
+container cannot be reached — which on iOS means the group is missing from the target's
+entitlements. Unsandboxed macOS performs no such check and hands back a constructed path
+regardless, so treat a success there as less informative than one on device.
+
+There is also a directory form, which is what tests and macOS tools use:
 
 ```swift
 try flags.publishSchema(inDirectory: someDirectory)

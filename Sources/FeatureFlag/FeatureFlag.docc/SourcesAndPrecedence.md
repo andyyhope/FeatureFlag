@@ -106,11 +106,14 @@ final class FirebaseSource: FlagValueSource, @unchecked Sendable {
 
     let sourceName = "Firebase"
 
+    private let lock = NSLock()
     private let subject = PassthroughSubject<FlagChange, Never>()
     private var values: [FlagKey: FlagValueBox] = [:]
 
     func box(for key: FlagKey, as type: FlagValueType) -> FlagValueBox? {
-        values[key]
+        lock.lock()
+        defer { lock.unlock() }
+        return values[key]
     }
 
     var changes: AnyPublisher<FlagChange, Never> {
@@ -118,11 +121,17 @@ final class FirebaseSource: FlagValueSource, @unchecked Sendable {
     }
 
     func refresh(with values: [FlagKey: FlagValueBox]) {
+        lock.lock()
         self.values = values
+        lock.unlock()
         subject.send(.all)
     }
 }
 ```
+
+The lock is not decoration. `@unchecked Sendable` is a promise you are making to the
+compiler, and a pole reads flags from whatever thread the app happens to be on while your
+network callback writes from another. Every source that ships here is written this way.
 
 The `type` argument is the flag's declared type. A source stored in a loosely typed
 medium can use it to decode exactly rather than guess — which is how

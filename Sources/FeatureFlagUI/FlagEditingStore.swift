@@ -191,12 +191,18 @@ public final class FlagEditingStore: ObservableObject {
 
     /// Applies an exported document. Strict and all-or-nothing, as everywhere else.
     public func `import`(_ data: Data, as format: FlagPayloadFormat) throws {
-        let payload = try FlagPayload.decode(data, as: format, valueTypes: schema.valueTypes)
+        let payload = try FlagPayload.decode(
+            data, as: format, valueTypes: schema.valueTypes, cases: schema.valueCases
+        )
         try apply(payload)
     }
 
     public func importQRCode(_ scanned: String) throws {
-        try apply(try FlagQRCode.decode(scanned, valueTypes: schema.valueTypes))
+        try apply(
+            try FlagQRCode.decode(
+                scanned, valueTypes: schema.valueTypes, cases: schema.valueCases
+            )
+        )
     }
 
     /// Applies a payload, undoing what it managed if a write fails partway.

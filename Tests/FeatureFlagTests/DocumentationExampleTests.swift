@@ -875,11 +875,14 @@ private final class FirebaseSource: FlagValueSource, @unchecked Sendable {
 
     let sourceName = "Firebase"
 
+    private let lock = NSLock()
     private let subject = PassthroughSubject<FlagChange, Never>()
     private var values: [FlagKey: FlagValueBox] = [:]
 
     func box(for key: FlagKey, as type: FlagValueType) -> FlagValueBox? {
-        values[key]
+        lock.lock()
+        defer { lock.unlock() }
+        return values[key]
     }
 
     var changes: AnyPublisher<FlagChange, Never> {
@@ -887,7 +890,9 @@ private final class FirebaseSource: FlagValueSource, @unchecked Sendable {
     }
 
     func refresh(with values: [FlagKey: FlagValueBox]) {
+        lock.lock()
         self.values = values
+        lock.unlock()
         subject.send(.all)
     }
 }
