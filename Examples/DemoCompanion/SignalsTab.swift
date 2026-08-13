@@ -34,7 +34,7 @@ struct SignalsTab: View {
     @State private var inFlight: AppSignal?
     @State private var history: [Attempt] = []
 
-    private let channel = FlagSignalChannel(appGroup: CompanionLoader.appGroup)
+    private let channel = FlagSignalChannel(appGroup: CompanionRootView.appGroup)
 
     private struct Attempt: Identifiable {
         let id = UUID()

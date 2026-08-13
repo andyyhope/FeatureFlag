@@ -16,20 +16,16 @@ import SwiftUI
 
 @main
 struct CompanionApp: App {
-
-    private let store = try? FlagEditingStore(appGroup: "group.com.example.flags")
-
     var body: some Scene {
         WindowGroup {
-            if let store {
-                FlagOverridesView(store: store)
-            } else {
-                Text("Run the host app once so it can publish its schema.")
-            }
+            FlagCompanionView(appGroup: "group.com.example.flags")
         }
     }
 }
 ```
+
+That is the whole app. ``FlagCompanionView`` opens the shared store, reports the two ways
+that can fail, and gives you the screens below as tabs.
 
 ### Platforms
 
@@ -55,6 +51,8 @@ free. See [Building a companion app](doc:BuildingACompanionApp).
 ### Essentials
 
 - <doc:BuildingACompanionApp>
+- ``FlagCompanionView``
+- ``FlagCompanionTabs``
 - ``FlagEditingStore``
 
 ### Screens

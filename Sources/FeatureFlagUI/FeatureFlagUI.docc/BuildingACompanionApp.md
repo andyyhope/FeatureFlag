@@ -1,6 +1,6 @@
 # Building a companion app
 
-An editor for another app's flags, in about thirty lines.
+An editor for another app's flags, in one line.
 
 ## Overview
 
@@ -12,72 +12,88 @@ It does **not** link the host app's code, import its modules, or know its types.
 flag in the host, rebuild the host, and the companion picks it up — there is nothing to
 keep in step.
 
-### 1. Share an App Group
+### The whole app
+
+```swift
+import FeatureFlagUI
+import SwiftUI
+
+@main
+struct CompanionApp: App {
+    var body: some Scene {
+        WindowGroup {
+            FlagCompanionView(appGroup: "group.com.example.flags")
+        }
+    }
+}
+```
+
+That is not an abbreviation of the real thing — it *is* the app. ``FlagCompanionView``
+opens the shared store, reports the two ways that can fail with a message someone can act
+on, and gives you Overrides and Flags as tabs. None of it is specific to any host, so
+none of it is worth writing twice.
+
+Give the target the App Group described below and you are finished. The rest of this
+article is for when you want more than the default.
+
+### Sharing an App Group
 
 Add the **App Groups** capability to the companion target with the same identifier the
 host uses. Without it the store cannot be built, and there is no way around that: the
 group is what makes one app's `UserDefaults` visible to another.
 
-### 2. Build a store
+It is also the only thing the two apps share. The companion never links the host's code.
 
-``FlagEditingStore`` is the whole model layer. Give it a group and it reads the host's
-published schema and edits the same shared suite:
+### Adding your own tabs
 
-```swift
-let store = try FlagEditingStore(appGroup: "group.com.example.flags")
-```
-
-It throws when the group is missing from *this* target's entitlements, and when the host
-has not published a schema yet. Both are worth telling the user apart from an empty list,
-because "run the host app once" is a fix they can act on:
+Some tabs only your app can supply — a screen built around one particular flag, or one
+that sends your own `FlagSignal` cases. Pass a closure and you are handed
+the loaded store, so you can order the built-in views however you like and put your own
+beside them, without reimplementing loading or the failure states:
 
 ```swift
 struct CompanionRootView: View {
 
-    private let store = try? FlagEditingStore(appGroup: "group.com.example.flags")
+    private enum Tab: Hashable {
+        case overrides, signals, flags
+    }
+
+    @State private var selection: Tab = .overrides
 
     var body: some View {
-        if let store {
-            FlagOverridesView(store: store)
-        } else {
-            VStack(spacing: 8) {
-                Image(systemName: "flag.slash").font(.largeTitle)
-                Text("No flags yet").font(.headline)
-                Text("Run the host app once so it can publish its schema.")
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+        FlagCompanionView(appGroup: "group.com.example.flags") { store in
+            TabView(selection: $selection) {
+                FlagOverridesView(store: store)
+                    .flagCompanionTab(
+                        "Overrides", symbol: "dial.medium", isSelected: selection == .overrides
+                    )
+                    .tag(Tab.overrides)
+
+                MySignalsTab()
+                    .flagCompanionTab(
+                        "Signals", symbol: "paperplane", isSelected: selection == .signals
+                    )
+                    .tag(Tab.signals)
+
+                FlagBrowserView(store: store)
+                    .flagCompanionTab(
+                        "Flags", symbol: "flag", isSelected: selection == .flags
+                    )
+                    .tag(Tab.flags)
             }
-            .padding()
         }
     }
 }
 ```
 
-`ContentUnavailableView` would say this in one line, but it is iOS 17, and this package
-supports iOS 16. Use it if your companion's own minimum is high enough — a companion is
-an internal build, so it usually can be.
+`flagCompanionTab(_:symbol:isSelected:)` fills the symbol when its tab is selected and
+outlines it otherwise. Two things it handles that are easy to get wrong: the symbol has
+to ship a `.fill` variant — `slider.horizontal.3` and `dot.radiowaves.left.and.right` do
+not, so a selected tab drawn with them looks like every other one — and iOS fills tab bar
+glyphs for you, so the outline name alone changes nothing until `symbolVariants` is
+cleared on the label itself.
 
-### 3. Put the screens in tabs
-
-The two views answer different questions, and a companion of any size wants both. They
-share one store, so state stays consistent between them:
-
-```swift
-struct CompanionRootView: View {
-
-    let store: FlagEditingStore
-
-    var body: some View {
-        TabView {
-            FlagOverridesView(store: store)
-                .tabItem { Label("Overrides", systemImage: "slider.horizontal.3") }
-
-            FlagBrowserView(store: store)
-                .tabItem { Label("Flags", systemImage: "flag") }
-        }
-    }
-}
-```
+### The two built-in screens
 
 ``FlagOverridesView`` lists only what has been changed, with a per-row reset, the exported
 JSON inline and copyable, and the actions that move overrides off the device — QR code,
@@ -87,10 +103,8 @@ share, import, reset everything.
 flags it holds and how many are overridden; searching flattens the whole tree, because
 someone hunting for a key by name should not have to guess which group it was filed under.
 
-Both views bring their own `NavigationStack`, so put them straight into a `TabView`
-without wrapping them again.
-
-### 4. That is the whole app
+Both bring their own `NavigationStack`, so they go straight into a `TabView` without
+wrapping them again.
 
 Everything else — which control a flag gets, how an enum becomes a picker, how a `Data`
 flag is edited, what a reset does — comes from the schema and needs no work from you.
