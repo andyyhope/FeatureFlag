@@ -238,3 +238,40 @@ private struct BigStringFlags {
     @Flag(default: "", description: "Blob")
     var blob: String
 }
+
+extension TransportEdgeCaseTests {
+
+    /// The documents claim to be readable and hand-editable. JSONSerialization escapes
+    /// forward slashes by default, which turns every URL into something nobody wants to
+    /// read, let alone correct by hand.
+    func testExportedJSONDoesNotEscapeSlashes() throws {
+        let pole = FlagPole(SlashFlags.self, sources: [SnapshotSource(name: "local")])
+        try pole.setOverride(URL(string: "https://staging.example.com/v3")!, for: pole.flags.$endpoint)
+
+        let json = String(decoding: try pole.export(as: .json), as: UTF8.self)
+
+        XCTAssertTrue(json.contains("https://staging.example.com/v3"), json)
+        XCTAssertFalse(json.contains(#"\/"#), "slashes should not be escaped")
+    }
+
+    func testAPublishedSchemaDoesNotEscapeSlashesEither() throws {
+        let json = String(decoding: try FlagSchema(SlashFlags.self).jsonData(), as: UTF8.self)
+        XCTAssertFalse(json.contains(#"\/"#), "slashes should not be escaped")
+    }
+
+    func testEscapingChangeDoesNotBreakTheRoundTrip() throws {
+        let source = FlagPole(SlashFlags.self, sources: [SnapshotSource(name: "local")])
+        try source.setOverride(URL(string: "https://a.example/x/y?z=1/2")!, for: source.flags.$endpoint)
+
+        let destination = FlagPole(SlashFlags.self, sources: [SnapshotSource(name: "local")])
+        _ = try destination.importPayload(try source.export(as: .json), as: .json)
+
+        XCTAssertEqual(destination.overrides, source.overrides)
+    }
+}
+
+@FlagContainer
+private struct SlashFlags {
+    @Flag(default: URL(string: "https://example.com")!, description: "Endpoint")
+    var endpoint: URL
+}
