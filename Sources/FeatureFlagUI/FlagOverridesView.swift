@@ -99,8 +99,14 @@
                         // On its own line, so it has the row's full width. Sharing a
                         // line with the title meant a URL or an array had to shrink to
                         // fit beside it, which is the value you most want to read.
+                        //
+                        // Capped all the same: a Data flag displays as base64, which has
+                        // no length worth relying on, and one override must not be able
+                        // to push every other one off the screen. The JSON block below
+                        // still carries it in full.
                         Text(store.value(for: entry).displayString)
                             .font(.callout.monospaced())
+                            .lineLimit(6)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
