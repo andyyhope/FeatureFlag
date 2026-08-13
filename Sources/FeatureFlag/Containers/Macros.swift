@@ -33,7 +33,7 @@ public macro FlagContainer() =
 /// gates the flags beneath it, so `checkout.applePay` is independent of everything
 /// above it.
 ///
-/// This expands to nothing on its own — ``FlagContainer(_:)`` reads it for metadata.
+/// This expands to nothing on its own — ``FlagContainer()`` reads it for metadata.
 @attached(peer)
 public macro FlagGroup(description: String) =
     #externalMacro(module: "FeatureFlagMacros", type: "FlagGroupMacro")

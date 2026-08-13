@@ -1,0 +1,6 @@
+# Swift Package Index builds and hosts the DocC documentation from this.
+# https://swiftpackageindex.com/andyyhope/FeatureFlag/documentation
+version: 1
+builder:
+  configs:
+    - documentation_targets: [FeatureFlag, FeatureFlagUI]

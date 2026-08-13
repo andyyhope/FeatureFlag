@@ -2,7 +2,7 @@ import FeatureFlag
 
 /// One level of the flag tree: the flags declared directly here, and the groups beneath.
 ///
-/// A published ``FlagSchema`` is deliberately flat — a list of flags, each carrying the
+/// A published `FlagSchema` is deliberately flat — a list of flags, each carrying the
 /// property path it sits at — because a flat list is easy to serialise and to validate a
 /// payload against. An editor wants the shape back, so that a tree of any depth can be
 /// walked one screen at a time rather than poured into one enormous list.

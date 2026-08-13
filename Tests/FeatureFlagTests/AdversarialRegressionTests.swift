@@ -325,3 +325,82 @@ private final class CountingSource: MutableFlagValueSource, @unchecked Sendable 
         values[key] = box
     }
 }
+
+// MARK: - Import validates enum cases, as remote overrides do
+
+extension AdversarialRegressionTests {
+
+    /// A document naming a case this build does not have is refused.
+    ///
+    /// The remote path rejects exactly this, on the grounds that a value the app cannot
+    /// represent would otherwise fall back to the default on every read — invisible in
+    /// the editor, and indistinguishable from a flag that simply does not work. An
+    /// imported document arrives from an older or newer build all the time, so the same
+    /// reasoning applies with more force.
+    func testImportingAnEnumCaseThisBuildLacksIsRejected() throws {
+        let local = SnapshotSource()
+        let pole = FlagPole(CaseCheckedFlags.self, sources: [local])
+
+        let document = Data(#"{"formatVersion": 1, "values": {"tier": "platinum"}}"#.utf8)
+
+        XCTAssertThrowsError(try pole.importPayload(document, as: .json)) { error in
+            guard case let .rejected(problems) = error as? FlagImportError else {
+                return XCTFail("expected .rejected, got \(error)")
+            }
+            XCTAssertEqual(problems.map(\.kind), [.unknownCase])
+            XCTAssertEqual(problems.map(\.key), ["tier"])
+        }
+
+        XCTAssertNil(local.values["tier"], "nothing is stored")
+        XCTAssertEqual(pole.tier, .free)
+    }
+
+    /// A case this build does have still imports.
+    func testImportingAKnownEnumCaseStillWorks() throws {
+        let pole = FlagPole(CaseCheckedFlags.self, sources: [SnapshotSource()])
+
+        try pole.importPayload(
+            Data(#"{"formatVersion": 1, "values": {"tier": "pro"}}"#.utf8), as: .json
+        )
+        XCTAssertEqual(pole.tier, .pro)
+    }
+
+    /// The same check on the scanned path, which shares the decoder.
+    func testAScannedCodeWithAnUnknownCaseIsRejected() throws {
+        let sender = FlagPole(WiderCaseFlags.self, sources: [SnapshotSource()])
+        try sender.setOverride(WiderTier.platinum, for: sender.flags.$tier)
+        let scanned = try sender.qrCodeString()
+
+        let receiver = FlagPole(CaseCheckedFlags.self, sources: [SnapshotSource()])
+        XCTAssertThrowsError(try receiver.importQRCode(scanned)) { error in
+            guard case let .rejected(problems) = error as? FlagImportError else {
+                return XCTFail("expected .rejected, got \(error)")
+            }
+            XCTAssertEqual(problems.map(\.kind), [.unknownCase])
+        }
+        XCTAssertEqual(receiver.tier, .free)
+    }
+}
+
+private enum CaseCheckedTier: String, FlagValue, CaseIterable, FlagValueCases {
+    case free, pro
+}
+
+/// A build with a case the receiving build has never heard of.
+private enum WiderTier: String, FlagValue, CaseIterable, FlagValueCases {
+    case free, pro, platinum
+}
+
+@FlagContainer
+private struct CaseCheckedFlags {
+
+    @Flag(default: CaseCheckedTier.free, description: "Tier")
+    var tier: CaseCheckedTier
+}
+
+@FlagContainer
+private struct WiderCaseFlags {
+
+    @Flag(default: WiderTier.free, description: "Tier")
+    var tier: WiderTier
+}

@@ -30,7 +30,7 @@ public enum FlagQRCodeError: Error, Equatable {
 /// raw JSON would not.
 ///
 /// Only overrides travel, never the whole flag tree. No camera UI ships here —
-/// ``decode(_:valueTypes:)`` takes whatever string your scanner produced.
+/// ``decode(_:valueTypes:cases:)`` takes whatever string your scanner produced.
 public enum FlagQRCode {
 
     /// Identifies a flag code and its wire format version.
@@ -68,7 +68,8 @@ public enum FlagQRCode {
     /// applied — the same strictness as any other import.
     public static func decode(
         _ scanned: String,
-        valueTypes: [FlagKey: FlagValueType]
+        valueTypes: [FlagKey: FlagValueType],
+        cases: [FlagKey: [FlagValueBox]] = [:]
     ) throws -> FlagPayload {
         guard scanned.hasPrefix(prefix) else { throw FlagQRCodeError.unrecognisedFormat }
 
@@ -76,7 +77,7 @@ public enum FlagQRCode {
         guard let compressed = base64URLDecoded(body) else { throw FlagQRCodeError.corrupt }
         guard let json = decompress(compressed) else { throw FlagQRCodeError.corrupt }
 
-        return try FlagPayload.decode(json, as: .json, valueTypes: valueTypes)
+        return try FlagPayload.decode(json, as: .json, valueTypes: valueTypes, cases: cases)
     }
 
     // MARK: - Image
@@ -224,7 +225,9 @@ extension FlagPole {
     /// Applies a scanned flag code.
     @discardableResult
     public func importQRCode(_ scanned: String) throws -> FlagImportResult {
-        let payload = try FlagQRCode.decode(scanned, valueTypes: schema.valueTypes)
+        let payload = try FlagQRCode.decode(
+            scanned, valueTypes: schema.valueTypes, cases: schema.valueCases
+        )
         return try apply(payload)
     }
 }

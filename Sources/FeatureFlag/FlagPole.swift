@@ -35,8 +35,14 @@ public final class FlagPole<Root: FlagContainer>: ObservableObject, @unchecked S
     private let resolver: FlagResolver
     private var cancellables: Set<AnyCancellable> = []
 
-    /// - Parameter applicationName: What a companion app calls this app. Defaults to
-    ///   the bundle's display name, falling back to its name and then its identifier.
+    /// - Parameters:
+    ///   - rootType: The container describing this app's flags.
+    ///   - sources: Asked in order, so the order of the stack *is* the precedence.
+    ///     Anything no source supplies falls back to the flag's compiled default.
+    ///   - keyEncoding: How property-name paths become storage keys. Changing this
+    ///     renames every key, so choose it once.
+    ///   - applicationName: What a companion app calls this app. Defaults to the
+    ///     bundle's display name, falling back to its name and then its identifier.
     public init(
         _ rootType: Root.Type = Root.self,
         sources: [any FlagValueSource],

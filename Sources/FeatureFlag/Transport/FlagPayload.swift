@@ -38,6 +38,12 @@ public struct FlagImportProblem: Hashable, Sendable {
         case unknownKey
         /// The value is not of the flag's declared type.
         case typeMismatch
+        /// The value is not one of the enum's cases.
+        ///
+        /// A document written by a build with more cases than this one would otherwise
+        /// store a value every read falls back from — invisible in an editor, and
+        /// indistinguishable from a flag that simply does not work.
+        case unknownCase
     }
 
     public let key: FlagKey
@@ -107,12 +113,24 @@ extension FlagPayload {
 
     /// Reads a payload, validating every value against the types the app declares.
     ///
-    /// Unknown keys and mistyped values are both reported, and nothing is applied
-    /// unless everything checks out.
+    /// Unknown keys, mistyped values and — where `cases` is supplied — enum cases this
+    /// build does not have are all reported, and nothing is applied unless everything
+    /// checks out.
+    ///
+    /// - Parameters:
+    ///   - data: The document, as exported.
+    ///   - format: How to parse it. A JSON document read as a property list, or the
+    ///     reverse, is rejected rather than guessed at.
+    ///   - valueTypes: The declared type of each flag, as ``FlagSchema/valueTypes``
+    ///     provides them. A key absent from this is an unknown flag.
+    ///   - cases: The permitted values for each enum flag, as ``FlagSchema/valueCases``
+    ///     provides them. Omitting it skips that check, which only makes sense when the
+    ///     caller has no schema to check against.
     public static func decode(
         _ data: Data,
         as format: FlagPayloadFormat,
-        valueTypes: [FlagKey: FlagValueType]
+        valueTypes: [FlagKey: FlagValueType],
+        cases: [FlagKey: [FlagValueBox]] = [:]
     ) throws -> FlagPayload {
         let object: [String: Any]
         switch format {
@@ -159,6 +177,15 @@ extension FlagPayload {
                 problems.append(FlagImportProblem(key: key, kind: .typeMismatch))
                 continue
             }
+
+            // Enums declare their cases, so a document from a build that has more of
+            // them is caught here rather than at every read, the same way a remote
+            // payload is.
+            if let permitted = cases[key], permitted.isEmpty == false, !permitted.contains(box) {
+                problems.append(FlagImportProblem(key: key, kind: .unknownCase))
+                continue
+            }
+
             values[key] = box
         }
 

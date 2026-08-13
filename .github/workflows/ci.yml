@@ -27,6 +27,21 @@ jobs:
       - name: Test
         run: swift test
 
+  documentation:
+    name: Documentation
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Warnings here are broken links and undocumented parameters — the things that
+      # make published documentation quietly wrong.
+      - name: Build documentation
+        run: |
+          swift package generate-documentation \
+            --target FeatureFlag \
+            --target FeatureFlagUI \
+            --warnings-as-errors
+
   platforms:
     name: Build ${{ matrix.name }}
     runs-on: macos-latest

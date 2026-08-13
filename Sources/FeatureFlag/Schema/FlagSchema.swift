@@ -151,6 +151,19 @@ public struct FlagSchema: Sendable, Equatable {
     public var valueTypes: [FlagKey: FlagValueType] {
         Dictionary(uniqueKeysWithValues: flags.map { ($0.key, $0.valueType) })
     }
+
+    /// The permitted values of every enum flag, for validating an incoming payload.
+    ///
+    /// Flags that are not enums are absent rather than present and empty, so a caller
+    /// can treat "no entry" as "anything of the right type will do".
+    public var valueCases: [FlagKey: [FlagValueBox]] {
+        var result = [FlagKey: [FlagValueBox]]()
+        for entry in flags {
+            guard let cases = entry.cases, cases.isEmpty == false else { continue }
+            result[entry.key] = cases
+        }
+        return result
+    }
 }
 
 public enum FlagSchemaError: Error, Equatable {
