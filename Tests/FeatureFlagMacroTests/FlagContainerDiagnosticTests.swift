@@ -227,3 +227,131 @@ final class FlagContainerDiagnosticTests: XCTestCase {
         )
     }
 }
+
+// MARK: - Optionals
+
+extension FlagContainerDiagnosticTests {
+
+    /// Without this, an optional flag fails as "generic struct 'Flag' requires that
+    /// 'String?' conform to 'FlagValue'", followed by an inferred-generic error pointing
+    /// into expanded code the author never wrote. True, and no help at all about what to
+    /// do instead.
+    func testAnOptionalFlagIsRejectedWithAnExplanation() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                @Flag(default: nil, description: "Endpoint")
+                var endpoint: String?
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    @Flag(default: nil, description: "Endpoint")
+                    var endpoint: String?
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message:
+                        "flags cannot be optional: a flag always has a value, because "
+                        + "'default' is what it falls back to. Use a sentinel the type "
+                        + "already has, or an enum with a case for 'unset'",
+                    line: 3,
+                    column: 5
+                )
+            ],
+            macros: testMacros
+        )
+    }
+
+    /// `Optional<String>` spelled the long way is the same declaration.
+    func testTheLongSpellingIsRejectedToo() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                @Flag(default: nil, description: "Endpoint")
+                var endpoint: Optional<String>
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    @Flag(default: nil, description: "Endpoint")
+                    var endpoint: Optional<String>
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message:
+                        "flags cannot be optional: a flag always has a value, because "
+                        + "'default' is what it falls back to. Use a sentinel the type "
+                        + "already has, or an enum with a case for 'unset'",
+                    line: 3,
+                    column: 5
+                )
+            ],
+            macros: testMacros
+        )
+    }
+
+    /// And so is an implicitly unwrapped one, which is still an Optional underneath.
+    func testAnImplicitlyUnwrappedOptionalIsRejected() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                @Flag(default: nil, description: "Endpoint")
+                var endpoint: String!
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    @Flag(default: nil, description: "Endpoint")
+                    var endpoint: String!
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message:
+                        "flags cannot be optional: a flag always has a value, because "
+                        + "'default' is what it falls back to. Use a sentinel the type "
+                        + "already has, or an enum with a case for 'unset'",
+                    line: 3,
+                    column: 5
+                )
+            ],
+            macros: testMacros
+        )
+    }
+}

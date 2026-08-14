@@ -201,6 +201,16 @@ extension FlagContainerMacro {
                 )
             }
 
+            // Caught here rather than left to the conformance requirement, which fails as
+            // "generic struct 'Flag' requires that 'String?' conform to 'FlagValue'" and
+            // then points a second error into expanded code the author never wrote.
+            if type.isOptional {
+                context.diagnose(
+                    Diagnostic(node: variable, message: FlagContainerDiagnostic.optionalUnsupported)
+                )
+                return nil
+            }
+
             guard let defaultValue = attribute.argument(labelled: "default") else {
                 context.diagnose(
                     Diagnostic(node: attribute, message: FlagContainerDiagnostic.defaultRequired)
@@ -230,6 +240,7 @@ enum FlagContainerDiagnostic: String, DiagnosticMessage {
     case storedPropertyRequired
     case descriptionRequired
     case defaultRequired
+    case optionalUnsupported
 
     var message: String {
         switch self {
@@ -243,6 +254,12 @@ enum FlagContainerDiagnostic: String, DiagnosticMessage {
             return "flags need a 'description' so the companion app can explain them"
         case .defaultRequired:
             return "'@Flag' needs a 'default' value to fall back to"
+        case .optionalUnsupported:
+            return """
+                flags cannot be optional: a flag always has a value, because 'default' \
+                is what it falls back to. Use a sentinel the type already has, or an \
+                enum with a case for 'unset'
+                """
         }
     }
 
@@ -250,5 +267,21 @@ enum FlagContainerDiagnostic: String, DiagnosticMessage {
 
     var diagnosticID: MessageID {
         MessageID(domain: "FeatureFlagMacros", id: rawValue)
+    }
+}
+
+
+// MARK: - Optionality
+
+extension TypeSyntax {
+
+    /// Whether this is `T?`, `T!` or `Optional<T>` — three spellings of one type.
+    var isOptional: Bool {
+        if self.is(OptionalTypeSyntax.self) { return true }
+        if self.is(ImplicitlyUnwrappedOptionalTypeSyntax.self) { return true }
+        if let identifier = self.as(IdentifierTypeSyntax.self) {
+            return identifier.name.text == "Optional"
+        }
+        return false
     }
 }
