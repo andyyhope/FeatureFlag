@@ -16,14 +16,12 @@
 		798F8A34B253A47576F5C85F /* AppFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A6EDE47E5801150AA6EC2E /* AppFlags.swift */; };
 		93B42FB8C8BBBED1D06C81DF /* FeatureFlag in Frameworks */ = {isa = PBXBuildFile; productRef = AA84288416DAAC6B17DA4992 /* FeatureFlag */; };
 		9990D6C8791C6AA84AC9EC9A /* DemoModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E86E5759BB3B6D0FEF375 /* DemoModel.swift */; };
-		BF83953876E95B94BD086FFE /* EnvironmentTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02014FD98936956877A430C6 /* EnvironmentTab.swift */; };
 		DFE8C6996D398545270E9E42 /* DemoCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB5A86BF1272ADC4BDFC2B66 /* DemoCompanionApp.swift */; };
 		EAE70026F056D16CB1487BAD /* AppSignals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978F72F38B94A4CCA5F8AB32 /* AppSignals.swift */; };
 		F888D70DD87EF0914605A0B6 /* FeatureFlagUI in Frameworks */ = {isa = PBXBuildFile; productRef = BBD75572CDFFA4FD7BC97E6B /* FeatureFlagUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		02014FD98936956877A430C6 /* EnvironmentTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentTab.swift; sourceTree = "<group>"; };
 		1670E37C95E49176B690A202 /* DemoApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DemoApp.entitlements; sourceTree = "<group>"; };
 		246EC28FE443BD7DBD7DCC89 /* DemoCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DemoCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		418E3598E2BAE7BDB15B49B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -66,7 +64,6 @@
 				FACE5A840958A99CD3628B9B /* CompanionRootView.swift */,
 				8075F24C2370323626E7A218 /* DemoCompanion.entitlements */,
 				BB5A86BF1272ADC4BDFC2B66 /* DemoCompanionApp.swift */,
-				02014FD98936956877A430C6 /* EnvironmentTab.swift */,
 			);
 			path = DemoCompanion;
 			sourceTree = "<group>";
@@ -202,7 +199,6 @@
 				EAE70026F056D16CB1487BAD /* AppSignals.swift in Sources */,
 				6034784464B7CB1C8CABFFFF /* CompanionRootView.swift in Sources */,
 				DFE8C6996D398545270E9E42 /* DemoCompanionApp.swift in Sources */,
-				BF83953876E95B94BD086FFE /* EnvironmentTab.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -93,6 +93,24 @@ not, so a selected tab drawn with them looks like every other one — and iOS fi
 glyphs for you, so the outline name alone changes nothing until `symbolVariants` is
 cleared on the label itself.
 
+### Promoting one flag to its own screen
+
+Some flags earn a tab. Not because they are a special kind — the companion reads them
+from the schema like any other — but because of their consequence: a flag that decides
+which backend the app talks to moves half the values on the Flags tab with it, and
+hunting for it in a list beside forty others undersells that.
+
+```swift
+.detail(key: "environment", title: "Environment")
+```
+
+``FlagDetailView`` lays an enum's cases out rather than tucking them into a menu, and
+shows what the schema knows about the flag — its key, its default, and whether a remote
+payload can change it. Any flag works; enums are simply the ones this suits best.
+
+Which key deserves it is knowledge about a particular app, which is why it is a
+parameter rather than something the library guesses.
+
 ### The two built-in screens
 
 ``FlagOverridesView`` lists only what has been changed, with a per-row reset, the exported

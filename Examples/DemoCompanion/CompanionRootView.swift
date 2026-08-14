@@ -26,11 +26,10 @@ struct CompanionRootView: View {
                 .overrides,
                 .signals(AppSignal.self, appGroup: Self.appGroup),
                 .flags,
-                // The one tab only this app can supply — it is built around the demo's own
-                // environment flag, and decides which payload the host fetches.
-                .custom(id: "environment", title: "Environment", symbol: "square.stack.3d.up") {
-                    EnvironmentTab(store: $0)
-                },
+                // The environment flag earns a screen because changing it makes the host
+                // fetch a different payload, so half the values on the Flags tab move
+                // with it. Which key that is, is knowledge about this app.
+                .detail(key: "environment", title: "Environment"),
             ]
         )
     }

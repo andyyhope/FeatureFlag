@@ -150,6 +150,18 @@
             }
         }
 
+        /// One flag on a screen of its own, for the one whose consequence earns it —
+        /// typically whichever flag decides what the rest of them mean.
+        public static func detail(
+            key: FlagKey,
+            title: String,
+            symbol: String = "square.stack.3d.up"
+        ) -> FlagCompanionTab {
+            FlagCompanionTab(id: "detail.\(key.rawValue)", title: title, symbol: symbol) {
+                AnyView(FlagDetailView(store: $0, key: key, title: title))
+            }
+        }
+
         /// Anything of your own, handed the same store the built-in tabs use.
         public static func custom<Content: View>(
             id: String,
