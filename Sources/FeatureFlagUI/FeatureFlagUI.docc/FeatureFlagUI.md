@@ -59,6 +59,8 @@ free. See [Building a companion app](doc:BuildingACompanionApp).
 
 - ``FlagOverridesView``
 - ``FlagBrowserView``
+- ``FlagDetailView``
+- ``FlagSignalsView``
 - ``FlagGroupView``
 - ``FlagRowView``
 - ``FlagQRCodeView``

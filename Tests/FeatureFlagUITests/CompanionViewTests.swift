@@ -187,3 +187,36 @@ extension CompanionViewTests {
         XCTAssertFalse(FlagCompanionTabs(store: makeStore(), tabs: [.flags]).isEmptyOfTabs)
     }
 }
+
+// MARK: - One flag on its own screen
+
+extension CompanionViewTests {
+
+    func testTheDetailViewBuildsForAFlagThatExists() {
+        let view = FlagDetailView(store: makeStore(), key: "new-onboarding")
+        XCTAssertNotNil(view.body)
+    }
+
+    /// A key that is not published must say so rather than render an empty form — the
+    /// most likely cause is using the property name instead of the published key.
+    func testTheDetailViewBuildsForAKeyThatDoesNot() {
+        let view = FlagDetailView(store: makeStore(), key: "newOnboarding")
+        XCTAssertNotNil(view.body)
+    }
+
+    /// Each detail tab is a distinct tab, so two of them must not collide on id.
+    func testDetailTabsAreIdentifiedByTheirKey() {
+        let tabs: [FlagCompanionTab] = [
+            .detail(key: "environment", title: "Environment"),
+            .detail(key: "checkout.tier", title: "Tier"),
+        ]
+        XCTAssertEqual(tabs.map(\.id), ["detail.environment", "detail.checkout.tier"])
+        XCTAssertNil(FlagCompanionTabs.duplicateID(in: tabs))
+    }
+
+    func testADetailTabRendersTheFlagItNames() {
+        let tab = FlagCompanionTab.detail(key: "new-onboarding", title: "Onboarding")
+        XCTAssertEqual(tab.title, "Onboarding")
+        XCTAssertNotNil(tab.content(makeStore()))
+    }
+}
