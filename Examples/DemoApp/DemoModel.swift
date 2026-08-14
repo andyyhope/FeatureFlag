@@ -20,11 +20,13 @@ final class DemoModel: ObservableObject {
     @Published private(set) var onboardingChanges = 0
 
     /// The last signal the companion sent, so the demo can show it arriving.
-    @Published private(set) var lastSignal: AppSignal?
+    @Published private(set) var lastSignal: String?
+    @Published private(set) var purgedCaches = 0
 
     private let remote: RemoteOverrideSource
     private let signals: FlagSignalChannel?
     private var signalSubscription: FlagSignalSubscription?
+    private var cacheSignalSubscription: FlagSignalSubscription?
     private var cancellables: Set<AnyCancellable> = []
 
     init() {
@@ -59,7 +61,12 @@ final class DemoModel: ObservableObject {
             .store(in: &cancellables)
 
         // The companion can ask this app to do something, not just change what it reads.
+        // One observer per group: each switch stays small and exhaustive, and every
+        // observer sees every signal rather than the first one claiming them all.
         signalSubscription = signals?.observe(AppSignal.self) { [weak self] signal in
+            MainActor.assumeIsolated { self?.handle(signal) }
+        }
+        cacheSignalSubscription = signals?.observe(CacheSignal.self) { [weak self] signal in
             MainActor.assumeIsolated { self?.handle(signal) }
         }
     }
@@ -67,12 +74,24 @@ final class DemoModel: ObservableObject {
     // MARK: - Signals from the companion
 
     private func handle(_ signal: AppSignal) {
-        lastSignal = signal
+        lastSignal = signal.signalDescription
         switch signal {
         case .refetchRemoteConfiguration:
             switchTo(flags.environment)
         case .clearRemoteConfiguration:
             clearRemote()
+        }
+    }
+
+    private func handle(_ signal: CacheSignal) {
+        lastSignal = signal.signalDescription
+        switch signal {
+        case .purgeImageCache:
+            purgedCaches += 1
+        case .purgeEverything:
+            // Nothing visible happens now, which is exactly why the signal declares
+            // requiresRestart — the companion says so rather than looking broken.
+            purgedCaches += 1
         }
     }
 

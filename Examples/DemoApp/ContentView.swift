@@ -131,7 +131,7 @@ struct ContentView: View {
 
     private var signals: some View {
         Section {
-            LabeledContent("Last signal received", value: model.lastSignal?.rawValue ?? "—")
+            LabeledContent("Last signal received", value: model.lastSignal ?? "—")
                 .font(.caption.monospaced())
         } header: {
             Text("Signals from the companion")

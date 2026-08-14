@@ -239,3 +239,132 @@ private enum TestSignal: String, FlagSignal {
 private enum NarrowSignal: String, FlagSignal {
     case refetch
 }
+
+// MARK: - More than one observer
+
+/// A host that groups its signals declares several enums and observes each of them.
+/// Until this worked, whichever observer woke first claimed the event, failed to
+/// represent it, and dropped it — so the second group's signals were silently lost.
+final class MultipleObserverTests: XCTestCase {
+
+    fileprivate func makeChannel() throws -> (FlagSignalChannel, String, UserDefaults) {
+        let suiteName = "signals.multi.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        return (
+            FlagSignalChannel(defaults: defaults, notificationName: suiteName),
+            suiteName,
+            defaults
+        )
+    }
+
+    func testEachObserverReceivesItsOwnSignals() throws {
+        let (channel, suiteName, defaults) = try makeChannel()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let cacheArrived = expectation(description: "cache")
+        let sessionArrived = expectation(description: "session")
+
+        let a = channel.observe(GroupedCacheSignal.self) { signal in
+            XCTAssertEqual(signal, .purgeImages)
+            cacheArrived.fulfill()
+        }
+        let b = channel.observe(GroupedSessionSignal.self) { signal in
+            XCTAssertEqual(signal, .signOut)
+            sessionArrived.fulfill()
+        }
+
+        channel.send(GroupedSessionSignal.signOut)
+        wait(for: [sessionArrived], timeout: 5)
+
+        channel.send(GroupedCacheSignal.purgeImages)
+        wait(for: [cacheArrived], timeout: 5)
+
+        _ = (a, b)
+    }
+
+    /// An observer must not consume an event it cannot represent, but it must still not
+    /// run the same one twice when the OS coalesces a notification.
+    func testAnObserverStillRunsEachSignalOnlyOnce() throws {
+        let (channel, suiteName, defaults) = try makeChannel()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let arrived = expectation(description: "once")
+        arrived.expectedFulfillmentCount = 1
+        arrived.assertForOverFulfill = true
+
+        let subscription = channel.observe(GroupedCacheSignal.self) { _ in arrived.fulfill() }
+
+        channel.send(GroupedCacheSignal.purgeImages)
+        DarwinNotificationCenter.post(suiteName)
+        DarwinNotificationCenter.post(suiteName)
+
+        wait(for: [arrived], timeout: 5)
+        _ = subscription
+    }
+
+    /// The acknowledgement has to mean "something handled it". It used to be recorded
+    /// before the type was checked, so a host observing only one group reported success
+    /// for a signal from another that it had actually dropped.
+    func testASignalNoObserverCanRepresentIsNotAcknowledged() async throws {
+        let (channel, suiteName, defaults) = try makeChannel()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let subscription = channel.observe(GroupedCacheSignal.self) { _ in
+            XCTFail("this observer cannot represent a session signal")
+        }
+
+        do {
+            try await channel.send(GroupedSessionSignal.signOut, timeout: 1)
+            XCTFail("expected .notAcknowledged")
+        } catch {
+            XCTAssertEqual(error as? FlagSignalError, .notAcknowledged)
+        }
+        _ = subscription
+    }
+}
+
+private enum GroupedCacheSignal: String, FlagSignal {
+    case purgeImages
+}
+
+private enum GroupedSessionSignal: String, FlagSignal {
+    case signOut
+}
+
+// MARK: - requiresRestart
+
+extension MultipleObserverTests {
+
+    func testASignalDoesNotRequireARestartUnlessItSaysSo() {
+        XCTAssertFalse(GroupedCacheSignal.purgeImages.requiresRestart)
+    }
+
+    func testASignalCanSayItNeedsARestart() {
+        XCTAssertTrue(RestartingSignal.swapDependency.requiresRestart)
+        XCTAssertFalse(RestartingSignal.harmless.requiresRestart)
+    }
+
+    /// It is declarative only — delivery is unaffected, because whether the effect is
+    /// visible yet is not something the channel can know.
+    func testRequiringARestartDoesNotChangeDelivery() throws {
+        let (channel, suiteName, defaults) = try makeChannel()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let arrived = expectation(description: "arrived")
+        let subscription = channel.observe(RestartingSignal.self) { signal in
+            XCTAssertEqual(signal, .swapDependency)
+            arrived.fulfill()
+        }
+
+        channel.send(RestartingSignal.swapDependency)
+        wait(for: [arrived], timeout: 5)
+        _ = subscription
+    }
+}
+
+private enum RestartingSignal: String, FlagSignal {
+    case swapDependency
+    case harmless
+
+    var requiresRestart: Bool { self == .swapDependency }
+}

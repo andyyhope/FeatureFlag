@@ -47,6 +47,52 @@ enum AppSignal: String, FlagSignal {
 }
 ```
 
+### Grouping them
+
+One enum stops scaling the moment an app has more than a handful. File them by type:
+each group is a real Swift boundary, so the host switches over one at a time and adding a
+case tells you exactly where to handle it.
+
+```swift
+enum ConfigSignal: String, FlagSignal {
+    case refetchRemoteConfiguration
+    case clearRemoteConfiguration
+}
+
+enum CacheSignal: String, FlagSignal {
+    case purgeImageCache
+    case purgeEverything
+
+    var requiresRestart: Bool { self == .purgeEverything }
+}
+```
+
+The host observes each type it cares about, and each observer sees every signal
+independently:
+
+```swift
+let config = channel.observe(ConfigSignal.self) { … }
+let caches = channel.observe(CacheSignal.self) { … }
+```
+
+**Raw values have to be unique across every group.** A signal travels as its raw value
+and nothing else, so two enums both defining `purge` would fire both observers for one
+press. The companion refuses a set of groups that collide rather than picking one.
+
+### Saying a signal needs a relaunch
+
+A handled signal usually means something visibly changed. Some do not — purging a cache
+the app read into memory at launch, or swapping a dependency built during start-up, is
+done the moment the handler runs and invisible until the next launch:
+
+```swift
+var requiresRestart: Bool { self == .purgeEverything }
+```
+
+It changes nothing about delivery. It is there so the companion can report "handled —
+relaunch to see it" rather than "handled", which is the difference between *nothing
+happened* and *nothing happened yet*.
+
 ### Receiving, in the host
 
 ```swift

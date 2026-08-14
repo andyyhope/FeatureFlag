@@ -132,12 +132,14 @@ public final class FlagSignalChannel: @unchecked Sendable {
         _ type: Signal.Type,
         handler: @escaping @Sendable (Signal) -> Void
     ) {
+        let observerKey = Self.handledKey(for: type)
+
         lock.lock()
         guard
             let record = defaults.dictionary(forKey: Key.signal),
             let sequence = record["sequence"] as? Int,
             let name = record["name"] as? String,
-            sequence > defaults.integer(forKey: Key.handled)
+            sequence > defaults.integer(forKey: observerKey)
         else {
             lock.unlock()
             return
@@ -146,14 +148,41 @@ public final class FlagSignalChannel: @unchecked Sendable {
         // Recorded before the handler runs. A Darwin notification can arrive more than
         // once for a single post, and re-running "purge the cache" because the OS
         // coalesced differently would be its own kind of bug.
-        defaults.set(sequence, forKey: Key.handled)
+        //
+        // Per observer, though. A host that groups its signals declares an enum per
+        // group and observes each one, and every observer has to get a look at every
+        // event: with a single shared watermark the first to wake claimed the event,
+        // failed to represent it, and dropped it on the floor.
+        defaults.set(sequence, forKey: observerKey)
         lock.unlock()
 
         guard let signal = Signal(rawValue: name) else { return }
 
         DispatchQueue.main.async {
             handler(signal)
+
+            // Only once a handler has actually run: the shared watermark is what the
+            // sender's acknowledgement waits on, so advancing it for a signal this
+            // observer could not represent would report success for a dropped event.
+            self.recordHandled(sequence)
             DarwinNotificationCenter.post(self.acknowledgementBell)
+        }
+    }
+
+    /// Where an observer of this type records what it has already seen.
+    ///
+    /// Keyed by type name, so renaming a signal enum resets its watermark and the next
+    /// event is delivered once more than it strictly should be. Harmless, and cheaper
+    /// than asking every caller for a stable identifier.
+    private static func handledKey<Signal: FlagSignal>(for type: Signal.Type) -> String {
+        "\(Key.handled).\(String(describing: type))"
+    }
+
+    private func recordHandled(_ sequence: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        if sequence > defaults.integer(forKey: Key.handled) {
+            defaults.set(sequence, forKey: Key.handled)
         }
     }
 

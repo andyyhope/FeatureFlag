@@ -111,6 +111,22 @@ payload can change it. Any flag works; enums are simply the ones this suits best
 Which key deserves it is knowledge about a particular app, which is why it is a
 parameter rather than something the library guesses.
 
+### Filing signals into groups
+
+An app with four signals wants a list; an app with forty wants them filed. Each group is
+its own enum, so the host keeps switching over one at a time:
+
+```swift
+.signals([
+    .group("Configuration", ConfigSignal.self),
+    .group("Caches", CacheSignal.self),
+], appGroup: group)
+```
+
+A group lays out flat below seven signals and takes a screen of its own above that. Say
+`display: .nested` or `.flat` to decide for yourself, or move
+``FlagSignalGroup/automaticNestingThreshold`` if six is the wrong number for your rows.
+
 ### The two built-in screens
 
 ``FlagOverridesView`` lists only what has been changed, with a per-row reset, the exported
