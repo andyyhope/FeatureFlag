@@ -54,7 +54,7 @@ if flags.checkout.applePay { … }
 Add the package in Xcode via **File → Add Package Dependencies**, or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.3.0"))
+.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.4.0"))
 ```
 
 Pre-1.0, `from:` would accept every breaking `0.x` bump. While the API is still moving,
@@ -205,8 +205,19 @@ FlagCompanionView(
 ```
 
 `.signals` is opt-in — it needs your signal enum, so an app without one simply leaves it
-out. `.custom(id:title:symbol:)` puts your own screens in the same list, handed the same
-store.
+out. `.detail(key:title:)` promotes a single flag to its own screen, for the one whose
+consequence earns it. `.custom(id:title:symbol:)` puts your own screens in the same list,
+handed the same store.
+
+Signals can be filed by type once there are enough of them to be worth it, and each group
+stays a real Swift boundary — the host switches over one enum at a time:
+
+```swift
+.signals([
+    .group("Configuration", ConfigSignal.self),
+    .group("Caches", CacheSignal.self),
+], appGroup: "group.example.flags")
+```
 
 Edits reach your running app through a Darwin notification, because
 `UserDefaults.didChangeNotification` does **not** fire for writes made by another process.
@@ -287,7 +298,7 @@ shows having to survive a trip through JSON.
 
 ## Status and contributing
 
-Early. 509 tests, but the API may still move before 1.0. Issues and pull requests are
+Early. 533 tests, but the API may still move before 1.0. Issues and pull requests are
 welcome — if you are reporting a bug, a failing test says more than a description.
 
 ## License
