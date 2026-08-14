@@ -133,6 +133,16 @@ struct ContentView: View {
         Section {
             LabeledContent("Last signal received", value: model.lastSignal ?? "—")
                 .font(.caption.monospaced())
+            LabeledContent("Caches purged", value: "\(model.purgedCaches)")
+                .font(.caption.monospaced())
+
+            if model.awaitingRelaunch {
+                Text("Everything was purged. It is rebuilt at launch, so this screen "
+                    + "will not look any different until the app starts again — which "
+                    + "is what that signal's requiresRestart is for.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
         } header: {
             Text("Signals from the companion")
         } footer: {

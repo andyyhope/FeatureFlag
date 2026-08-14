@@ -107,6 +107,31 @@ iOS gives third-party apps no XPC and no way to wake another app, so this is bui
 the App Group plus a Darwin notification — the notification carries no payload, so the
 signal name travels in the shared store and the notification rings the bell.
 
+### Two groups, not one enum
+
+The demo declares `AppSignal` for configuration and `CacheSignal` for caches, and the
+companion files them:
+
+```swift
+.signals([
+    .group("Configuration", AppSignal.self),
+    .group("Caches", CacheSignal.self),
+], appGroup: demoAppGroup)
+```
+
+The host observes each separately, so its configuration handler never has to mention
+caches and each `switch` stays exhaustive:
+
+```swift
+signals?.observe(AppSignal.self)   { … }
+signals?.observe(CacheSignal.self) { … }
+```
+
+`CacheSignal.purgeEverything` declares `requiresRestart`, because what it empties is
+rebuilt at launch: the host handles it immediately and looks unchanged, so the companion
+reports "handled — relaunch to see it" instead of leaving you to conclude nothing
+happened. Tap it and the host says so too.
+
 **Signals reach a running host only.** A signal sent to a suspended or terminated app is
 lost rather than queued, which is why the buttons use the acknowledged form: without
 waiting for the host to confirm, a press into a closed app would look exactly like a
@@ -140,7 +165,7 @@ them — that is what the demo shows — but one iOS has since suspended will no
 | `DemoApp/ContentView.swift` | host | Live values, remote payloads, provenance, Combine |
 | `DemoApp/DemoModel.swift` | host | Owns the pole and the remote source it feeds |
 | `DemoApp/RemoteConfigurations.swift` | host | The bundled payloads |
-| `DemoApp/AppSignals.swift` | both | The signal vocabulary, shared so both sides agree |
+| `DemoApp/AppSignals.swift` | both | Two signal enums — one group each, shared so both sides agree |
 | `DemoApp/DemoApp.swift` | host | `@main`; publishes the schema on launch |
 | `DemoCompanion/CompanionRootView.swift` | companion | Chooses which tabs the companion shows |
 | `DemoCompanion/EnvironmentTab.swift` | companion | The one screen only this app can supply |

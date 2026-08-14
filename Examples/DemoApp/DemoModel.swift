@@ -22,6 +22,7 @@ final class DemoModel: ObservableObject {
     /// The last signal the companion sent, so the demo can show it arriving.
     @Published private(set) var lastSignal: String?
     @Published private(set) var purgedCaches = 0
+    @Published private(set) var awaitingRelaunch = false
 
     private let remote: RemoteOverrideSource
     private let signals: FlagSignalChannel?
@@ -87,11 +88,15 @@ final class DemoModel: ObservableObject {
         lastSignal = signal.signalDescription
         switch signal {
         case .purgeImageCache:
+            // Visible immediately, so this one needs no relaunch.
             purgedCaches += 1
+
         case .purgeEverything:
-            // Nothing visible happens now, which is exactly why the signal declares
-            // requiresRestart — the companion says so rather than looking broken.
-            purgedCaches += 1
+            // Emptied now, rebuilt at launch — so nothing here looks different until
+            // the app starts again. That is what the signal's requiresRestart says, and
+            // why the companion reports "handled — relaunch to see it" rather than
+            // leaving someone to conclude nothing happened.
+            awaitingRelaunch = true
         }
     }
 
