@@ -19,10 +19,20 @@ where RawValue == String {
 
     /// What to call this on a button. Defaults to the raw value.
     var signalDescription: String { get }
+
+    /// Whether the host has to be relaunched before this takes effect. Defaults to
+    /// `false`.
+    ///
+    /// A handled signal usually means something visibly changed. Some do not: purging a
+    /// cache the app read into memory at launch, or swapping a dependency built during
+    /// start-up, is done the moment the handler runs and invisible until the next launch.
+    /// Saying so is the difference between "nothing happened" and "nothing happened yet".
+    var requiresRestart: Bool { get }
 }
 
 extension FlagSignal {
     public var signalDescription: String { rawValue }
+    public var requiresRestart: Bool { false }
 }
 
 public enum FlagSignalError: Error, Equatable {

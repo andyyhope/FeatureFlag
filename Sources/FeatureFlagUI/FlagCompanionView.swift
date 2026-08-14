@@ -77,8 +77,7 @@
         /// A companion built from a list of tabs.
         ///
         /// Defaults to overrides and the whole flag tree, which is every companion's
-        /// minimum. Add ``FlagCompanionTab/signals(_:appGroup:title:symbol:)`` if your app
-        /// has signals, leave it out if it does not, and put them in whatever order reads
+        /// minimum. Add a `signals` tab if your app has signals, leave it out if it does not, and put them in whatever order reads
         /// best.
         public init(appGroup: String, tabs: [FlagCompanionTab] = [.overrides, .flags]) {
             self.init(appGroup: appGroup) { store in
@@ -147,6 +146,21 @@
         ) -> FlagCompanionTab {
             FlagCompanionTab(id: "signals", title: title, symbol: symbol) { _ in
                 AnyView(FlagSignalsView(Signal.self, appGroup: appGroup))
+            }
+        }
+
+        /// Signals filed into groups, for an app with enough of them to be worth it.
+        ///
+        /// Each group is its own enum, so the host still switches over one at a time,
+        /// exhaustively — see ``FlagSignalGroup``.
+        public static func signals(
+            _ groups: [FlagSignalGroup],
+            appGroup: String,
+            title: String = "Signals",
+            symbol: String = "paperplane"
+        ) -> FlagCompanionTab {
+            FlagCompanionTab(id: "signals", title: title, symbol: symbol) { _ in
+                AnyView(FlagSignalsView(groups: groups, appGroup: appGroup))
             }
         }
 

@@ -24,7 +24,15 @@ struct CompanionRootView: View {
                 // Overrides first: "what have I changed?" is the question you have before
                 // filing a bug or handing the device to someone else.
                 .overrides,
-                .signals(AppSignal.self, appGroup: Self.appGroup),
+                // Two enums, two groups. The host observes each separately, so its
+                // configuration handler never has to mention caches.
+                .signals(
+                    [
+                        .group("Configuration", AppSignal.self),
+                        .group("Caches", CacheSignal.self),
+                    ],
+                    appGroup: Self.appGroup
+                ),
                 .flags,
                 // The environment flag earns a screen because changing it makes the host
                 // fetch a different payload, so half the values on the Flags tab move

@@ -53,6 +53,7 @@ free. See [Building a companion app](doc:BuildingACompanionApp).
 - <doc:BuildingACompanionApp>
 - ``FlagCompanionView``
 - ``FlagCompanionTabs``
+- ``FlagCompanionTab``
 - ``FlagEditingStore``
 
 ### Screens
@@ -60,11 +61,17 @@ free. See [Building a companion app](doc:BuildingACompanionApp).
 - ``FlagOverridesView``
 - ``FlagBrowserView``
 - ``FlagDetailView``
-- ``FlagSignalsView``
 - ``FlagGroupView``
 - ``FlagRowView``
 - ``FlagQRCodeView``
 - ``FlagImportView``
+
+### Sending signals
+
+- ``FlagSignalsView``
+- ``FlagSignalGroup``
+- ``FlagSignalGroupDisplay``
+- ``FlagSignalDelay``
 
 ### Structure
 

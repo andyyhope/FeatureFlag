@@ -26,82 +26,152 @@
 
     /// Sends an app's signals to its host, and says whether they arrived.
     ///
-    /// Generic over your own signal type, so the list is whatever you declared:
+    /// ```swift
+    /// FlagSignalsView(AppSignal.self, appGroup: "group.com.example.flags")
+    /// ```
+    ///
+    /// Give it groups when there are enough signals to be worth filing:
     ///
     /// ```swift
-    /// enum AppSignal: String, FlagSignal {
-    ///     case refetchRemoteConfiguration
-    ///     case purgeImageCache
-    /// }
-    ///
-    /// FlagSignalsView(AppSignal.self, appGroup: "group.com.example.flags")
+    /// FlagSignalsView(
+    ///     groups: [
+    ///         .group("Caches", CacheSignal.self),
+    ///         .group("Session", SessionSignal.self),
+    ///     ],
+    ///     appGroup: "group.com.example.flags"
+    /// )
     /// ```
     ///
     /// Every send waits for the host to confirm, because a Darwin notification has no
     /// delivery receipt — without that, a press into a closed app would look exactly like
     /// a successful one.
-    public struct FlagSignalsView<Signal: FlagSignal>: View {
+    public struct FlagSignalsView: View {
 
-        @State private var delay: FlagSignalDelay = .instant
-        @State private var pending: Signal?
-        @State private var countdown: Double = 0
-        @State private var pendingTask: Task<Void, Never>?
-        @State private var inFlight: Signal?
-        @State private var history: [Attempt] = []
-
-        private let channel: FlagSignalChannel?
-        private let timeout: TimeInterval
+        @StateObject private var model: FlagSignalsModel
+        private let groups: [FlagSignalGroup]
 
         /// - Parameters:
-        ///   - type: Your signal enum. Its `allCases` become the list.
+        ///   - groups: Shown in the order given. A group is laid out flat or on its own
+        ///     screen according to its ``FlagSignalGroupDisplay``.
         ///   - appGroup: The group the host also declares.
         ///   - timeout: How long to wait for the host to acknowledge before calling it
-        ///     unhandled. Two seconds is long enough for a foregrounded app and short
-        ///     enough that a closed one does not leave someone staring at a spinner.
-        public init(_ type: Signal.Type = Signal.self, appGroup: String, timeout: TimeInterval = 2) {
-            self.channel = FlagSignalChannel(appGroup: appGroup)
-            self.timeout = timeout
+        ///     unhandled.
+        public init(groups: [FlagSignalGroup], appGroup: String, timeout: TimeInterval = 2) {
+            // Two groups defining the same raw value is a declaration mistake with no
+            // correct behaviour: a signal travels as its raw value, so the host's
+            // observers would both fire for one press.
+            precondition(
+                groups.duplicateSignalID == nil,
+                """
+                More than one signal group defines \
+                '\(groups.duplicateSignalID ?? "")'. A signal travels as its raw value, \
+                so it has to be unique across every group.
+                """
+            )
+
+            self.groups = groups
+            self._model = StateObject(
+                wrappedValue: FlagSignalsModel(appGroup: appGroup, timeout: timeout)
+            )
         }
 
-        private struct Attempt: Identifiable {
-            let id = UUID()
-            let signal: Signal
-            let wasHandled: Bool
-            let at: Date
+        /// Every case of one signal type, in a single flat list.
+        public init<Signal: FlagSignal>(
+            _ type: Signal.Type = Signal.self,
+            appGroup: String,
+            timeout: TimeInterval = 2
+        ) {
+            self.init(
+                groups: [FlagSignalGroup.group("", type, display: .flat)],
+                appGroup: appGroup,
+                timeout: timeout
+            )
         }
 
         public var body: some View {
             NavigationStack {
                 Form {
-                    delaySection
-                    signalsSection
-                    if history.isEmpty == false { historySection }
-                    if channel == nil { unavailableSection }
+                    FlagSignalDelayPicker(model: model)
+
+                    ForEach(groups.filter { $0.isNested == false }) { group in
+                        FlagSignalListSection(model: model, group: group)
+                    }
+
+                    let nested = groups.filter(\.isNested)
+                    if nested.isEmpty == false {
+                        Section("Groups") {
+                            ForEach(nested) { group in
+                                NavigationLink {
+                                    FlagSignalGroupScreen(model: model, group: group)
+                                } label: {
+                                    LabeledContent(group.title) {
+                                        Text("\(group.signals.count)")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    FlagSignalHistorySection(model: model)
+
+                    if model.channel == nil {
+                        Section {
+                            Text("The App Group is unavailable, so there is nowhere to send.")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 .navigationTitle("Signals")
                 #if os(iOS)
                     .navigationBarTitleDisplayMode(.inline)
                 #endif
             }
-            .onDisappear { cancelPending() }
+            .onDisappear { model.cancelPending() }
         }
+    }
 
-        // MARK: - Delay
+    // MARK: - One group's own screen
 
-        private var delaySection: some View {
+    struct FlagSignalGroupScreen: View {
+
+        @ObservedObject var model: FlagSignalsModel
+        let group: FlagSignalGroup
+
+        var body: some View {
+            Form {
+                // Repeated rather than left behind on the previous screen: the delay is
+                // the mechanism, and having to go back to change it would defeat it.
+                FlagSignalDelayPicker(model: model)
+                FlagSignalListSection(model: model, group: group, showsHeader: false)
+                FlagSignalHistorySection(model: model)
+            }
+            .navigationTitle(group.title)
+            #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+            #endif
+        }
+    }
+
+    // MARK: - Pieces
+
+    struct FlagSignalDelayPicker: View {
+
+        @ObservedObject var model: FlagSignalsModel
+
+        var body: some View {
             Section {
-                Picker("Delay", selection: $delay) {
+                Picker("Delay", selection: $model.delay) {
                     ForEach(FlagSignalDelay.allCases) { option in
                         Text(option.label).tag(option)
                     }
                 }
                 .pickerStyle(.segmented)
-                .disabled(pending != nil)
+                .disabled(model.pending != nil)
             } header: {
                 Text("Delay")
             } footer: {
                 Text(
-                    delay == .instant
+                    model.delay == .instant
                         ? "Sent the moment you tap. The app has to be running to hear it, and "
                             + "opening this one puts it in the background."
                         : "Tap a signal, then switch to the app. It fires when the circle "
@@ -109,88 +179,144 @@
                 )
             }
         }
+    }
 
-        // MARK: - Signals
+    struct FlagSignalListSection: View {
 
-        private var signalsSection: some View {
+        @ObservedObject var model: FlagSignalsModel
+        let group: FlagSignalGroup
+        var showsHeader = true
+
+        var body: some View {
             Section {
-                ForEach(Array(Signal.allCases), id: \.self) { signal in
+                ForEach(group.signals) { signal in
                     Button {
-                        tapped(signal)
+                        model.tapped(signal)
                     } label: {
                         HStack {
-                            Text(signal.signalDescription)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(signal.description)
+                                if signal.requiresRestart {
+                                    Text("Takes effect after a relaunch")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                             Spacer(minLength: 8)
                             trailing(for: signal)
                         }
                     }
-                    .disabled(
-                        channel == nil || (inFlight != nil) || (pending != nil && pending != signal)
-                    )
+                    .disabled(model.isDisabled(signal))
                 }
             } header: {
-                Text("Send to the app")
+                if showsHeader, group.title.isEmpty == false {
+                    Text(group.title)
+                }
             } footer: {
-                Text(
-                    pending == nil
-                        ? "Signals carry no payload. State belongs in flags, which you can "
-                            + "already edit — \u{201C}re-fetch for staging\u{201D} is a flag, "
-                            + "then a bare re-fetch."
-                        : "Tap again to cancel."
-                )
+                if showsHeader, group.title.isEmpty {
+                    Text(
+                        model.pending == nil
+                            ? "Signals carry no payload. State belongs in flags, which you "
+                                + "can already edit."
+                            : "Tap again to cancel."
+                    )
+                }
             }
         }
 
         @ViewBuilder
-        private func trailing(for signal: Signal) -> some View {
-            if inFlight == signal {
+        private func trailing(for signal: ErasedSignal) -> some View {
+            if model.inFlight == signal {
                 ProgressView()
-            } else if pending == signal {
+            } else if model.pending == signal {
                 Circle()
-                    .trim(from: 0, to: countdown)
+                    .trim(from: 0, to: model.countdown)
                     .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .frame(width: 20, height: 20)
-                    .overlay {
-                        Circle().stroke(Color.accentColor.opacity(0.2), lineWidth: 3)
-                    }
+                    .overlay { Circle().stroke(Color.accentColor.opacity(0.2), lineWidth: 3) }
                     .accessibilityLabel(
-                        "Sending in \(Int(delay.rawValue)) seconds. Tap to cancel."
+                        "Sending in \(Int(model.delay.rawValue)) seconds. Tap to cancel."
                     )
             } else {
                 Image(systemName: "paperplane").foregroundStyle(.tint)
             }
         }
+    }
 
-        private var historySection: some View {
-            Section("Recent") {
-                ForEach(history) { attempt in
-                    LabeledContent {
-                        Text(attempt.wasHandled ? "handled" : "no response")
-                            .foregroundStyle(attempt.wasHandled ? .green : .orange)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(attempt.signal.signalDescription)
-                            Text(attempt.at.formatted(date: .omitted, time: .standard))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+    struct FlagSignalHistorySection: View {
+
+        @ObservedObject var model: FlagSignalsModel
+
+        var body: some View {
+            if model.history.isEmpty == false {
+                Section("Recent") {
+                    ForEach(model.history) { attempt in
+                        LabeledContent {
+                            Text(attempt.outcome)
+                                .foregroundStyle(attempt.wasHandled ? .green : .orange)
+                                .multilineTextAlignment(.trailing)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(attempt.signal.description)
+                                Text(attempt.at.formatted(date: .omitted, time: .standard))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .font(.callout)
                     }
-                    .font(.callout)
+                }
+            }
+        }
+    }
+
+    // MARK: - State
+
+    /// Delay, countdown, what is in flight and what happened.
+    ///
+    /// Held apart from the views because a nested group is a second screen, and pushing
+    /// one must not lose a scheduled send or the history of what came back.
+    @MainActor
+    final class FlagSignalsModel: ObservableObject {
+
+        @Published var delay: FlagSignalDelay = .instant
+        @Published var pending: ErasedSignal?
+        @Published var countdown: Double = 0
+        @Published var inFlight: ErasedSignal?
+        @Published var history: [Attempt] = []
+
+        let channel: FlagSignalChannel?
+        private let timeout: TimeInterval
+        private var pendingTask: Task<Void, Never>?
+
+        init(appGroup: String, timeout: TimeInterval) {
+            self.channel = FlagSignalChannel(appGroup: appGroup)
+            self.timeout = timeout
+        }
+
+        struct Attempt: Identifiable {
+            let id = UUID()
+            let signal: ErasedSignal
+            let wasHandled: Bool
+            let at: Date
+
+            /// "Handled" is not the whole truth for a signal whose effect waits for a
+            /// relaunch, and saying only that invites "nothing happened".
+            var outcome: String {
+                switch (wasHandled, signal.requiresRestart) {
+                case (true, true): return "handled — relaunch to see it"
+                case (true, false): return "handled"
+                case (false, _): return "no response"
                 }
             }
         }
 
-        private var unavailableSection: some View {
-            Section {
-                Text("The App Group is unavailable, so there is nowhere to send.")
-                    .foregroundStyle(.secondary)
-            }
+        func isDisabled(_ signal: ErasedSignal) -> Bool {
+            channel == nil || inFlight != nil || (pending != nil && pending != signal)
         }
 
-        // MARK: - Sending
-
-        private func tapped(_ signal: Signal) {
+        func tapped(_ signal: ErasedSignal) {
             if pending == signal {
                 cancelPending()
             } else if delay == .instant {
@@ -200,12 +326,12 @@
             }
         }
 
-        private func schedule(_ signal: Signal) {
+        private func schedule(_ signal: ErasedSignal) {
             pending = signal
             countdown = 0
             withAnimation(.linear(duration: delay.rawValue)) { countdown = 1 }
 
-            pendingTask = Task {
+            pendingTask = Task { [delay] in
                 try? await Task.sleep(nanoseconds: UInt64(delay.rawValue * 1_000_000_000))
                 guard Task.isCancelled == false else { return }
                 pending = nil
@@ -214,25 +340,27 @@
             }
         }
 
-        private func cancelPending() {
+        func cancelPending() {
             pendingTask?.cancel()
             pendingTask = nil
             pending = nil
             withAnimation(.easeOut(duration: 0.15)) { countdown = 0 }
         }
 
-        private func send(_ signal: Signal) {
+        private func send(_ signal: ErasedSignal) {
             guard let channel else { return }
             inFlight = signal
 
-            Task {
+            Task { [timeout] in
                 var handled = true
                 do {
-                    try await channel.send(signal, timeout: timeout)
+                    try await signal.send(over: channel, timeout: timeout)
                 } catch {
                     handled = false
                 }
-                history.insert(Attempt(signal: signal, wasHandled: handled, at: Date()), at: 0)
+                history.insert(
+                    Attempt(signal: signal, wasHandled: handled, at: Date()), at: 0
+                )
                 history = Array(history.prefix(5))
                 inFlight = nil
             }
