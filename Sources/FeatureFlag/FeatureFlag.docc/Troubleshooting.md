@@ -101,6 +101,29 @@ A custom ``KeyEncoding`` collides far more easily: anything that maps two distin
 property names onto one string will do it. ``FlagSchema/duplicateKeys`` reports them, so a
 test can assert there are none.
 
+### "flags cannot be optional"
+
+`@Flag(default: nil, description: "…") var endpoint: String?` is rejected. A flag always
+has a value: `default` is what it falls back to, and `nil` already means "no source
+supplied one" at every layer beneath — `box(for:as:)` returning `nil` means *try the next
+source*, and `setBox(nil, for:)` means *remove the override*. A flag whose value could be
+`nil` would be indistinguishable from one nothing supplies.
+
+Use a sentinel the type already has, or an enum with a case for unset:
+
+```swift
+@Flag(default: "", description: "Override the API host")
+var apiHost: String
+
+enum Endpoint: String, FlagValue, CaseIterable, FlagValueCases {
+    case `default`, staging, local
+}
+```
+
+Swift's own error — "generic struct 'Flag' requires that 'String?' conform to 'FlagValue'"
+— appears alongside this one and cannot be suppressed: `@Flag` is a property wrapper, so
+its constraint is checked whatever the macro says.
+
 ### The macro complains about a missing type annotation
 
 A macro sees syntax, not types, so it cannot infer one:

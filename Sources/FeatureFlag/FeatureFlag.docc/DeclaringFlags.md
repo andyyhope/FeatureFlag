@@ -31,6 +31,12 @@ Two rules the compiler will hold you to:
 - **`description` is required.** It is the label in the companion app's list. A flag
   nobody can identify is a flag nobody dares change.
 
+**A flag's type cannot be optional.** `var endpoint: String?` is rejected, because a flag
+always has a value — `default` is what it falls back to when no source supplies one, and
+`nil` already means "no source supplied one" everywhere beneath. Use a sentinel the type
+already has (`""`), or an enum with a case for unset, which also earns you a picker in the
+companion instead of a free-text field.
+
 `remoteKey` is optional, and says where this flag lives in a backend payload. A flag
 without one is not remotely overridable at all — see
 [Remote overrides](doc:RemoteOverrides).
