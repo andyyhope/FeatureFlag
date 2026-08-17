@@ -31,7 +31,7 @@ final class DemoModel: ObservableObject {
     private var cancellables: Set<AnyCancellable> = []
 
     init() {
-        let remote = RemoteOverrideSource(AppFlags.self, name: "Remote")
+        let remote = RemoteOverrideSource(AppFlags.self, mapper: DemoRemoteMapper(), name: "Remote")
         self.remote = remote
 
         // Order is the precedence. Overrides sit above the backend, so a value set by

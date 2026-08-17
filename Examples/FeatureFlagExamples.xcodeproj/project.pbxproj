@@ -16,6 +16,7 @@
 		798F8A34B253A47576F5C85F /* AppFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A6EDE47E5801150AA6EC2E /* AppFlags.swift */; };
 		93B42FB8C8BBBED1D06C81DF /* FeatureFlag in Frameworks */ = {isa = PBXBuildFile; productRef = AA84288416DAAC6B17DA4992 /* FeatureFlag */; };
 		9990D6C8791C6AA84AC9EC9A /* DemoModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E86E5759BB3B6D0FEF375 /* DemoModel.swift */; };
+		A7A0B60AFCD53DDB44006B4F /* DemoRemoteMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4A92A4F78E305DCB9DB97D /* DemoRemoteMapper.swift */; };
 		DFE8C6996D398545270E9E42 /* DemoCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB5A86BF1272ADC4BDFC2B66 /* DemoCompanionApp.swift */; };
 		EAE70026F056D16CB1487BAD /* AppSignals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978F72F38B94A4CCA5F8AB32 /* AppSignals.swift */; };
 		F888D70DD87EF0914605A0B6 /* FeatureFlagUI in Frameworks */ = {isa = PBXBuildFile; productRef = BBD75572CDFFA4FD7BC97E6B /* FeatureFlagUI */; };
@@ -35,6 +36,7 @@
 		C0F30C3CE0080624FAE3B965 /* RemoteConfigurations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigurations.swift; sourceTree = "<group>"; };
 		F2A6EDE47E5801150AA6EC2E /* AppFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFlags.swift; sourceTree = "<group>"; };
 		FACE5A840958A99CD3628B9B /* CompanionRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionRootView.swift; sourceTree = "<group>"; };
+		FC4A92A4F78E305DCB9DB97D /* DemoRemoteMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoRemoteMapper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,6 +106,7 @@
 				1670E37C95E49176B690A202 /* DemoApp.entitlements */,
 				B040F4A907056358E2970A06 /* DemoApp.swift */,
 				AC2E86E5759BB3B6D0FEF375 /* DemoModel.swift */,
+				FC4A92A4F78E305DCB9DB97D /* DemoRemoteMapper.swift */,
 				C0F30C3CE0080624FAE3B965 /* RemoteConfigurations.swift */,
 			);
 			path = DemoApp;
@@ -211,6 +214,7 @@
 				015C48BB398EF3C411A324BE /* ContentView.swift in Sources */,
 				48805EB7DED827669C2B2632 /* DemoApp.swift in Sources */,
 				9990D6C8791C6AA84AC9EC9A /* DemoModel.swift in Sources */,
+				A7A0B60AFCD53DDB44006B4F /* DemoRemoteMapper.swift in Sources */,
 				749E4A731FCEC5665DF0E72C /* RemoteConfigurations.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

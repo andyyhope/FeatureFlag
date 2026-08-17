@@ -110,3 +110,49 @@ extension RemoteConfiguration {
         isDeliberatelyBroken: true
     )
 }
+
+// MARK: - A shape no path can address
+
+extension RemoteConfiguration {
+
+    /// The flags arrive as a list, and the flag's name is a field rather than a key.
+    ///
+    /// `DotPathMapper` finds nothing here — no path addresses "the record whose flag is
+    /// new-onboarding" — so without `DemoRemoteMapper` this payload would apply cleanly
+    /// and change absolutely nothing.
+    static let records = RemoteConfiguration(
+        id: "records",
+        name: "List of records",
+        summary: "A shape no dot path can reach, reshaped by a custom mapper",
+        json: """
+            {
+              "experiments": [
+                { "flag": "new-onboarding", "enabled": true },
+                { "flag": "checkout.apple-pay", "enabled": true }
+              ]
+            }
+            """,
+        isDeliberatelyBroken: false
+    )
+
+    /// The same shape with one flag misspelled.
+    ///
+    /// `DotPathMapper` cannot produce an unknown key — it only ever emits keys it read
+    /// from the schema — but a custom mapper with a typo can, which is the whole reason
+    /// that problem kind exists. Applying is all-or-nothing, so the valid record beside
+    /// it is not applied either.
+    static let recordsWithATypo = RemoteConfiguration(
+        id: "records-typo",
+        name: "List of records, misspelled",
+        summary: "new-onbaording is not a flag this app has",
+        json: """
+            {
+              "experiments": [
+                { "flag": "new-onbaording", "enabled": true },
+                { "flag": "checkout.apple-pay", "enabled": true }
+              ]
+            }
+            """,
+        isDeliberatelyBroken: true
+    )
+}
