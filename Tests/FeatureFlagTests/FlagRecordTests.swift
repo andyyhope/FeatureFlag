@@ -91,6 +91,43 @@ final class FlagRecordTests: XCTestCase {
         XCTAssertEqual(parsed?.first?["tier"] as? String, "secondary")
     }
 
+    // MARK: - Reading through the shape alone
+
+    func testStoredTextCanBeReadBackFromTheShapeWithoutTheSwiftType() throws {
+        // What the companion app does. It has the schema and nothing else.
+        let box = FlagRecords([Endpoint.staging, Endpoint.canary]).box
+
+        let records = try XCTUnwrap(box.recordValues(matching: Endpoint.flagRecordShape))
+
+        XCTAssertEqual(records.count, 2)
+        XCTAssertEqual(records.first?["name"], .string("staging"))
+        XCTAssertEqual(records.first?["weight"], .int(7))
+        XCTAssertEqual(records.last?["tier"], .string("secondary"))
+    }
+
+    func testAListWithAnIncompleteRecordCannotBeReadThroughItsShape() {
+        // Strict on purpose: the host would reject this list and fall back to its
+        // default, so an editor that showed it would be showing a value not in effect.
+        let box = FlagValueBox.string("""
+            [{"name":"partial","enabled":true}]
+            """)
+
+        XCTAssertNil(box.recordValues(matching: Endpoint.flagRecordShape))
+    }
+
+    func testRecordsBuiltFromBoxesAloneMatchWhatTheTypeWouldHaveWritten() throws {
+        // The companion writes this; the host reads it. They have to agree exactly.
+        let built = FlagValueBox.records(
+            [Endpoint.canary.flagRecordBoxes, Endpoint.staging.flagRecordBoxes]
+        )
+
+        XCTAssertEqual(built, FlagRecords([Endpoint.canary, Endpoint.staging]).box)
+    }
+
+    func testAValueThatIsNotEvenTextIsNotRecords() {
+        XCTAssertNil(FlagValueBox.int(3).recordValues(matching: Endpoint.flagRecordShape))
+    }
+
     // MARK: - Degrading
 
     func testStoredTextThatIsNotJSONFallsBackToTheDefault() throws {

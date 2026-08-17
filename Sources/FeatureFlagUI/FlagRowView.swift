@@ -52,6 +52,19 @@ public struct FlagRowView: View {
             case .text, .data, .json:
                 textField(keyboard: .default)
 
+            case let .records(fields):
+                NavigationLink {
+                    FlagRecordsEditorView(store: store, entry: entry, fields: fields)
+                } label: {
+                    LabeledContent(recordSummary) {
+                        Text(fields.map(\.name).joined(separator: ", "))
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+
             case let .list(element):
                 // A row in a list cannot hold a list, so this one pushes. The summary is
                 // what a glance needs: how many, and a taste of what they are.
@@ -68,6 +81,12 @@ public struct FlagRowView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// "3 records", or that the stored text is not any.
+    private var recordSummary: String {
+        guard let records = store.records(for: entry) else { return "Unreadable" }
+        return "\(records.count) record\(records.count == 1 ? "" : "s")"
     }
 
     /// "3 strings", so the row says what it holds before you open it.

@@ -74,7 +74,68 @@ public struct FlagRecords<Record: FlagRecord>: FlagValue, ExpressibleByArrayLite
     public static var flagValueType: FlagValueType { .string }
 
     public var box: FlagValueBox {
-        let objects = values.map { $0.flagRecordBoxes.mapValues(\.jsonValue) }
+        .records(values.map(\.flagRecordBoxes))
+    }
+
+    public init?(box: FlagValueBox) {
+        guard let records = box.recordValues(matching: Record.flagRecordShape) else {
+            return nil
+        }
+
+        var values = [Record]()
+        values.reserveCapacity(records.count)
+        for boxes in records {
+            guard let record = Record(flagRecordBoxes: boxes) else { return nil }
+            values.append(record)
+        }
+
+        self.values = values
+    }
+}
+
+// MARK: - Reading records without their Swift type
+
+extension FlagValueBox {
+
+    /// The records inside a record flag's stored text, read through a shape alone.
+    ///
+    /// This is what a companion app has to work with: it holds the schema and never the
+    /// host's Swift types, so a shape is the only description of a record it will ever
+    /// see. ``FlagRecords`` decodes through here too, so the two cannot drift.
+    ///
+    /// Every field of the shape must be present and hold its declared type. Returning a
+    /// partial list would mean an editor showing a value the host had already rejected.
+    public func recordValues(matching shape: [FlagRecordField]) -> [[String: FlagValueBox]]? {
+        guard
+            case let .string(json) = self,
+            let objects = try? JSONSerialization.jsonObject(with: Data(json.utf8))
+                as? [[String: Any]]
+        else { return nil }
+
+        var records = [[String: FlagValueBox]]()
+        records.reserveCapacity(objects.count)
+
+        for object in objects {
+            var boxes = [String: FlagValueBox](minimumCapacity: shape.count)
+            for field in shape {
+                guard
+                    let value = object[field.name],
+                    let box = FlagValueBox(jsonValue: value, as: field.type)
+                else { return nil }
+                boxes[field.name] = box
+            }
+            records.append(boxes)
+        }
+
+        return records
+    }
+
+    /// A list of records as the text a record flag stores.
+    ///
+    /// The other half of ``recordValues(matching:)``, for an editor that has changed
+    /// something and needs to write it back the way the host will read it.
+    public static func records(_ records: [[String: FlagValueBox]]) -> FlagValueBox {
+        let objects = records.map { $0.mapValues(\.jsonValue) }
         guard
             let data = try? JSONSerialization.data(
                 withJSONObject: objects,
@@ -82,36 +143,6 @@ public struct FlagRecords<Record: FlagRecord>: FlagValue, ExpressibleByArrayLite
             )
         else { return .string("[]") }
         return .string(String(decoding: data, as: UTF8.self))
-    }
-
-    public init?(box: FlagValueBox) {
-        guard
-            case let .string(json) = box,
-            let objects = try? JSONSerialization.jsonObject(with: Data(json.utf8))
-                as? [[String: Any]]
-        else { return nil }
-
-        var values = [Record]()
-        values.reserveCapacity(objects.count)
-
-        for object in objects {
-            var boxes = [String: FlagValueBox](minimumCapacity: Record.flagRecordShape.count)
-            for field in Record.flagRecordShape {
-                // A field that is absent or holds the wrong type is left out rather
-                // than guessed at, and the record itself decides whether it can do
-                // without it. One bad record fails the whole list, as one bad element
-                // fails an array — a half-built list is worse than the default.
-                guard
-                    let value = object[field.name],
-                    let box = FlagValueBox(jsonValue: value, as: field.type)
-                else { continue }
-                boxes[field.name] = box
-            }
-            guard let record = Record(flagRecordBoxes: boxes) else { return nil }
-            values.append(record)
-        }
-
-        self.values = values
     }
 }
 
