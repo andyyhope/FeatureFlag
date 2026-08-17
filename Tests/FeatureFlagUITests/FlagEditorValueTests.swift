@@ -109,9 +109,18 @@ final class FlagEditorValueTests: XCTestCase {
         XCTAssertEqual(entry(valueType: .double).editorKind, .decimal)
     }
 
-    func testCollectionsShareTheJSONEditor() {
-        XCTAssertEqual(entry(valueType: .array(.int)).editorKind, .json)
+    /// An array of scalars is a list of controls, one per element. A dictionary has no
+    /// order to lay out and an array of arrays has no row that reads well, so those two
+    /// keep the JSON block.
+    func testAnArrayOfScalarsGetsARowPerElement() {
+        XCTAssertEqual(entry(valueType: .array(.int)).editorKind, .list(element: .int))
+        XCTAssertEqual(entry(valueType: .array(.date)).editorKind, .list(element: .date))
+    }
+
+    func testStructuralCollectionsKeepTheJSONEditor() {
         XCTAssertEqual(entry(valueType: .dictionary(.string)).editorKind, .json)
+        XCTAssertEqual(entry(valueType: .array(.array(.string))).editorKind, .json)
+        XCTAssertEqual(entry(valueType: .array(.dictionary(.int))).editorKind, .json)
     }
 
     func testCasesWinOverTheUnderlyingType() {
@@ -153,14 +162,23 @@ extension FlagEditorValueTests {
         XCTAssertTrue(data.editorKind.wantsWrappingEditor)
     }
 
-    func testCollectionsAlsoUseTheWrappingEditor() {
-        for type in [FlagValueType.array(.string), .dictionary(.int)] {
+    func testStructuralCollectionsAlsoUseTheWrappingEditor() {
+        for type in [FlagValueType.dictionary(.int), .array(.array(.string))] {
             let entry = FlagSchema.Entry(
                 key: "k", propertyPath: ["k"], description: "",
                 valueType: type, defaultValue: .array([])
             )
             XCTAssertTrue(entry.editorKind.wantsWrappingEditor, "\(type)")
         }
+    }
+
+    /// A list pushes to its own screen, so it never needs the wrapping block.
+    func testAListDoesNotUseTheWrappingEditor() {
+        let entry = FlagSchema.Entry(
+            key: "k", propertyPath: ["k"], description: "",
+            valueType: .array(.string), defaultValue: .array([])
+        )
+        XCTAssertFalse(entry.editorKind.wantsWrappingEditor)
     }
 
     func testScalarsStayOnASingleLine() {
