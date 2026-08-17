@@ -65,22 +65,9 @@ struct ContentView: View {
 
     private var remoteConfiguration: some View {
         Section {
-            Button {
-                model.apply(.malformed)
-            } label: {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(RemoteConfiguration.malformed.name)
-                        Text(RemoteConfiguration.malformed.summary)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
-                }
-            }
-            .buttonStyle(.plain)
+            payloadButton(.records)
+            payloadButton(.recordsWithATypo)
+            payloadButton(.malformed)
 
             if model.appliedConfiguration != nil {
                 Button("Clear remote payload", role: .destructive) { model.clearRemote() }
@@ -125,6 +112,29 @@ struct ContentView: View {
         } footer: {
             Text("resolution(for:) — the answer to “why is this flag false?”")
         }
+    }
+
+    /// One payload, offered as a button. The broken ones are marked, so a rejection
+    /// reads as the point of the exercise rather than as the demo being wrong.
+    private func payloadButton(_ configuration: RemoteConfiguration) -> some View {
+        Button {
+            model.apply(configuration)
+        } label: {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(configuration.name)
+                    Text(configuration.summary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                if configuration.isDeliberatelyBroken {
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Signals

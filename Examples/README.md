@@ -164,7 +164,8 @@ them — that is what the demo shows — but one iOS has since suspended will no
 | `DemoApp/AppFlags.swift` | host | The flag tree and the `FlagPole` that reads it |
 | `DemoApp/ContentView.swift` | host | Live values, remote payloads, provenance, Combine |
 | `DemoApp/DemoModel.swift` | host | Owns the pole and the remote source it feeds |
-| `DemoApp/RemoteConfigurations.swift` | host | The bundled payloads |
+| `DemoApp/RemoteConfigurations.swift` | host | The bundled payloads, including two no dot path can read |
+| `DemoApp/DemoRemoteMapper.swift` | host | A custom mapper, for the payload shaped as a list |
 | `DemoApp/AppSignals.swift` | both | Two signal enums — one group each, shared so both sides agree |
 | `DemoApp/DemoApp.swift` | host | `@main`; publishes the schema on launch |
 | `DemoCompanion/CompanionRootView.swift` | companion | Chooses which tabs the companion shows |
@@ -198,6 +199,25 @@ Everything except the two `@main` entry points also builds under `swift build`, 
 The signing settings matter more than they look. With code signing switched **off** rather
 than ad-hoc, entitlements are never embedded, the App Group container does not exist, and
 the two apps silently share nothing.
+
+## When a payload has a shape no path can reach
+
+Three of the demo's payloads are ordinary — every flag sits at a dot path, and
+`remoteKey` finds it. Two are not:
+
+```json
+{ "experiments": [ { "flag": "new-onboarding", "enabled": true } ] }
+```
+
+No path addresses "the record whose flag is new-onboarding", so `DotPathMapper` finds
+nothing and the payload applies cleanly while changing absolutely nothing — which is the
+worst way for this to fail. `DemoRemoteMapper` reshapes it, and composes the built-in
+mapper rather than replacing it, so the older shape still works.
+
+Tap **List of records, misspelled** to see the other half: a mapper is the only thing
+that can emit a key no flag has, which is why that is reported as `.unknownKey` rather
+than skipped. Applying is all-or-nothing, so the valid record beside it is not applied
+either.
 
 ## Adding remote overrides
 
