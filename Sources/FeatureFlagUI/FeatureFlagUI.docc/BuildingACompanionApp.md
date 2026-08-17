@@ -143,6 +143,11 @@ wrapping them again.
 Everything else — which control a flag gets, how an enum becomes a picker, how a `Data`
 flag is edited, what a reset does — comes from the schema and needs no work from you.
 
+An array of scalars gets a row per element, with the control its element type deserves:
+a toggle per `Bool`, a date picker per `Date`, a number field per `Int`. Add, delete and
+reorder come with it. Arrays of arrays and dictionaries stay as JSON text, because no
+row-per-element layout reads well for either.
+
 ## Going further
 
 ### Editing something other than an App Group

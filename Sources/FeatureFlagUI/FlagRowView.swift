@@ -51,9 +51,29 @@ public struct FlagRowView: View {
 
             case .text, .data, .json:
                 textField(keyboard: .default)
+
+            case let .list(element):
+                // A row in a list cannot hold a list, so this one pushes. The summary is
+                // what a glance needs: how many, and a taste of what they are.
+                NavigationLink {
+                    FlagArrayEditorView(store: store, entry: entry, element: element)
+                } label: {
+                    LabeledContent(summary(of: element)) {
+                        Text(store.value(for: entry).displayString)
+                            .font(.callout.monospaced())
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// "3 strings", so the row says what it holds before you open it.
+    private func summary(of element: FlagValueType) -> String {
+        guard case let .array(values) = store.value(for: entry) else { return "Edit" }
+        return "\(values.count) \(element.typeName)\(values.count == 1 ? "" : "s")"
     }
 
     // MARK: - Header

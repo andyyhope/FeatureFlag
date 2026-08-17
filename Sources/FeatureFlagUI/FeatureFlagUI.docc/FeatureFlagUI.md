@@ -63,6 +63,7 @@ free. See [Building a companion app](doc:BuildingACompanionApp).
 - ``FlagDetailView``
 - ``FlagGroupView``
 - ``FlagRowView``
+- ``FlagArrayEditorView``
 - ``FlagQRCodeView``
 - ``FlagImportView``
 

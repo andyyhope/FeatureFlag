@@ -13,7 +13,14 @@ public enum FlagEditorKind: Hashable, Sendable {
     case url
     /// Base64, because there is nothing better to show for arbitrary bytes.
     case data
-    /// Collections, edited as JSON text.
+    /// An array of values that each have a control of their own, edited a row at a time.
+    ///
+    /// Carries the element's type, which is what lets the editor pick the right control
+    /// for a row without ever seeing the host's Swift types.
+    indirect case list(element: FlagValueType)
+
+    /// Everything else structural — dictionaries, and arrays whose elements are
+    /// themselves collections — edited as JSON text.
     case json
 }
 
@@ -50,7 +57,16 @@ extension FlagSchema.Entry {
         case .date: return .date
         case .url: return .url
         case .data: return .data
-        case .array, .dictionary: return .json
+        case let .array(element):
+            // An array of scalars is a list of controls. An array of arrays is a shape
+            // no row-per-element editor reads well, so it stays JSON.
+            switch element {
+            case .array, .dictionary: return .json
+            default: return .list(element: element)
+            }
+
+        case .dictionary:
+            return .json
         }
     }
 }

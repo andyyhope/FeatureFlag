@@ -105,7 +105,7 @@ final class FlagEditingStoreTests: XCTestCase {
         XCTAssertEqual(try kind("checkout.express.label"), .text)
         XCTAssertEqual(try kind("checkout.launched-at"), .date)
         XCTAssertEqual(try kind("checkout.endpoint"), .url)
-        XCTAssertEqual(try kind("checkout.express.tags"), .json)
+        XCTAssertEqual(try kind("checkout.express.tags"), .list(element: .string))
     }
 
     func testAnEnumGetsAPickerOfItsCases() throws {
