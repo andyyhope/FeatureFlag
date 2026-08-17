@@ -81,6 +81,49 @@ extension RemoteValue {
     ///
     /// Dates, data and URLs arrive as strings, which is the only representation JSON
     /// has for them and matches how this framework exports them.
+    /// This value as a list of records, or `nil` if it is not one.
+    ///
+    /// A record flag stores text, so without this a backend sending the natural shape —
+    /// a list of objects — would be turned away for not being a string. Every field of
+    /// the shape must be present and hold its declared type, and an enum field must
+    /// name a case this build has, so a payload that would not survive being read back
+    /// is refused now rather than discovered later as a flag that quietly stopped
+    /// taking effect.
+    ///
+    /// A backend that sends the list already serialised as text is understood too, and
+    /// is held to exactly the same standard.
+    func recordBox(matching shape: [FlagRecordField]) -> FlagValueBox? {
+        if case let .string(text) = self {
+            guard FlagValueBox.string(text).recordValues(matching: shape) != nil else {
+                return nil
+            }
+            return .string(text)
+        }
+
+        guard case let .array(values) = self else { return nil }
+
+        var records = [[String: FlagValueBox]]()
+        records.reserveCapacity(values.count)
+
+        for value in values {
+            guard case let .object(fields) = value else { return nil }
+
+            var boxes = [String: FlagValueBox](minimumCapacity: shape.count)
+            for field in shape {
+                guard
+                    let raw = fields[field.name],
+                    let box = raw.box(as: field.type)
+                else { return nil }
+
+                if let cases = field.cases, cases.contains(box) == false { return nil }
+                boxes[field.name] = box
+            }
+            records.append(boxes)
+        }
+
+        return .records(records)
+    }
+
     func box(as type: FlagValueType) -> FlagValueBox? {
         switch (self, type) {
         case let (.bool(value), .bool):
