@@ -74,7 +74,8 @@ extension FlagRecordMacro: MemberMacro {
                     name: "\(field.name)",
                     type: \(field.type).flagValueType,
                     cases: FeatureFlag._flagValueCases(of: \(field.type).self),
-                    defaultValue: \(fallback)
+                    defaultValue: \(fallback),
+                    fields: FeatureFlag._flagRecordShape(of: \(field.type).self)
                 )
                 """
         }

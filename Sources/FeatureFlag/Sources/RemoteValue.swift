@@ -118,7 +118,15 @@ extension RemoteValue {
                     boxes[field.name] = fallback
                     continue
                 }
-                guard let box = raw.box(as: field.type) else { return nil }
+                // A field holding its own list of records is a string like any other
+                // record list, so it recurses rather than being read as one. Without
+                // this a backend would have to send a string containing JSON, nested
+                // inside JSON, which nothing produces on purpose.
+                let converted =
+                    field.fields.map { raw.recordBox(matching: $0) }
+                    ?? raw.box(as: field.type)
+
+                guard let box = converted else { return nil }
 
                 if let cases = field.cases, cases.contains(box) == false { return nil }
                 boxes[field.name] = box

@@ -32,13 +32,15 @@ final class FlagRecordMacroTests: XCTestCase {
                                 name: "name",
                                 type: String.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: String.self),
-                                defaultValue: nil
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self)
                             ),
                             FeatureFlag.FlagRecordField(
                                 name: "enabled",
                                 type: Bool.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: Bool.self),
-                                defaultValue: nil
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: Bool.self)
                             )
                         ]
                     }
@@ -85,7 +87,8 @@ final class FlagRecordMacroTests: XCTestCase {
                                 name: "name",
                                 type: String.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: String.self),
-                                defaultValue: nil
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self)
                             )
                         ]
                     }
@@ -130,7 +133,8 @@ final class FlagRecordMacroTests: XCTestCase {
                                 name: "weight",
                                 type: Int.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: Int.self),
-                                defaultValue: (1 as Int).box
+                                defaultValue: (1 as Int).box,
+                                fields: FeatureFlag._flagRecordShape(of: Int.self)
                             )
                         ]
                     }
@@ -175,7 +179,8 @@ final class FlagRecordMacroTests: XCTestCase {
                                 name: "name",
                                 type: String.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: String.self),
-                                defaultValue: nil
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self)
                             )
                         ]
                     }
@@ -222,7 +227,8 @@ final class FlagRecordMacroTests: XCTestCase {
                                 name: "name",
                                 type: String.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: String.self),
-                                defaultValue: nil
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self)
                             )
                         ]
                     }

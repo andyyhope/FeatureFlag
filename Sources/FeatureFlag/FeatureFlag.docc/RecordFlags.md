@@ -121,6 +121,37 @@ or an enum case this build has never heard of rejects the **whole payload** rath
 being found later as a flag that quietly stopped taking effect. A backend that sends the
 list already serialised as a string is understood too, and held to the same standard.
 
+### A field that is itself a list
+
+A record's field can be another list of records:
+
+```swift
+@FlagRecord
+struct SpendLimit {
+    var currency: String
+    var maximum: Double
+}
+
+@FlagRecord
+struct PaymentMethod {
+    var name: String
+    var limits: FlagRecords<SpendLimit> = []
+}
+```
+
+`FlagRecords` is a ``FlagValue``, so this always round-tripped — the nested list boxes
+as a string inside its parent's JSON. What the shape adds is that it *describes* the
+nested fields, so the companion pushes another list rather than showing a block of
+escaped JSON, and a backend can send the shape it would write anyway:
+
+```json
+{ "name": "Visa", "limits": [ { "currency": "AUD", "maximum": 500 } ] }
+```
+
+A list already serialised as a string is still understood, since that is what an export
+contains. One level of nesting is what the editor lays out well; deeper is representable
+but reads as JSON.
+
 ### Adding a field later
 
 Write the new field with an initialiser and lists already stored keep working:

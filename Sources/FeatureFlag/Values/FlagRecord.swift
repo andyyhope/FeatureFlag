@@ -23,16 +23,24 @@ public struct FlagRecordField: Hashable, Sendable {
     /// nothing honest to put there.
     public let defaultValue: FlagValueBox?
 
+    /// The fields of each record, when this field is itself a ``FlagRecords`` list.
+    ///
+    /// A nested list is a string like any other record list, so without this an editor
+    /// would show a block of escaped JSON and a backend would have to send one.
+    public let fields: [FlagRecordField]?
+
     public init(
         name: String,
         type: FlagValueType,
         cases: [FlagValueBox]? = nil,
-        defaultValue: FlagValueBox? = nil
+        defaultValue: FlagValueBox? = nil,
+        fields: [FlagRecordField]? = nil
     ) {
         self.name = name
         self.type = type
         self.cases = cases
         self.defaultValue = defaultValue
+        self.fields = fields
     }
 }
 
