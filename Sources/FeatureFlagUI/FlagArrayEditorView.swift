@@ -105,8 +105,6 @@
         let element: FlagValueType
         let onChange: (FlagValueBox) -> Void
 
-        @State private var text: String = ""
-
         var body: some View {
             switch element {
             case .bool:
@@ -131,39 +129,30 @@
                 .labelsHidden()
 
             default:
-                TextField("Value", text: $text)
-                    .font(.body.monospaced())
-                    .multilineTextAlignment(.trailing)
-                    #if os(iOS)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(keyboard)
-                    #endif
-                    .onAppear { text = value.displayString }
-                    .onChange(of: value) { text = $0.displayString }
-                    .onSubmit(commit)
-                    // Committing on every keystroke would reject "1" on the way to "-1",
-                    // so the text stands until it is finished with.
-                    .onDisappear(perform: commit)
+                // The same field the flag rows use, rather than a bare TextField: it
+                // carries the border that marks where the editable region is, and it
+                // refuses an edit that does not parse instead of guessing. Without it an
+                // empty string element renders as a blank row with nothing to aim at.
+                FlagTextField(
+                    text: value.displayString,
+                    keyboard: keyboard,
+                    isMultiline: false
+                ) { edited in
+                    guard let box = FlagValueBox(displayString: edited, as: element) else {
+                        return false
+                    }
+                    onChange(box)
+                    return true
+                }
             }
         }
 
-        #if os(iOS)
-            private var keyboard: UIKeyboardType {
-                switch element {
-                case .int: return .numbersAndPunctuation
-                case .double, .float: return .decimalPad
-                case .url: return .URL
-                default: return .default
-                }
+        private var keyboard: TextInputKeyboard {
+            switch element {
+            case .int, .double, .float: return .numbersAndPunctuation
+            case .url: return .URL
+            default: return .default
             }
-        #endif
-
-        private func commit() {
-            guard let box = FlagValueBox(displayString: text, as: element), box != value else {
-                return
-            }
-            onChange(box)
         }
     }
 
