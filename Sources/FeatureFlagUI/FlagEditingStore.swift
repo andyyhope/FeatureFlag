@@ -13,17 +13,28 @@ import Foundation
 /// `MutableFlagValueSource` the two processes share.
 public final class FlagEditingStore: ObservableObject {
 
-    public let schema: FlagSchema
+    /// What the editor is rendering. Replaced by ``refreshSchema()`` when the host
+    /// publishes a different one.
+    public private(set) var schema: FlagSchema
 
     /// Filters the visible flags by key and description.
     @Published public var searchText: String = ""
 
     private let source: any MutableFlagValueSource
+    private let reloadSchema: () -> FlagSchema?
     private var cancellables: Set<AnyCancellable> = []
 
-    public init(schema: FlagSchema, source: any MutableFlagValueSource) {
+    /// - Parameter reloadingSchemaWith: How to read the host's schema again, for
+    ///   ``refreshSchema()``. The default never finds a new one, which suits a store
+    ///   built around a schema handed in directly.
+    public init(
+        schema: FlagSchema,
+        source: any MutableFlagValueSource,
+        reloadingSchemaWith reloadSchema: @escaping () -> FlagSchema? = { nil }
+    ) {
         self.schema = schema
         self.source = source
+        self.reloadSchema = reloadSchema
 
         // Another process editing the same store should update this one live.
         source.changes
@@ -41,7 +52,25 @@ public final class FlagEditingStore: ObservableObject {
         guard let source = UserDefaultsSource(appGroup: groupIdentifier) else {
             throw FlagSchemaError.notPublished
         }
-        try self.init(schema: FlagSchema(appGroup: groupIdentifier), source: source)
+        try self.init(
+            schema: FlagSchema(appGroup: groupIdentifier),
+            source: source,
+            reloadingSchemaWith: { try? FlagSchema(appGroup: groupIdentifier) }
+        )
+    }
+
+    /// Re-reads the host's schema, if it has changed.
+    ///
+    /// A companion is a long-lived app pointed at a host that is being rebuilt all day.
+    /// Without this it holds the schema it read at launch, so a flag added on the other
+    /// side is invisible until the companion is force quit — which looks exactly like
+    /// the App Group being wrong, and sends people to check their entitlements.
+    ///
+    /// Call it when the app comes to the front. ``FlagCompanionView`` already does.
+    public func refreshSchema() {
+        guard let reloaded = reloadSchema(), reloaded != schema else { return }
+        objectWillChange.send()
+        schema = reloaded
     }
 
     // MARK: - Structure
@@ -169,6 +198,16 @@ public final class FlagEditingStore: ObservableObject {
             values[entry.key] = value(for: entry)
         }
         return try FlagPayload(values: values).encoded(as: format)
+    }
+
+    /// The code as text, or `nil` when there is not one worth offering.
+    ///
+    /// A view wants to know whether to show a Copy button, not to handle an error while
+    /// building its body — and "nothing is overridden" and "this will not fit in a code"
+    /// both mean the same thing here: there is nothing to hand over.
+    public var copyableQRCode: String? {
+        guard overriddenKeys.isEmpty == false else { return nil }
+        return try? qrCodeString()
     }
 
     public func qrCodeString() throws -> String {

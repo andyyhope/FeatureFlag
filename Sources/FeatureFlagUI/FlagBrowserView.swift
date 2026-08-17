@@ -91,6 +91,7 @@ public struct FlagQRCodeView: View {
     @ObservedObject private var store: FlagEditingStore
     @Environment(\.dismiss) private var dismiss
     @State private var hasCopied = false
+    @State private var hasCopiedCode = false
     @State private var savedFile: URL?
 
     public init(store: FlagEditingStore) {
@@ -116,6 +117,28 @@ public struct FlagQRCodeView: View {
                             .foregroundStyle(.secondary)
                     }
                 #endif
+
+                // Scanning needs a second device with a camera. Copying the code itself
+                // is the way across when there isn't one — a simulator, a Mac, or a
+                // phone whose camera permission you are not going to grant a debug tool
+                // — and it pastes straight into the import field.
+                if let code = store.copyableQRCode {
+                    Button {
+                        FlagPasteboard.copy(code)
+                        withAnimation(.easeOut(duration: 0.15)) { hasCopiedCode = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+                            withAnimation(.easeIn(duration: 0.2)) { hasCopiedCode = false }
+                        }
+                    } label: {
+                        Label(
+                            hasCopiedCode ? "Code copied" : "Copy code",
+                            systemImage: hasCopiedCode ? "checkmark" : "text.quote"
+                        )
+                        .font(.footnote)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(hasCopiedCode ? Color.green : Color.accentColor)
+                }
 
                 Text("\(store.overriddenKeys.count) override(s)")
                     .font(.footnote)
@@ -147,7 +170,7 @@ public struct FlagQRCodeView: View {
                     }
                 } label: {
                     Label(
-                        hasCopied ? "Copied" : "Copy",
+                        hasCopied ? "Image copied" : "Copy image",
                         systemImage: hasCopied ? "checkmark" : "doc.on.doc"
                     )
                 }

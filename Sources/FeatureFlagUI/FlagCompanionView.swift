@@ -65,10 +65,33 @@
 
             case let .ready(store):
                 content(store)
+                    // The host is being rebuilt all day while this app stays open, so
+                    // coming back to the front is the moment to check whether its flags
+                    // have changed. Without it a newly added flag stays invisible until
+                    // the companion is force quit, which reads as a broken App Group.
+                    .onReceive(FlagCompanionView.didBecomeActive) { _ in
+                        store.refreshSchema()
+                    }
 
             case let .failed(message):
+                // Retried on return too: the usual reason for this is that the host had
+                // never been run, and the obvious next move is to go and run it.
                 FlagCompanionUnavailableView(message: message) { loader.load() }
+                    .onReceive(FlagCompanionView.didBecomeActive) { _ in loader.load() }
             }
+        }
+
+        /// Whichever notification this platform uses for "the app is in front again".
+        static var didBecomeActive: NotificationCenter.Publisher {
+            #if os(iOS)
+                NotificationCenter.default.publisher(
+                    for: UIApplication.didBecomeActiveNotification
+                )
+            #else
+                NotificationCenter.default.publisher(
+                    for: NSApplication.didBecomeActiveNotification
+                )
+            #endif
         }
     }
 
