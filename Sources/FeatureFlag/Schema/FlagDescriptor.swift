@@ -25,6 +25,10 @@ public struct FlagDescriptor: Hashable, Sendable {
     /// overridable.
     public let remoteKey: String?
 
+    /// The fields of each record, when the flag holds a ``FlagRecords`` list. Editors
+    /// render a row per record and a control per field rather than raw JSON.
+    public let recordShape: [FlagRecordField]?
+
     public init(
         propertyName: String,
         keyPath: FlagKeyPath,
@@ -32,7 +36,8 @@ public struct FlagDescriptor: Hashable, Sendable {
         valueType: FlagValueType,
         defaultValue: FlagValueBox,
         cases: [FlagValueBox]? = nil,
-        remoteKey: String? = nil
+        remoteKey: String? = nil,
+        recordShape: [FlagRecordField]? = nil
     ) {
         self.propertyName = propertyName
         self.keyPath = keyPath
@@ -41,6 +46,7 @@ public struct FlagDescriptor: Hashable, Sendable {
         self.defaultValue = defaultValue
         self.cases = cases
         self.remoteKey = remoteKey
+        self.recordShape = recordShape
     }
 }
 
@@ -135,7 +141,8 @@ extension FlagDescriptor {
             valueType: valueType,
             defaultValue: defaultValue,
             cases: cases,
-            remoteKey: remoteKey
+            remoteKey: remoteKey,
+            recordShape: recordShape
         )
     }
 }

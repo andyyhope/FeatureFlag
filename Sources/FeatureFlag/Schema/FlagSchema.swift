@@ -37,6 +37,9 @@ public struct FlagSchema: Sendable, Equatable {
         /// Every case, when the type is a `CaseIterable` enum. Editors show a picker.
         public let cases: [FlagValueBox]?
         public let remoteKey: String?
+        /// The fields of each record, when the flag holds a ``FlagRecords`` list.
+        /// Editors show a row per record instead of a block of JSON.
+        public let recordShape: [FlagRecordField]?
 
         public init(
             key: FlagKey,
@@ -45,7 +48,8 @@ public struct FlagSchema: Sendable, Equatable {
             valueType: FlagValueType,
             defaultValue: FlagValueBox,
             cases: [FlagValueBox]? = nil,
-            remoteKey: String? = nil
+            remoteKey: String? = nil,
+            recordShape: [FlagRecordField]? = nil
         ) {
             self.key = key
             self.propertyPath = propertyPath
@@ -54,6 +58,7 @@ public struct FlagSchema: Sendable, Equatable {
             self.defaultValue = defaultValue
             self.cases = cases
             self.remoteKey = remoteKey
+            self.recordShape = recordShape
         }
     }
 
@@ -143,7 +148,8 @@ public struct FlagSchema: Sendable, Equatable {
                         valueType: descriptor.valueType,
                         defaultValue: descriptor.defaultValue,
                         cases: descriptor.cases,
-                        remoteKey: descriptor.remoteKey
+                        remoteKey: descriptor.remoteKey,
+                        recordShape: descriptor.recordShape
                     )
                 )
 
@@ -303,6 +309,7 @@ extension FlagSchema.Entry {
         ]
         object["cases"] = cases?.map(\.jsonValue)
         object["remoteKey"] = remoteKey
+        object["recordShape"] = recordShape?.map(\.jsonObject)
         return object
     }
 
@@ -330,6 +337,32 @@ extension FlagSchema.Entry {
             FlagValueBox(jsonValue: $0, as: valueType)
         }
         self.remoteKey = object["remoteKey"] as? String
+        self.recordShape = (object["recordShape"] as? [[String: Any]])?.compactMap(
+            FlagRecordField.init(jsonObject:)
+        )
+    }
+}
+
+extension FlagRecordField {
+
+    var jsonObject: [String: Any] {
+        var object: [String: Any] = ["name": name, "type": type.typeName]
+        object["cases"] = cases?.map(\.jsonValue)
+        return object
+    }
+
+    init?(jsonObject object: [String: Any]) {
+        guard
+            let name = object["name"] as? String,
+            let typeName = object["type"] as? String,
+            let type = FlagValueType(typeName: typeName)
+        else { return nil }
+
+        self.name = name
+        self.type = type
+        self.cases = (object["cases"] as? [Any])?.compactMap {
+            FlagValueBox(jsonValue: $0, as: type)
+        }
     }
 }
 

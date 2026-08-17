@@ -70,7 +70,8 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                                     valueType: Bool.flagValueType,
                                     defaultValue: (false as Bool).box,
                                     cases: FeatureFlag._flagValueCases(of: Bool.self),
-                                    remoteKey: nil
+                                    remoteKey: nil,
+                                    recordShape: FeatureFlag._flagRecordShape(of: Bool.self)
                                 )
                             )
                         ]
