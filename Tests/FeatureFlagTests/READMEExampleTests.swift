@@ -87,6 +87,28 @@ final class READMEExampleTests: XCTestCase {
         XCTAssertEqual(tier.cases, [.string("free"), .string("pro")])
     }
 
+    /// The records sample: the declaration, and the stored form the README describes.
+    func testRecordsSampleCompilesAndStoresAsJSONText() {
+        let flags = FlagPole(READMERecordFlags.self, sources: [])
+
+        XCTAssertEqual(flags.paymentMethods.values.map(\.name), ["Visa"])
+        XCTAssertEqual(
+            flags.$paymentMethods.defaultValue.box,
+            .string(#"[{"enabled":true,"kind":"card","name":"Visa"}]"#)
+        )
+    }
+
+    /// "Adding a field to a record invalidates lists already stored."
+    func testRecordsSampleFallsBackWhenAStoredListPredatesAField() throws {
+        let local = SnapshotSource(name: "local")
+        // Written by a build whose PaymentMethod had no `enabled`.
+        try local.setBox(.string(#"[{"kind":"card","name":"Amex"}]"#), for: "payment-methods")
+
+        let flags = FlagPole(READMERecordFlags.self, sources: [local])
+
+        XCTAssertEqual(flags.paymentMethods.values.map(\.name), ["Visa"])
+    }
+
     /// The dynamic member lookup caveat: real members win.
     func testDocumentedShadowingCaveatHolds() {
         let flags = FlagPole(AppFlags.self, sources: [])
@@ -119,6 +141,27 @@ private struct CheckoutFlags {
 
     @Flag(default: Tier.free, description: "Pricing tier to present")
     var tier: Tier
+}
+
+private enum PaymentKind: String, FlagValue, CaseIterable, FlagValueCases {
+    case card, wallet
+}
+
+@FlagRecord
+private struct PaymentMethod {
+    var name: String
+    var kind: PaymentKind
+    var enabled: Bool
+}
+
+@FlagContainer
+private struct READMERecordFlags {
+
+    @Flag(
+        default: [PaymentMethod(name: "Visa", kind: .card, enabled: true)],
+        description: "Payment methods offered at checkout"
+    )
+    var paymentMethods: FlagRecords<PaymentMethod>
 }
 
 private enum Tier: String, FlagValue, CaseIterable, FlagValueCases {

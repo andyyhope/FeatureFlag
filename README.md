@@ -79,6 +79,8 @@ compiles to nothing rather than pretending. The core module supports all four.
   evaluation order to reason about.
 - **Every type `UserDefaults` supports**, plus arrays, dictionaries, and
   `RawRepresentable` enums, which need no implementation beyond declaring conformance.
+- **Records.** `@FlagRecord` gives a flag a list of fixed-shape values — a name, a URL and
+  a switch, repeated — with a field-by-field editor in the companion app.
 - **A companion app** sharing flags through an App Group, updating your app while it runs.
 - **Remote overrides** from JSON or PLIST, mapped from whatever shape your backend sends.
 - **Export and import** as JSON, PLIST, or a QR code.
@@ -105,6 +107,7 @@ Xcode (**Product → Build Documentation**) or right here on GitHub:
 | [Getting started](Sources/FeatureFlag/FeatureFlag.docc/GettingStarted.md) | Empty project to a flag you can toggle from a second app |
 | [Declaring flags](Sources/FeatureFlag/FeatureFlag.docc/DeclaringFlags.md) | Containers, nesting, keys, and flags with no pole behind them |
 | [Flag values](Sources/FeatureFlag/FeatureFlag.docc/FlagValues.md) | The types a flag can hold, enums, and conforming your own |
+| [Records](Sources/FeatureFlag/FeatureFlag.docc/RecordFlags.md) | Lists of fixed-shape values, and how they stay editable |
 | [Sources and precedence](Sources/FeatureFlag/FeatureFlag.docc/SourcesAndPrecedence.md) | Stacking sources, and finding out which one won |
 | [Observing changes](Sources/FeatureFlag/FeatureFlag.docc/ObservingChanges.md) | Combine publishers, SwiftUI, and changes from another process |
 | [Remote overrides](Sources/FeatureFlag/FeatureFlag.docc/RemoteOverrides.md) | Dot paths, custom mappers, and why a bad field rejects everything |
@@ -255,6 +258,28 @@ unavailable for those five names.
 **If your own module declares a type called `Flag`**, write `@FeatureFlag.Flag` instead. A
 local `Flag` makes the bare attribute fail before any macro runs. Everything generated is
 fully qualified, so nothing else can be shadowed.
+
+**A flag can hold a list of records** when configuration is not one value but several
+small structured ones:
+
+```swift
+@FlagRecord
+struct PaymentMethod {
+    var name: String
+    var kind: PaymentKind      // an enum field becomes a picker in the companion
+    var enabled: Bool
+}
+
+@Flag(default: [PaymentMethod(name: "Visa", kind: .card, enabled: true)],
+      description: "Payment methods offered at checkout")
+var paymentMethods: FlagRecords<PaymentMethod>
+```
+
+Stored as JSON text, so every codec, the QR encoder and remote validation already handle
+it — and a companion built before records existed degrades to a text field rather than
+failing to read the schema. Adding a field to a record invalidates lists already stored:
+the app falls back to its default rather than reading a half-built value.
+See [Records](Sources/FeatureFlag/FeatureFlag.docc/RecordFlags.md).
 
 → [Troubleshooting](Sources/FeatureFlag/FeatureFlag.docc/Troubleshooting.md) has the rest,
 including the `UserDefaults` type-caching behaviour that only bites if a flag changes its

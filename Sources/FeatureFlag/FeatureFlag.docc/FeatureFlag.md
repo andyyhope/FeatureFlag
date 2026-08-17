@@ -58,9 +58,14 @@ goes from an empty project to a flag you can toggle from a second app.
 ### Declaring flags
 
 - <doc:FlagValues>
+- <doc:RecordFlags>
 - ``FlagGroup(description:)``
 - ``FlagValue``
 - ``FlagValueCases``
+- ``FlagRecord()``
+- ``FlagRecord``
+- ``FlagRecords``
+- ``FlagRecordField``
 - ``KeyEncoding``
 
 ### Where values come from

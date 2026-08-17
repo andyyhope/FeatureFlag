@@ -98,6 +98,30 @@ let data = try Data(contentsOf: bundleURL)
 try remote.apply(data, format: .plist)
 ```
 
+### Lists of records
+
+A flag holding a ``FlagRecords`` list takes the shape a backend would write anyway:
+
+```swift
+@Flag(default: [], description: "Endpoints", remoteKey: "config.endpoints")
+var endpoints: FlagRecords<Endpoint>
+```
+
+```json
+{ "config": { "endpoints": [
+    { "name": "staging", "url": "https://staging.example", "weight": 7 }
+] } }
+```
+
+Records are stored as text, so what decides here is not the flag's type but the shape
+published beside it. Every field must be present and hold its declared type, and an
+enum field must name a case this build has — otherwise the whole payload is rejected,
+as with any other mismatch. A backend that sends the list already serialised as a
+string is understood too, and validated the same way rather than being taken on trust.
+
+A bad field inside a record is reported as a `.typeMismatch` on the flag, because a
+``RemoteOverrideProblem`` names a flag rather than a field. See <doc:RecordFlags>.
+
 ### When a path cannot express it
 
 Some payloads are not addressable by path — a list of records where the flag name is a

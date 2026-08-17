@@ -68,7 +68,8 @@ public struct AppFlags {
             PaymentMethod(name: "Apple Pay", kind: .wallet, enabled: true, minimumSpend: 5),
             PaymentMethod(name: "Bank transfer", kind: .transfer, enabled: false, minimumSpend: 50),
         ],
-        description: "Payment methods offered at checkout"
+        description: "Payment methods offered at checkout",
+        remoteKey: "config.paymentMethods"
     )
     public var paymentMethods: FlagRecords<PaymentMethod>
 

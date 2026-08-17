@@ -35,12 +35,52 @@ final class RemoteConfigurationTests: XCTestCase {
         XCTAssertTrue(result.absentKeys.isEmpty, "unmatched paths: \(result.absentKeys)")
         XCTAssertEqual(
             result.appliedKeys,
-            ["checkout.apple-pay", "checkout.endpoint", "new-onboarding"]
+            ["checkout.apple-pay", "checkout.endpoint", "new-onboarding", "payment-methods"]
         )
 
         XCTAssertTrue(pole.newOnboarding)
         XCTAssertTrue(pole.checkout.applePay)
         XCTAssertEqual(pole.checkout.endpoint.host(), "staging.api.example.com")
+    }
+
+    // MARK: - Records
+
+    func testAPayloadReplacesTheWholeListOfRecords() throws {
+        let (pole, remote, _) = makePole()
+        XCTAssertEqual(pole.paymentMethods.values.count, 3, "the compiled default")
+
+        try remote.apply(RemoteConfiguration.local.data, format: .json)
+
+        XCTAssertEqual(pole.paymentMethods.values.map(\.name), ["Test card"])
+        XCTAssertEqual(pole.paymentMethods.values.first?.kind, .card)
+    }
+
+    func testEachEnvironmentBringsItsOwnPaymentMethods() throws {
+        let (pole, remote, _) = makePole()
+
+        try remote.apply(RemoteConfiguration.production.data, format: .json)
+        XCTAssertEqual(pole.paymentMethods.values.map(\.name), ["Visa", "Mastercard"])
+
+        try remote.apply(RemoteConfiguration.staging.data, format: .json)
+        XCTAssertEqual(
+            pole.paymentMethods.values.map(\.name),
+            ["Visa", "Apple Pay", "Bank transfer"]
+        )
+        XCTAssertEqual(pole.paymentMethods.values.last?.minimumSpend, 10)
+    }
+
+    func testEveryBundledPayloadSendsRecordsThisBuildCanRead() throws {
+        // A payload naming a payment kind the app has never heard of, or missing a
+        // field, would reject the whole thing — including the flags beside it.
+        for configuration in [
+            RemoteConfiguration.production, .staging, .local,
+        ] {
+            let (_, remote, _) = makePole()
+            XCTAssertNoThrow(
+                try remote.apply(configuration.data, format: .json),
+                "\(configuration.name) was rejected"
+            )
+        }
     }
 
     func testProductionTurnsThingsOff() throws {

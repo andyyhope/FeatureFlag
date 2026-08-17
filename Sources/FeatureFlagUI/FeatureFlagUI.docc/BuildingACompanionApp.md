@@ -148,6 +148,19 @@ a toggle per `Bool`, a date picker per `Date`, a number field per `Int`. Add, de
 reorder come with it. Arrays of arrays and dictionaries stay as JSON text, because no
 row-per-element layout reads well for either.
 
+A flag holding a list of records gets ``FlagRecordsEditorView``: a row per record showing
+its first field and a taste of the rest, and the four verbs a list needs — add, duplicate
+by swiping from the leading edge, reorder, remove. Each record opens onto a screen of its
+own, a row per field with the control that field's type calls for, including a picker for
+an enum field.
+
+None of this needs the host's Swift types. A record arrives as a dictionary of boxes and
+a published shape, which is enough to lay it out and enough to write it back the way the
+host will read it — new records start every enum field on a real case, so the companion
+cannot write a list the app would reject. When the stored text is not a list of records
+at all, the screen says so rather than showing an empty list, because an empty list would
+invite you to add one and wonder why nothing changed.
+
 ## Going further
 
 ### Editing something other than an App Group
