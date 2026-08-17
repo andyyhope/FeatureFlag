@@ -135,3 +135,33 @@ final class RemoteValueTests: XCTestCase {
         )
     }
 }
+
+// MARK: - The types only a property list carries natively
+
+extension RemoteValueTests {
+
+    /// JSON has no date and no data, so these two branches are reachable only from a
+    /// property list. Strings becoming dates and data is tested above; this is the
+    /// value arriving already typed.
+    func testNativeDatesAndDataBoxAsThemselves() {
+        let moment = Date(timeIntervalSince1970: 1_000)
+        XCTAssertEqual(RemoteValue.date(moment).box(as: .date), .date(moment))
+
+        let bytes = Data([0xDE, 0xAD, 0xBE, 0xEF])
+        XCTAssertEqual(RemoteValue.data(bytes).box(as: .data), .data(bytes))
+    }
+
+    /// A native date is not a string, and must not satisfy a string flag by being
+    /// described into one.
+    func testNativeDatesAndDataDoNotSatisfyOtherTypes() {
+        let moment = RemoteValue.date(Date(timeIntervalSince1970: 1_000))
+        for type in [FlagValueType.string, .int, .double, .bool, .data, .url] {
+            XCTAssertNil(moment.box(as: type), "a date should not box as \(type)")
+        }
+
+        let bytes = RemoteValue.data(Data([0x01]))
+        for type in [FlagValueType.string, .int, .double, .bool, .date, .url] {
+            XCTAssertNil(bytes.box(as: type), "data should not box as \(type)")
+        }
+    }
+}
