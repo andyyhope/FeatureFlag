@@ -242,3 +242,103 @@ private struct RecordListMapper: RemoteOverrideMapper {
         return result
     }
 }
+
+// MARK: - Property lists, beyond the happy path
+
+extension RemoteOverrideTests {
+
+    private func makePlistSource() -> RemoteOverrideSource {
+        RemoteOverrideSource(PlistRemoteFlags.self)
+    }
+
+    private func plist(_ object: [String: Any]) throws -> Data {
+        try PropertyListSerialization.data(fromPropertyList: object, format: .xml, options: 0)
+    }
+
+    /// The reason a property list is worth supporting at all: it carries dates and data
+    /// natively, and JSON cannot. Nothing else can exercise these paths.
+    func testDatesAndDataArriveNativelyFromAPropertyList() throws {
+        let moment = Date(timeIntervalSince1970: 1_700_000_000)
+        let bytes = Data([0x01, 0x02, 0x03])
+
+        let source = makePlistSource()
+        let result = try source.apply(
+            try plist(["cfg": ["launchesAt": moment, "blob": bytes]]),
+            format: .plist
+        )
+
+        XCTAssertEqual(Set(result.appliedKeys), ["launches-at", "blob"])
+        XCTAssertEqual(source.box(for: "launches-at", as: .date), .date(moment))
+        XCTAssertEqual(source.box(for: "blob", as: .data), .data(bytes))
+    }
+
+    /// A property list keeps whole numbers and fractions apart, where JSON hands both to
+    /// the same decoder. The strictness has to hold either way.
+    func testAPropertyListStillRejectsAMistypedValue() throws {
+        XCTAssertThrowsError(
+            try makePlistSource().apply(
+                try plist(["cfg": ["launchesAt": "not a date"]]),
+                format: .plist
+            )
+        ) { error in
+            guard case let .rejected(problems) = error as? RemoteOverrideError else {
+                return XCTFail("expected .rejected, got \(error)")
+            }
+            XCTAssertEqual(problems.map(\.kind), [.typeMismatch])
+        }
+    }
+
+    func testAWholeNumberStillWidensToADoubleFromAPropertyList() throws {
+        let source = makePlistSource()
+        _ = try source.apply(try plist(["cfg": ["ratio": 1]]), format: .plist)
+        XCTAssertEqual(source.box(for: "ratio", as: .double), .double(1))
+    }
+
+    /// The counterpart of `testRejectsMalformedData`, which only covered JSON.
+    func testRejectsAMalformedPropertyList() {
+        XCTAssertThrowsError(
+            try makePlistSource().apply(Data("not a property list".utf8), format: .plist)
+        ) { error in
+            guard case .malformed = error as? RemoteOverrideError else {
+                return XCTFail("expected .malformed, got \(error)")
+            }
+        }
+    }
+
+    /// JSON read as a property list is not a property list, and saying so beats
+    /// half-decoding it.
+    func testJSONReadAsAPropertyListIsRejected() {
+        XCTAssertThrowsError(
+            try makePlistSource().apply(
+                Data(#"{"cfg": {"ratio": 1}}"#.utf8), format: .plist
+            )
+        ) { error in
+            guard case .malformed = error as? RemoteOverrideError else {
+                return XCTFail("expected .malformed, got \(error)")
+            }
+        }
+    }
+
+    /// A flag the payload never mentions is reported rather than quietly ignored, the
+    /// same way it is for JSON.
+    func testAbsentKeysAreReportedForAPropertyListToo() throws {
+        let result = try makePlistSource().apply(
+            try plist(["cfg": ["ratio": 2.5]]), format: .plist
+        )
+        XCTAssertEqual(result.appliedKeys, ["ratio"])
+        XCTAssertEqual(Set(result.absentKeys), ["launches-at", "blob"])
+    }
+}
+
+@FlagContainer
+private struct PlistRemoteFlags {
+
+    @Flag(default: .distantPast, description: "Launch date", remoteKey: "cfg.launchesAt")
+    var launchesAt: Date
+
+    @Flag(default: Data(), description: "A blob", remoteKey: "cfg.blob")
+    var blob: Data
+
+    @Flag(default: 0.0, description: "Ratio", remoteKey: "cfg.ratio")
+    var ratio: Double
+}
