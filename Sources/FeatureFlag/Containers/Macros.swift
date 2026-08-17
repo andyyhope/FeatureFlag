@@ -37,3 +37,31 @@ public macro FlagContainer() =
 @attached(peer)
 public macro FlagGroup(description: String) =
     #externalMacro(module: "FeatureFlagMacros", type: "FlagGroupMacro")
+
+/// Turns a struct into a ``FlagRecord``, so a flag can hold a list of them.
+///
+/// ```swift
+/// @FlagRecord
+/// struct Endpoint {
+///     var name: String
+///     var url: URL
+///     var enabled: Bool
+/// }
+///
+/// @Flag(default: [Endpoint(name: "prod", url: …, enabled: true)], description: "Endpoints")
+/// var endpoints: FlagRecords<Endpoint>
+/// ```
+///
+/// Every stored property becomes a field, in declaration order, and must itself be a
+/// ``FlagValue``. Fields are boxed one at a time rather than run through `Codable`, so a
+/// `Date` inside a record is written exactly the way a `Date` flag beside it is written,
+/// and an enum field arrives in the companion app as a picker.
+///
+/// Fields need explicit type annotations, for the same reason flags do.
+/// The memberwise initialiser survives: the generated one lives in an extension,
+/// because a struct that declares an initialiser in its own body loses it — and a
+/// record you cannot construct is no use as a flag's default.
+@attached(extension, conformances: FlagRecord, names: named(init(flagRecordBoxes:)))
+@attached(member, names: named(flagRecordShape), named(flagRecordBoxes))
+public macro FlagRecord() =
+    #externalMacro(module: "FeatureFlagMacros", type: "FlagRecordMacro")

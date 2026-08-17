@@ -36,6 +36,31 @@ final class FlagRecordTests: XCTestCase {
         XCTAssertEqual(pole.flags.endpoints.values, [])
     }
 
+    func testTheMemberwiseInitialiserSurvivesTheMacro() {
+        // The generated initialiser lives in an extension for exactly this reason.
+        // Declared among the members it would suppress the one Swift writes, leaving a
+        // record nobody can construct — including in the `default:` its flag needs.
+        let endpoint = Endpoint(
+            name: "adhoc",
+            url: URL(string: "https://adhoc.example")!,
+            enabled: true,
+            weight: 1,
+            expires: Date(timeIntervalSince1970: 0),
+            tier: .primary
+        )
+
+        XCTAssertEqual(endpoint.name, "adhoc")
+    }
+
+    func testARecordCanBeWrittenByHandWithoutTheMacro() throws {
+        let local = SnapshotSource(name: "local")
+        try local.setBox(FlagRecords([Note(text: "by hand")]).box, for: "notes")
+
+        let pole = FlagPole(HandWrittenFlags.self, sources: [local])
+
+        XCTAssertEqual(pole.flags.notes.values, [Note(text: "by hand")])
+    }
+
     // MARK: - Wire format
 
     func testDatesAndURLsAreWrittenTheWayEveryOtherFlagWritesThem() throws {
@@ -186,8 +211,8 @@ private enum Tier: String, FlagValue, FlagValueCases, CaseIterable {
     case secondary
 }
 
-/// Hand-written for now; `@FlagRecord` generates exactly this in phase two.
-private struct Endpoint: FlagRecord {
+@FlagRecord
+private struct Endpoint {
 
     var name: String
     var url: URL
@@ -197,50 +222,6 @@ private struct Endpoint: FlagRecord {
     var tier: Tier
 
     static let fieldNames = ["name", "url", "enabled", "weight", "expires", "tier"]
-
-    static var flagRecordShape: [FlagRecordField] {
-        [
-            FlagRecordField(name: "name", type: String.flagValueType, cases: _flagValueCases(of: String.self)),
-            FlagRecordField(name: "url", type: URL.flagValueType, cases: _flagValueCases(of: URL.self)),
-            FlagRecordField(name: "enabled", type: Bool.flagValueType, cases: _flagValueCases(of: Bool.self)),
-            FlagRecordField(name: "weight", type: Int.flagValueType, cases: _flagValueCases(of: Int.self)),
-            FlagRecordField(name: "expires", type: Date.flagValueType, cases: _flagValueCases(of: Date.self)),
-            FlagRecordField(name: "tier", type: Tier.flagValueType, cases: _flagValueCases(of: Tier.self)),
-        ]
-    }
-
-    var flagRecordBoxes: [String: FlagValueBox] {
-        [
-            "name": name.box,
-            "url": url.box,
-            "enabled": enabled.box,
-            "weight": weight.box,
-            "expires": expires.box,
-            "tier": tier.box,
-        ]
-    }
-
-    init?(flagRecordBoxes boxes: [String: FlagValueBox]) {
-        guard
-            let name = boxes["name"].flatMap(String.init(box:)),
-            let url = boxes["url"].flatMap(URL.init(box:)),
-            let enabled = boxes["enabled"].flatMap(Bool.init(box:)),
-            let weight = boxes["weight"].flatMap(Int.init(box:)),
-            let expires = boxes["expires"].flatMap(Date.init(box:)),
-            let tier = boxes["tier"].flatMap(Tier.init(box:))
-        else { return nil }
-
-        self.init(name: name, url: url, enabled: enabled, weight: weight, expires: expires, tier: tier)
-    }
-
-    init(name: String, url: URL, enabled: Bool, weight: Int, expires: Date, tier: Tier) {
-        self.name = name
-        self.url = url
-        self.enabled = enabled
-        self.weight = weight
-        self.expires = expires
-        self.tier = tier
-    }
 }
 
 extension Endpoint {
@@ -268,4 +249,33 @@ private struct RecordFlags {
 
     @Flag(default: [Endpoint.production], description: "Endpoints")
     var endpoints: FlagRecords<Endpoint>
+}
+
+/// The macro is the supported path, but the protocol is public and documented as
+/// conformable by hand. This is what that costs.
+private struct Note: FlagRecord {
+
+    var text: String
+
+    static var flagRecordShape: [FlagRecordField] {
+        [FlagRecordField(name: "text", type: String.flagValueType)]
+    }
+
+    var flagRecordBoxes: [String: FlagValueBox] { ["text": text.box] }
+
+    init(text: String) {
+        self.text = text
+    }
+
+    init?(flagRecordBoxes boxes: [String: FlagValueBox]) {
+        guard let text = boxes["text"].flatMap(String.init(box:)) else { return nil }
+        self.text = text
+    }
+}
+
+@FlagContainer
+private struct HandWrittenFlags {
+
+    @Flag(default: [], description: "Notes")
+    var notes: FlagRecords<Note>
 }
