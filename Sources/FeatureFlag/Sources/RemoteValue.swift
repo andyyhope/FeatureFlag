@@ -110,10 +110,15 @@ extension RemoteValue {
 
             var boxes = [String: FlagValueBox](minimumCapacity: shape.count)
             for field in shape {
-                guard
-                    let raw = fields[field.name],
-                    let box = raw.box(as: field.type)
-                else { return nil }
+                // A backend that has not caught up with a newly added field is the same
+                // situation as a stored record that predates it, and gets the same
+                // answer: the field's declared default, if it has one.
+                guard let raw = fields[field.name] else {
+                    guard let fallback = field.defaultValue else { return nil }
+                    boxes[field.name] = fallback
+                    continue
+                }
+                guard let box = raw.box(as: field.type) else { return nil }
 
                 if let cases = field.cases, cases.contains(box) == false { return nil }
                 boxes[field.name] = box

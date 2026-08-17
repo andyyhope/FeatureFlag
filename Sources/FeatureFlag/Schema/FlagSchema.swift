@@ -364,6 +364,7 @@ extension FlagRecordField {
     var jsonObject: [String: Any] {
         var object: [String: Any] = ["name": name, "type": type.typeName]
         object["cases"] = cases?.map(\.jsonValue)
+        object["default"] = defaultValue?.jsonValue
         return object
     }
 
@@ -377,6 +378,9 @@ extension FlagRecordField {
         self.name = name
         self.type = type
         self.cases = (object["cases"] as? [Any])?.compactMap {
+            FlagValueBox(jsonValue: $0, as: type)
+        }
+        self.defaultValue = object["default"].flatMap {
             FlagValueBox(jsonValue: $0, as: type)
         }
     }

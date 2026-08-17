@@ -121,11 +121,35 @@ or an enum case this build has never heard of rejects the **whole payload** rath
 being found later as a flag that quietly stopped taking effect. A backend that sends the
 list already serialised as a string is understood too, and held to the same standard.
 
+### Adding a field later
+
+Write the new field with an initialiser and lists already stored keep working:
+
+```swift
+@FlagRecord
+struct Endpoint {
+    var name: String
+    var url: URL
+    var weight: Int = 1     // added in a later build
+}
+```
+
+The value goes into the shape, so a record written before the field existed — in the
+store, in a backend's payload, or in an exported document — is filled from it rather
+than refused. This is the same syntax and the same meaning as the default Swift's
+memberwise initialiser already gives you.
+
+A field with no initialiser has nothing to fall back to, so a record missing one is
+still refused. And a field that is present but holds the wrong type is refused whether
+it has a default or not: filling in an absent field is a migration, while overwriting a
+wrong one would be guessing, and would hide a stored value that genuinely disagrees
+with this build.
+
 ### When a stored list cannot be read
 
-A list is all of its records or none of them. If one record is missing a field or holds
-the wrong type — a hand-edited store, or a build that has since added a field — the flag
-falls back to its default, exactly as any other type mismatch does.
+A list is all of its records or none of them. If one record is missing a field that has
+no default, or holds the wrong type in one — a hand-edited store, say — the flag falls
+back to its default, exactly as any other type mismatch does.
 
 That fallback is silent in the app. The companion says so plainly rather than showing an
 empty list, since an empty list would invite you to add a record and wonder why nothing

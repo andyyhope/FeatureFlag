@@ -320,11 +320,13 @@
 
         /// What a new record starts this field at.
         ///
-        /// An enum field starts on a real case rather than an empty string. Anything
-        /// else is not a value of its type, so the host would reject the record — and
-        /// with it the whole list — the moment it read it.
+        /// The value the field was declared with, when it has one — the author already
+        /// said what a sensible starting point is, and repeating it here would be a
+        /// second opinion. Failing that, an enum field starts on a real case rather
+        /// than an empty string, which is not a value of its type and would have the
+        /// host reject the record, and with it the whole list.
         var emptyBox: FlagValueBox {
-            cases?.first ?? type.emptyBox
+            defaultValue ?? cases?.first ?? type.emptyBox
         }
     }
 

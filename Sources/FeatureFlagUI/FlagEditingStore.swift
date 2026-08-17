@@ -24,9 +24,12 @@ public final class FlagEditingStore: ObservableObject {
     private let reloadSchema: () -> FlagSchema?
     private var cancellables: Set<AnyCancellable> = []
 
-    /// - Parameter reloadingSchemaWith: How to read the host's schema again, for
-    ///   ``refreshSchema()``. The default never finds a new one, which suits a store
-    ///   built around a schema handed in directly.
+    /// - Parameters:
+    ///   - schema: What to render, as the host published it.
+    ///   - source: The shared store both apps read and write.
+    ///   - reloadSchema: How to read the host's schema again, for ``refreshSchema()``.
+    ///     The default never finds a new one, which suits a store built around a schema
+    ///     handed in directly rather than read from an App Group.
     public init(
         schema: FlagSchema,
         source: any MutableFlagValueSource,

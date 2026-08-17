@@ -31,12 +31,14 @@ final class FlagRecordMacroTests: XCTestCase {
                             FeatureFlag.FlagRecordField(
                                 name: "name",
                                 type: String.flagValueType,
-                                cases: FeatureFlag._flagValueCases(of: String.self)
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil
                             ),
                             FeatureFlag.FlagRecordField(
                                 name: "enabled",
                                 type: Bool.flagValueType,
-                                cases: FeatureFlag._flagValueCases(of: Bool.self)
+                                cases: FeatureFlag._flagValueCases(of: Bool.self),
+                                defaultValue: nil
                             )
                         ]
                     }
@@ -82,7 +84,8 @@ final class FlagRecordMacroTests: XCTestCase {
                             FeatureFlag.FlagRecordField(
                                 name: "name",
                                 type: String.flagValueType,
-                                cases: FeatureFlag._flagValueCases(of: String.self)
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil
                             )
                         ]
                     }
@@ -100,6 +103,51 @@ final class FlagRecordMacroTests: XCTestCase {
                             return nil
                         }
                         self.name = name
+                    }
+                }
+                """,
+            macros: recordMacros
+        )
+    }
+
+    func testAFieldWrittenWithAValueCarriesItAsItsDefault() {
+        // Cast the way `@Flag` casts a default, so the expression compiles given the
+        // annotation the field has to carry anyway.
+        assertMacroExpansion(
+            """
+            @FlagRecord
+            struct Endpoint {
+                var weight: Int = 1
+            }
+            """,
+            expandedSource: """
+                struct Endpoint {
+                    var weight: Int = 1
+
+                    static var flagRecordShape: [FeatureFlag.FlagRecordField] {
+                        [
+                            FeatureFlag.FlagRecordField(
+                                name: "weight",
+                                type: Int.flagValueType,
+                                cases: FeatureFlag._flagValueCases(of: Int.self),
+                                defaultValue: (1 as Int).box
+                            )
+                        ]
+                    }
+
+                    var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
+                        [
+                            "weight": weight.box
+                        ]
+                    }
+                }
+
+                extension Endpoint {
+                    init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+                        guard let weight = flagRecordBoxes["weight"].flatMap(Int.init(box:)) else {
+                            return nil
+                        }
+                        self.weight = weight
                     }
                 }
                 """,
@@ -126,7 +174,8 @@ final class FlagRecordMacroTests: XCTestCase {
                             FeatureFlag.FlagRecordField(
                                 name: "name",
                                 type: String.flagValueType,
-                                cases: FeatureFlag._flagValueCases(of: String.self)
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil
                             )
                         ]
                     }
@@ -172,7 +221,8 @@ final class FlagRecordMacroTests: XCTestCase {
                             FeatureFlag.FlagRecordField(
                                 name: "name",
                                 type: String.flagValueType,
-                                cases: FeatureFlag._flagValueCases(of: String.self)
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil
                             )
                         ]
                     }
