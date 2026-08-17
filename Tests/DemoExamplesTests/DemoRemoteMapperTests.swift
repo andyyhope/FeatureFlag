@@ -15,7 +15,7 @@ final class DemoRemoteMapperTests: XCTestCase {
     /// nothing, because no path addresses "the record whose flag is new-onboarding".
     func testTheDefaultMapperFindsNothingInARecordList() throws {
         let plain = RemoteOverrideSource(AppFlags.self, name: "Remote")
-        let result = try plain.apply(RemoteConfiguration.records.data, format: .json)
+        let result = try plain.apply(RemoteConfiguration.experiments.data, format: .json)
 
         XCTAssertTrue(result.appliedKeys.isEmpty)
         XCTAssertNil(plain.box(for: "new-onboarding", as: .bool))
@@ -23,7 +23,7 @@ final class DemoRemoteMapperTests: XCTestCase {
 
     func testTheCustomMapperReshapesTheSamePayload() throws {
         let source = makeSource()
-        let result = try source.apply(RemoteConfiguration.records.data, format: .json)
+        let result = try source.apply(RemoteConfiguration.experiments.data, format: .json)
 
         XCTAssertEqual(Set(result.appliedKeys), ["new-onboarding", "checkout.apple-pay"])
         XCTAssertEqual(source.box(for: "new-onboarding", as: .bool), .bool(true))
@@ -47,7 +47,7 @@ final class DemoRemoteMapperTests: XCTestCase {
     /// exactly why it is reported rather than skipped.
     func testAMisspelledFlagIsReportedRatherThanIgnored() {
         XCTAssertThrowsError(
-            try makeSource().apply(RemoteConfiguration.recordsWithATypo.data, format: .json)
+            try makeSource().apply(RemoteConfiguration.experimentsWithATypo.data, format: .json)
         ) { error in
             guard case let .rejected(problems) = error as? RemoteOverrideError else {
                 return XCTFail("expected .rejected, got \(error)")
@@ -60,7 +60,7 @@ final class DemoRemoteMapperTests: XCTestCase {
     /// All-or-nothing, so the valid record beside the misspelled one is not applied.
     func testNothingIsAppliedWhenOneRecordIsWrong() {
         let source = makeSource()
-        _ = try? source.apply(RemoteConfiguration.recordsWithATypo.data, format: .json)
+        _ = try? source.apply(RemoteConfiguration.experimentsWithATypo.data, format: .json)
         XCTAssertNil(source.box(for: "checkout.apple-pay", as: .bool))
     }
 

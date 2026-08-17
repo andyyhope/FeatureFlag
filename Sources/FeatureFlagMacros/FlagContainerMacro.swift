@@ -94,7 +94,8 @@ extension FlagContainerMacro: MemberMacro {
                                     valueType: \(type).flagValueType,
                                     defaultValue: (\(flag.defaultValue.trimmedDescription) as \(type)).box,
                                     cases: FeatureFlag._flagValueCases(of: \(type).self),
-                                    remoteKey: \(flag.remoteKey?.trimmedDescription ?? "nil")
+                                    remoteKey: \(flag.remoteKey?.trimmedDescription ?? "nil"),
+                                    recordShape: FeatureFlag._flagRecordShape(of: \(type).self)
                                 )
                             )
                     """

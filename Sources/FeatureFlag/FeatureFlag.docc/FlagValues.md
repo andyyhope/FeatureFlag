@@ -63,6 +63,24 @@ Dictionaries must be keyed by `String`. Property lists and JSON have no other ki
 key, and a flag that cannot survive a trip through either would not be editable from a
 companion app.
 
+A collection has to be homogeneous, because its element type is what the schema
+publishes and what a payload is validated against. When you want a list of small
+structured values instead — a name, a URL and a switch, repeated — that is a record:
+
+```swift
+@FlagRecord
+struct Endpoint {
+    var name: String
+    var url: URL
+    var enabled: Bool
+}
+
+@Flag(default: [], description: "Endpoints")
+var endpoints: FlagRecords<Endpoint>
+```
+
+See <doc:RecordFlags>.
+
 ### Enums
 
 An enum with a raw value conforms with no implementation at all:

@@ -192,7 +192,15 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
                 continue
             }
 
-            guard let box = remoteValue.box(as: entry.valueType) else {
+            // A record flag stores text, so it cannot be checked by type alone: the
+            // shape published beside it is what says whether the list a backend sent is
+            // one this build can read. A bad field inside a record is reported as a
+            // mismatch on the flag, since a problem names a flag and not a field.
+            let converted =
+                entry.recordShape.map { remoteValue.recordBox(matching: $0) }
+                ?? remoteValue.box(as: entry.valueType)
+
+            guard let box = converted else {
                 problems.append(
                     RemoteOverrideProblem(
                         key: key,

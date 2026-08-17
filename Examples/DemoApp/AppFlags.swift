@@ -22,6 +22,25 @@ public enum CheckoutTier: String, FlagValue, CaseIterable, FlagValueCases {
     case enterprise
 }
 
+public enum PaymentKind: String, FlagValue, CaseIterable, FlagValueCases {
+    case card
+    case wallet
+    case transfer
+}
+
+/// A record: a fixed shape a flag can hold a list of.
+///
+/// Every field is a `FlagValue`, so each one arrives in the companion app with the
+/// control its type calls for — a toggle, a stepper's worth of number field, and a
+/// picker for the enum.
+@FlagRecord
+public struct PaymentMethod {
+    public var name: String
+    public var kind: PaymentKind
+    public var enabled: Bool
+    public var minimumSpend: Double
+}
+
 @FlagContainer
 public struct AppFlags {
 
@@ -42,6 +61,17 @@ public struct AppFlags {
 
     @Flag(default: ["AU", "NZ"], description: "Markets the app is live in")
     public var markets: [String]
+
+    @Flag(
+        default: [
+            PaymentMethod(name: "Visa", kind: .card, enabled: true, minimumSpend: 0),
+            PaymentMethod(name: "Apple Pay", kind: .wallet, enabled: true, minimumSpend: 5),
+            PaymentMethod(name: "Bank transfer", kind: .transfer, enabled: false, minimumSpend: 50),
+        ],
+        description: "Payment methods offered at checkout",
+        remoteKey: "config.paymentMethods"
+    )
+    public var paymentMethods: FlagRecords<PaymentMethod>
 
     @FlagGroup(description: "Checkout")
     public var checkout: CheckoutFlags

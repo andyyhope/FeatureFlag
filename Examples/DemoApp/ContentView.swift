@@ -12,6 +12,7 @@ struct ContentView: View {
             List {
                 environment
                 liveValues
+                paymentMethods
                 remoteConfiguration
                 provenance
                 signals
@@ -61,12 +62,41 @@ struct ContentView: View {
         }
     }
 
+    /// A record flag read the way an app would actually read one: typed, and used.
+    private var paymentMethods: some View {
+        Section {
+            // By position, not by name: two records can share a name — the companion
+            // can add one and leave it blank — and a duplicated ForEach id makes
+            // SwiftUI drop rows.
+            ForEach(Array(flags.paymentMethods.values.enumerated()), id: \.offset) { _, method in
+                LabeledContent {
+                    Text(method.enabled ? "on" : "off")
+                        .foregroundStyle(method.enabled ? .green : .secondary)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(method.name.isEmpty ? "Untitled" : method.name)
+                        Text("\(method.kind.rawValue) · min \(method.minimumSpend, format: .number)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } header: {
+            Text("Payment methods")
+        } footer: {
+            Text(
+                "A list of records. Edit them field by field in the companion app, or "
+                    + "switch environment above to have a payload replace the whole list."
+            )
+        }
+    }
+
     // MARK: - Remote payloads
 
     private var remoteConfiguration: some View {
         Section {
-            payloadButton(.records)
-            payloadButton(.recordsWithATypo)
+            payloadButton(.experiments)
+            payloadButton(.experimentsWithATypo)
             payloadButton(.malformed)
 
             if model.appliedConfiguration != nil {

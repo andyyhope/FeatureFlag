@@ -46,7 +46,13 @@ extension RemoteConfiguration {
                 "onboarding": { "v2": false },
                 "checkout": { "applePay": false }
               },
-              "config": { "apiEndpoint": "https://api.example.com" }
+              "config": {
+                "apiEndpoint": "https://api.example.com",
+                "paymentMethods": [
+                  { "name": "Visa", "kind": "card", "enabled": true, "minimumSpend": 0 },
+                  { "name": "Mastercard", "kind": "card", "enabled": true, "minimumSpend": 0 }
+                ]
+              }
             }
             """,
         isDeliberatelyBroken: false
@@ -62,7 +68,14 @@ extension RemoteConfiguration {
                 "onboarding": { "v2": true },
                 "checkout": { "applePay": true }
               },
-              "config": { "apiEndpoint": "https://staging.api.example.com" }
+              "config": {
+                "apiEndpoint": "https://staging.api.example.com",
+                "paymentMethods": [
+                  { "name": "Visa", "kind": "card", "enabled": true, "minimumSpend": 0 },
+                  { "name": "Apple Pay", "kind": "wallet", "enabled": true, "minimumSpend": 0 },
+                  { "name": "Bank transfer", "kind": "transfer", "enabled": true, "minimumSpend": 10 }
+                ]
+              }
             }
             """,
         isDeliberatelyBroken: false
@@ -78,7 +91,12 @@ extension RemoteConfiguration {
                 "onboarding": { "v2": true },
                 "checkout": { "applePay": true }
               },
-              "config": { "apiEndpoint": "http://localhost:8080" }
+              "config": {
+                "apiEndpoint": "http://localhost:8080",
+                "paymentMethods": [
+                  { "name": "Test card", "kind": "card", "enabled": true, "minimumSpend": 0 }
+                ]
+              }
             }
             """,
         isDeliberatelyBroken: false
@@ -117,12 +135,15 @@ extension RemoteConfiguration {
 
     /// The flags arrive as a list, and the flag's name is a field rather than a key.
     ///
+    /// Nothing to do with ``FlagRecords``: this is a payload shape, not a flag type.
+    /// The flags it sets are ordinary booleans.
+    ///
     /// `DotPathMapper` finds nothing here — no path addresses "the record whose flag is
     /// new-onboarding" — so without `DemoRemoteMapper` this payload would apply cleanly
     /// and change absolutely nothing.
-    static let records = RemoteConfiguration(
-        id: "records",
-        name: "List of records",
+    static let experiments = RemoteConfiguration(
+        id: "experiments",
+        name: "List of experiments",
         summary: "A shape no dot path can reach, reshaped by a custom mapper",
         json: """
             {
@@ -141,9 +162,9 @@ extension RemoteConfiguration {
     /// from the schema — but a custom mapper with a typo can, which is the whole reason
     /// that problem kind exists. Applying is all-or-nothing, so the valid record beside
     /// it is not applied either.
-    static let recordsWithATypo = RemoteConfiguration(
-        id: "records-typo",
-        name: "List of records, misspelled",
+    static let experimentsWithATypo = RemoteConfiguration(
+        id: "experiments-typo",
+        name: "List of experiments, misspelled",
         summary: "new-onbaording is not a flag this app has",
         json: """
             {

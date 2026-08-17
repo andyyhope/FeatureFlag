@@ -6,5 +6,6 @@ struct FeatureFlagPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         FlagContainerMacro.self,
         FlagGroupMacro.self,
+        FlagRecordMacro.self,
     ]
 }

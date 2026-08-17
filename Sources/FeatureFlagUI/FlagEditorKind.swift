@@ -19,6 +19,12 @@ public enum FlagEditorKind: Hashable, Sendable {
     /// for a row without ever seeing the host's Swift types.
     indirect case list(element: FlagValueType)
 
+    /// A list of fixed-shape records, edited a record at a time.
+    ///
+    /// Carries the fields, which is what lets the editor give each one the control its
+    /// type deserves without ever seeing the host's Swift types.
+    case records([FlagRecordField])
+
     /// Everything else structural — dictionaries, and arrays whose elements are
     /// themselves collections — edited as JSON text.
     case json
@@ -48,6 +54,11 @@ extension FlagSchema.Entry {
     public var editorKind: FlagEditorKind {
         if let cases, cases.isEmpty == false {
             return .picker(cases)
+        }
+        // A record list is a string to everything else in the framework, and it takes
+        // the shape published beside it to know it is anything more.
+        if let recordShape, recordShape.isEmpty == false {
+            return .records(recordShape)
         }
         switch valueType {
         case .bool: return .toggle

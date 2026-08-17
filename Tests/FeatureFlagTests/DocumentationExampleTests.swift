@@ -699,6 +699,92 @@ final class DocumentationExampleTests: XCTestCase {
         _ = subscription
     }
 
+    // MARK: - RecordFlags.md
+
+    /// The article's declaration, its read, and the loop it shows.
+    func testRecordArticleDeclarationReadsItsDefaults() {
+        let flags = FlagPole(DocsRecordFlags.self, sources: [])
+
+        var shown = [String]()
+        for method in flags.paymentMethods.values where method.enabled {
+            shown.append(method.name)
+        }
+
+        XCTAssertEqual(shown, ["Visa", "Apple Pay"])
+    }
+
+    /// "A list of records is stored as JSON text", and the sample of that text.
+    func testRecordArticleStoredFormIsTheJSONItShows() {
+        let single = FlagRecords([
+            DocsPaymentMethod(name: "Visa", kind: .card, enabled: true, minimumSpend: 0)
+        ])
+
+        XCTAssertEqual(
+            single.box,
+            .string(#"[{"enabled":true,"kind":"card","minimumSpend":0,"name":"Visa"}]"#)
+        )
+    }
+
+    /// The schema fragment the article prints: a string, with a shape beside it.
+    func testRecordArticleSchemaKeepsTheTypeNameACompanionAlreadyKnows() throws {
+        let schema = FlagSchema(DocsRecordFlags.self)
+        let entry = try XCTUnwrap(schema.flags.first { $0.key == "payment-methods" })
+
+        XCTAssertEqual(entry.valueType, .string)
+        XCTAssertEqual(entry.recordShape?.map(\.name), [
+            "name", "kind", "enabled", "minimumSpend",
+        ])
+        XCTAssertEqual(
+            entry.recordShape?.first { $0.name == "kind" }?.cases,
+            [.string("card"), .string("wallet")]
+        )
+    }
+
+    /// The remote payload the article shows, applied.
+    func testRecordArticleRemotePayloadApplies() throws {
+        let remote = RemoteOverrideSource(DocsRecordFlags.self)
+        try remote.apply(Data("""
+            { "config": { "paymentMethods": [
+                { "name": "Bank transfer", "kind": "card", "enabled": true, "minimumSpend": 10 }
+            ] } }
+            """.utf8), format: .json)
+
+        let flags = FlagPole(DocsRecordFlags.self, sources: [remote])
+
+        XCTAssertEqual(flags.paymentMethods.values.map(\.name), ["Bank transfer"])
+    }
+
+    /// "a missing field … rejects the whole payload".
+    func testRecordArticleRemotePayloadIsAllOrNothing() {
+        let remote = RemoteOverrideSource(DocsRecordFlags.self)
+
+        XCTAssertThrowsError(
+            try remote.apply(Data("""
+                { "config": { "paymentMethods": [ { "name": "Partial" } ] } }
+                """.utf8), format: .json)
+        )
+    }
+
+    /// "the flag falls back to its default", which is also the Troubleshooting entry.
+    func testRecordArticleUnreadableStoredListFallsBackToTheDefault() throws {
+        let local = SnapshotSource(name: "local")
+        try local.setBox(.string(#"[{"name":"Half"}]"#), for: "payment-methods")
+
+        let flags = FlagPole(DocsRecordFlags.self, sources: [local])
+
+        XCTAssertEqual(flags.paymentMethods.values.map(\.name), ["Visa", "Apple Pay"])
+    }
+
+    /// "The memberwise initialiser survives" — the reason the generated one is in an
+    /// extension, and the thing that breaks if it ever moves.
+    func testRecordArticleMemberwiseInitialiserSurvives() {
+        let method = DocsPaymentMethod(
+            name: "Ad hoc", kind: .wallet, enabled: false, minimumSpend: 1
+        )
+
+        XCTAssertEqual(method.name, "Ad hoc")
+    }
+
     // MARK: - Troubleshooting.md
 
     /// The five names dynamic member lookup cannot reach, and the way through.
@@ -724,6 +810,33 @@ final class DocumentationExampleTests: XCTestCase {
 }
 
 // MARK: - Fixtures, exactly as the articles write them
+
+private enum DocsPaymentKind: String, FlagValue, CaseIterable, FlagValueCases {
+    case card
+    case wallet
+}
+
+@FlagRecord
+private struct DocsPaymentMethod {
+    var name: String
+    var kind: DocsPaymentKind
+    var enabled: Bool
+    var minimumSpend: Double
+}
+
+@FlagContainer
+private struct DocsRecordFlags {
+
+    @Flag(
+        default: [
+            DocsPaymentMethod(name: "Visa", kind: .card, enabled: true, minimumSpend: 0),
+            DocsPaymentMethod(name: "Apple Pay", kind: .wallet, enabled: true, minimumSpend: 5),
+        ],
+        description: "Payment methods offered at checkout",
+        remoteKey: "config.paymentMethods"
+    )
+    var paymentMethods: FlagRecords<DocsPaymentMethod>
+}
 
 @FlagContainer
 private struct DocsAppFlags {

@@ -178,6 +178,26 @@ the symbols do not exist. Those platforms have no `Menu`, `TextEditor` or border
 field, and a flag editor on a watch is not a real use case, so the module is scoped rather
 than pretending. The core `FeatureFlag` module supports all four platforms.
 
+### A record flag reads as its default, and the companion says "not a list of records"
+
+A ``FlagRecords`` list is all of its records or none of them. One record missing a
+field, or holding the wrong type in one, and the whole list is unreadable — so the flag
+falls back to its default, silently, exactly as any other type mismatch does.
+
+The usual causes are a store edited by hand, and a build that has added a field since
+the stored value was written. The companion cannot produce one: it builds records from
+the published shape.
+
+Reset the flag to clear it. To see what is actually stored:
+
+```swift
+print(pole.$paymentMethods.resolution)
+```
+
+Adding a field to a record is therefore a breaking change to any list already stored.
+Nothing is lost — the app keeps working on its default — but overrides set before the
+change stop taking effect.
+
 ### Everything reverts when a config refresh lands
 
 The remote source is above the local one in the stack. Reverse them:
