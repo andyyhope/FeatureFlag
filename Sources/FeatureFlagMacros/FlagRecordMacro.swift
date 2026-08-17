@@ -97,13 +97,21 @@ extension FlagRecordMacro: MemberMacro {
     static func initialiser(for fields: [RecordField], access: String) -> DeclSyntax {
         // One `guard` over every field rather than one per field: a record is all of
         // its fields or none of them, and a single statement says that plainly.
+        // Subscripted through the parameter's own label rather than a short internal
+        // name: a field called `boxes` would otherwise shadow the parameter inside the
+        // guard, and fail as an error pointing into code nobody wrote. The only name
+        // that can collide now is one that already collides with the generated
+        // property of the same name.
         let bindings = fields.map { field in
-            "let \(field.name) = boxes[\"\(field.name)\"].flatMap(\(field.type).init(box:))"
+            """
+            let \(field.name) = flagRecordBoxes["\(field.name)"]\
+            .flatMap(\(field.type).init(box:))
+            """
         }
         let assignments = fields.map { "self.\($0.name) = \($0.name)" }
 
         return """
-            \(raw: access)init?(flagRecordBoxes boxes: [String: FeatureFlag.FlagValueBox]) {
+            \(raw: access)init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
                 guard \(raw: bindings.joined(separator: ",\n          ")) else {
                     return nil
                 }

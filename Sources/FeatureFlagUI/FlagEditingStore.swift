@@ -192,7 +192,11 @@ public final class FlagEditingStore: ObservableObject {
     /// Applies an exported document. Strict and all-or-nothing, as everywhere else.
     public func `import`(_ data: Data, as format: FlagPayloadFormat) throws {
         let payload = try FlagPayload.decode(
-            data, as: format, valueTypes: schema.valueTypes, cases: schema.valueCases
+            data,
+            as: format,
+            valueTypes: schema.valueTypes,
+            cases: schema.valueCases,
+            recordShapes: schema.recordShapes
         )
         try apply(payload)
     }
@@ -200,7 +204,10 @@ public final class FlagEditingStore: ObservableObject {
     public func importQRCode(_ scanned: String) throws {
         try apply(
             try FlagQRCode.decode(
-                scanned, valueTypes: schema.valueTypes, cases: schema.valueCases
+                scanned,
+                valueTypes: schema.valueTypes,
+                cases: schema.valueCases,
+                recordShapes: schema.recordShapes
             )
         )
     }

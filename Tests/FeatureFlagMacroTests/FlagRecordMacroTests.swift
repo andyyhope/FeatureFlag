@@ -50,9 +50,9 @@ final class FlagRecordMacroTests: XCTestCase {
                 }
 
                 extension Endpoint {
-                    init?(flagRecordBoxes boxes: [String: FeatureFlag.FlagValueBox]) {
-                        guard let name = boxes["name"].flatMap(String.init(box:)),
-                              let enabled = boxes["enabled"].flatMap(Bool.init(box:)) else {
+                    init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+                        guard let name = flagRecordBoxes["name"].flatMap(String.init(box:)),
+                              let enabled = flagRecordBoxes["enabled"].flatMap(Bool.init(box:)) else {
                             return nil
                         }
                         self.name = name
@@ -95,8 +95,8 @@ final class FlagRecordMacroTests: XCTestCase {
                 }
 
                 extension Endpoint {
-                    public init?(flagRecordBoxes boxes: [String: FeatureFlag.FlagValueBox]) {
-                        guard let name = boxes["name"].flatMap(String.init(box:)) else {
+                    public init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+                        guard let name = flagRecordBoxes["name"].flatMap(String.init(box:)) else {
                             return nil
                         }
                         self.name = name
@@ -139,8 +139,8 @@ final class FlagRecordMacroTests: XCTestCase {
                 }
 
                 extension Endpoint {
-                    init?(flagRecordBoxes boxes: [String: FeatureFlag.FlagValueBox]) {
-                        guard let name = boxes["name"].flatMap(String.init(box:)) else {
+                    init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+                        guard let name = flagRecordBoxes["name"].flatMap(String.init(box:)) else {
                             return nil
                         }
                         self.name = name
@@ -185,8 +185,8 @@ final class FlagRecordMacroTests: XCTestCase {
                 }
 
                 extension Endpoint {
-                    init?(flagRecordBoxes boxes: [String: FeatureFlag.FlagValueBox]) {
-                        guard let name = boxes["name"].flatMap(String.init(box:)) else {
+                    init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+                        guard let name = flagRecordBoxes["name"].flatMap(String.init(box:)) else {
                             return nil
                         }
                         self.name = name

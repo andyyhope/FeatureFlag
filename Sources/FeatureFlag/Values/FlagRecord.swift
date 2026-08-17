@@ -135,6 +135,21 @@ extension FlagValueBox {
     /// The other half of ``recordValues(matching:)``, for an editor that has changed
     /// something and needs to write it back the way the host will read it.
     public static func records(_ records: [[String: FlagValueBox]]) -> FlagValueBox {
+        // An infinity or a NaN makes JSONSerialization raise an Objective-C exception,
+        // which no `try` can catch — the process dies with a message about JSON writing
+        // and nothing about which flag caused it. Everywhere else that serialises checks
+        // first and throws something catchable; boxing cannot throw, so this traps
+        // instead, naming the field.
+        precondition(
+            nonFiniteRecordField(in: records) == nil,
+            """
+            The record field '\(nonFiniteRecordField(in: records) ?? "")' holds an \
+            infinity or a NaN, and a list of records is stored as JSON, which can \
+            represent neither. Use a finite value, or a sentinel the field's type \
+            already has.
+            """
+        )
+
         let objects = records.map { $0.mapValues(\.jsonValue) }
         guard
             let data = try? JSONSerialization.data(
@@ -143,6 +158,22 @@ extension FlagValueBox {
             )
         else { return .string("[]") }
         return .string(String(decoding: data, as: UTF8.self))
+    }
+}
+
+extension FlagValueBox {
+
+    /// The first field holding a number JSON cannot write, or `nil` when every one of
+    /// them can be written.
+    static func nonFiniteRecordField(in records: [[String: FlagValueBox]]) -> String? {
+        for record in records {
+            // Sorted so the field named is the same one every time, rather than
+            // whichever the dictionary happened to yield first.
+            for name in record.keys.sorted() where record[name]?.containsNonFiniteNumber == true {
+                return name
+            }
+        }
+        return nil
     }
 }
 

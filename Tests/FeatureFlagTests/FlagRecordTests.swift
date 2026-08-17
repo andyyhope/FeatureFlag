@@ -169,6 +169,96 @@ final class FlagRecordTests: XCTestCase {
         XCTAssertEqual(try endpoints(withEnabled: "\"yes\""), [.production])
     }
 
+    func testAFieldCanBeNamedAnythingIncludingTheGeneratedParameter() {
+        // A field called `boxes` used to shadow the initialiser's parameter and fail to
+        // compile, pointing at expanded code nobody wrote.
+        let value = AwkwardlyNamed(boxes: 7, name: "fine")
+
+        XCTAssertEqual(AwkwardlyNamed(flagRecordBoxes: value.flagRecordBoxes), value)
+    }
+
+    // MARK: - Numbers JSON cannot write
+
+    func testANonFiniteFieldIsNamedRatherThanLeftToCrashTheProcess() {
+        // JSONSerialization raises an Objective-C exception for an infinity, which no
+        // `try` can catch — it terminates the app. Everything else in the framework
+        // checks first; this is that check for records.
+        let records: [[String: FlagValueBox]] = [
+            ["name": .string("fine"), "weight": .int(1)],
+            ["name": .string("bad"), "ratio": .double(.infinity)],
+        ]
+
+        XCTAssertEqual(FlagValueBox.nonFiniteRecordField(in: records), "ratio")
+    }
+
+    func testNaNIsCaughtToo() {
+        let records: [[String: FlagValueBox]] = [["ratio": .float(.nan)]]
+
+        XCTAssertEqual(FlagValueBox.nonFiniteRecordField(in: records), "ratio")
+    }
+
+    func testOrdinaryNumbersAreNotMistakenForNonFiniteOnes() {
+        let records: [[String: FlagValueBox]] = [
+            ["a": .double(0), "b": .float(-1.5), "c": .int(.max)]
+        ]
+
+        XCTAssertNil(FlagValueBox.nonFiniteRecordField(in: records))
+    }
+
+    // MARK: - Import
+
+    func testImportingSomethingThatIsNotARecordListIsRejected() throws {
+        // Before this, any string at all was accepted — because the flag is a string —
+        // and the app then quietly read its default instead of what was imported.
+        let document = try payload(forEndpointsValue: "\"total garbage\"")
+
+        XCTAssertThrowsError(try FlagPole(RecordFlags.self, sources: [SnapshotSource()])
+            .importPayload(document, as: .json)
+        ) { error in
+            guard case let FlagImportError.rejected(problems) = error else {
+                return XCTFail("expected a rejection, got \(error)")
+            }
+            XCTAssertEqual(problems.map(\.kind), [.typeMismatch])
+        }
+    }
+
+    func testImportingARecordMissingAFieldIsRejected() throws {
+        let document = try payload(forEndpointsValue: #"  "[{\"name\":\"half\"}]"  "#)
+
+        XCTAssertThrowsError(
+            try FlagPole(RecordFlags.self, sources: [SnapshotSource()])
+                .importPayload(document, as: .json)
+        )
+    }
+
+    func testImportingAValidRecordListIsAccepted() throws {
+        let source = SnapshotSource(name: "local")
+        let pole = FlagPole(RecordFlags.self, sources: [source])
+        guard case let .string(json) = FlagRecords([Endpoint.canary]).box else {
+            return XCTFail("a record list boxes as a string")
+        }
+        let escaped = String(
+            decoding: try JSONSerialization.data(
+                withJSONObject: json, options: [.fragmentsAllowed]
+            ),
+            as: UTF8.self
+        )
+
+        let result = try pole.importPayload(try payload(forEndpointsValue: escaped), as: .json)
+
+        XCTAssertEqual(result.appliedKeys, ["endpoints"])
+        XCTAssertEqual(pole.endpoints.values, [.canary])
+    }
+
+    /// An export document carrying one value for `endpoints`, written by hand so the
+    /// value can be deliberately wrong.
+    private func payload(forEndpointsValue json: String) throws -> Data {
+        Data("""
+            { "formatVersion": 1, "exportedAt": "2026-01-01T00:00:00Z",
+              "values": { "endpoints": \(json) } }
+            """.utf8)
+    }
+
     // MARK: - Schema
 
     func testTheSchemaCarriesTheShapeSoACompanionCanRenderIt() throws {
@@ -246,6 +336,13 @@ final class FlagRecordTests: XCTestCase {
 private enum Tier: String, FlagValue, FlagValueCases, CaseIterable {
     case primary
     case secondary
+}
+
+/// Field names that collide with what the macro generates around them.
+@FlagRecord
+private struct AwkwardlyNamed {
+    var boxes: Int
+    var name: String
 }
 
 @FlagRecord

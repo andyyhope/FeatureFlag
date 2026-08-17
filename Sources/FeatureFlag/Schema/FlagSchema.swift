@@ -212,6 +212,22 @@ public struct FlagSchema: Sendable, Equatable {
     ///
     /// Flags that are not enums are absent rather than present and empty, so a caller
     /// can treat "no entry" as "anything of the right type will do".
+    /// The record shape of every record flag, for validating an incoming document.
+    ///
+    /// A record list is stored as a string, so without this an import would accept any
+    /// text at all for one — and the app would then read its default instead of what
+    /// was imported, silently. Flags that hold no records are absent rather than
+    /// present and empty.
+    public var recordShapes: [FlagKey: [FlagRecordField]] {
+        var result = [FlagKey: [FlagRecordField]]()
+        for entry in flags {
+            guard let shape = entry.recordShape, shape.isEmpty == false else { continue }
+            // First wins, as in `valueTypes`, so a duplicated key cannot trap here.
+            if result[entry.key] == nil { result[entry.key] = shape }
+        }
+        return result
+    }
+
     public var valueCases: [FlagKey: [FlagValueBox]] {
         var result = [FlagKey: [FlagValueBox]]()
         for entry in flags {

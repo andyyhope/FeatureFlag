@@ -48,7 +48,11 @@ extension FlagPole {
         -> FlagImportResult
     {
         let payload = try FlagPayload.decode(
-            data, as: format, valueTypes: schema.valueTypes, cases: schema.valueCases
+            data,
+            as: format,
+            valueTypes: schema.valueTypes,
+            cases: schema.valueCases,
+            recordShapes: schema.recordShapes
         )
         return try apply(payload)
     }

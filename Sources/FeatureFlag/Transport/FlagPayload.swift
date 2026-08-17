@@ -126,11 +126,15 @@ extension FlagPayload {
     ///   - cases: The permitted values for each enum flag, as ``FlagSchema/valueCases``
     ///     provides them. Omitting it skips that check, which only makes sense when the
     ///     caller has no schema to check against.
+    ///   - recordShapes: The fields of each record flag, as ``FlagSchema/recordShapes``
+    ///     provides them. Omitting it means a record flag is checked only for being a
+    ///     string, which any text satisfies.
     public static func decode(
         _ data: Data,
         as format: FlagPayloadFormat,
         valueTypes: [FlagKey: FlagValueType],
-        cases: [FlagKey: [FlagValueBox]] = [:]
+        cases: [FlagKey: [FlagValueBox]] = [:],
+        recordShapes: [FlagKey: [FlagRecordField]] = [:]
     ) throws -> FlagPayload {
         let object: [String: Any]
         switch format {
@@ -183,6 +187,15 @@ extension FlagPayload {
             // payload is.
             if let permitted = cases[key], permitted.isEmpty == false, !permitted.contains(box) {
                 problems.append(FlagImportProblem(key: key, kind: .unknownCase))
+                continue
+            }
+
+            // A record list is a string, which any text satisfies — so being the right
+            // type is not enough to know the app can read it. Checked here rather than
+            // left to the read, where it would fall back to the default and look like
+            // an import that did nothing.
+            if let shape = recordShapes[key], box.recordValues(matching: shape) == nil {
+                problems.append(FlagImportProblem(key: key, kind: .typeMismatch))
                 continue
             }
 
