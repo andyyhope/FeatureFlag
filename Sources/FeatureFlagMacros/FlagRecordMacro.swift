@@ -64,13 +64,20 @@ extension FlagRecordMacro: MemberMacro {
 
     private static func shape(for fields: [RecordField], access: String) -> DeclSyntax {
         let entries = fields.map { field in
-            """
-            FeatureFlag.FlagRecordField(
-                name: "\(field.name)",
-                type: \(field.type).flagValueType,
-                cases: FeatureFlag._flagValueCases(of: \(field.type).self)
-            )
-            """
+            // Cast the way `@Flag` casts a default, so the expression always compiles
+            // given the annotation the field is required to carry anyway.
+            let fallback =
+                field.defaultValue.map { "(\($0) as \(field.type)).box" } ?? "nil"
+
+            return """
+                FeatureFlag.FlagRecordField(
+                    name: "\(field.name)",
+                    type: \(field.type).flagValueType,
+                    cases: FeatureFlag._flagValueCases(of: \(field.type).self),
+                    defaultValue: \(fallback),
+                    fields: FeatureFlag._flagRecordShape(of: \(field.type).self)
+                )
+                """
         }
 
         return """
@@ -163,6 +170,10 @@ extension FlagRecordMacro: ExtensionMacro {
 struct RecordField {
     let name: String
     let type: String
+
+    /// The expression it was written with, if any. `var weight: Int = 1` has one;
+    /// `var name: String` does not.
+    let defaultValue: String?
 }
 
 extension FlagRecordMacro {
@@ -200,7 +211,11 @@ extension FlagRecordMacro {
                 return nil
             }
 
-            return RecordField(name: name, type: type.trimmedDescription)
+            return RecordField(
+                name: name,
+                type: type.trimmedDescription,
+                defaultValue: binding.initializer?.value.trimmedDescription
+            )
         }
     }
 }

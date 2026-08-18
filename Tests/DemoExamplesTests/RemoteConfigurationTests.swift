@@ -69,6 +69,26 @@ final class RemoteConfigurationTests: XCTestCase {
         XCTAssertEqual(pole.paymentMethods.values.last?.minimumSpend, 10)
     }
 
+    func testAPayloadCanCarryANestedListOfRecords() throws {
+        let (pole, remote, _) = makePole()
+        try remote.apply(RemoteConfiguration.staging.data, format: .json)
+
+        let transfer = try XCTUnwrap(
+            pole.paymentMethods.values.first { $0.name == "Bank transfer" }
+        )
+        XCTAssertEqual(transfer.limits.values.map(\.currency), ["AUD", "NZD"])
+        XCTAssertEqual(transfer.limits.values.first?.maximum, 5000)
+    }
+
+    func testAPayloadThatOmitsANestedListGetsTheDeclaredDefault() throws {
+        // Every payload written before `limits` existed. They still apply.
+        let (pole, remote, _) = makePole()
+        try remote.apply(RemoteConfiguration.production.data, format: .json)
+
+        XCTAssertEqual(pole.paymentMethods.values.map(\.name), ["Visa", "Mastercard"])
+        XCTAssertEqual(pole.paymentMethods.values.first?.limits.values, [])
+    }
+
     func testEveryBundledPayloadSendsRecordsThisBuildCanRead() throws {
         // A payload naming a payment kind the app has never heard of, or missing a
         // field, would reject the whole thing — including the flags beside it.

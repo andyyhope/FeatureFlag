@@ -194,9 +194,21 @@ Reset the flag to clear it. To see what is actually stored:
 print(pole.$paymentMethods.resolution)
 ```
 
-Adding a field to a record is therefore a breaking change to any list already stored.
-Nothing is lost — the app keeps working on its default — but overrides set before the
-change stop taking effect.
+Give a new field an initialiser and this stops being a problem: a record stored before
+the field existed is filled from it rather than rejected.
+
+```swift
+@FlagRecord
+struct Endpoint {
+    var name: String
+    var weight: Int = 1     // added later, so it says what to assume
+}
+```
+
+A field with no initialiser has nothing honest to fall back to, so a record missing one
+is still refused. A field that is *present* but holds the wrong type is refused either
+way — filling in an absent field is a migration, overwriting a wrong one would be
+guessing.
 
 ### Everything reverts when a config refresh lands
 

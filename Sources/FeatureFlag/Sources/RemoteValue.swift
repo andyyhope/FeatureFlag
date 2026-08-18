@@ -110,10 +110,23 @@ extension RemoteValue {
 
             var boxes = [String: FlagValueBox](minimumCapacity: shape.count)
             for field in shape {
-                guard
-                    let raw = fields[field.name],
-                    let box = raw.box(as: field.type)
-                else { return nil }
+                // A backend that has not caught up with a newly added field is the same
+                // situation as a stored record that predates it, and gets the same
+                // answer: the field's declared default, if it has one.
+                guard let raw = fields[field.name] else {
+                    guard let fallback = field.defaultValue else { return nil }
+                    boxes[field.name] = fallback
+                    continue
+                }
+                // A field holding its own list of records is a string like any other
+                // record list, so it recurses rather than being read as one. Without
+                // this a backend would have to send a string containing JSON, nested
+                // inside JSON, which nothing produces on purpose.
+                let converted =
+                    field.fields.map { raw.recordBox(matching: $0) }
+                    ?? raw.box(as: field.type)
+
+                guard let box = converted else { return nil }
 
                 if let cases = field.cases, cases.contains(box) == false { return nil }
                 boxes[field.name] = box

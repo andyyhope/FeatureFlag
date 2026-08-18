@@ -24,11 +24,22 @@
 
         public var body: some View {
             List {
-                if let records = store.records(for: entry) {
-                    recordSection(records)
-                } else {
-                    unreadableSection
-                }
+                FlagRecordList(
+                    fields: fields,
+                    records: store.records(for: entry),
+                    unreadableText: store.value(for: entry).displayString,
+                    // Every change starts from what is stored right now rather than from
+                    // the array this screen was built with. A record's own screen is
+                    // pushed on top of this list and lives as long as you are editing it,
+                    // so writing back a captured copy would undo anything that happened
+                    // in between — silently, and to records you never opened.
+                    onChange: { change in
+                        guard var current = store.records(for: entry) else { return }
+                        change(&current)
+                        try? store.setRecords(current, for: entry)
+                    },
+                    emptyRecord: { entry.emptyRecord }
+                )
 
                 if store.isOverridden(entry) {
                     Section {
@@ -44,67 +55,98 @@
                 .toolbar { EditButton() }
             #endif
         }
+    }
 
-        // MARK: - The list
+    // MARK: - The list itself
 
-        @ViewBuilder
-        private func recordSection(_ records: [[String: FlagValueBox]]) -> some View {
-            Section {
-                ForEach(Array(records.enumerated()), id: \.offset) { index, record in
-                    NavigationLink {
-                        FlagRecordEditorView(
-                            title: summary(of: record),
-                            fields: fields,
-                            record: record,
-                            onChange: { edited in
-                                mutate { current in
-                                    guard current.indices.contains(index) else { return }
-                                    current[index] = edited
+    /// The sections a list of records is made of, independent of where the list lives.
+    ///
+    /// A flag's list comes from the store; a nested list comes from one field of one
+    /// record. They are the same screen, so they are the same view — the difference is
+    /// only how a change gets written back.
+    struct FlagRecordList: View {
+
+        let fields: [FlagRecordField]
+        /// `nil` when the stored text is not a list of records at all.
+        let records: [[String: FlagValueBox]]?
+        let unreadableText: String
+        let onChange: ((inout [[String: FlagValueBox]]) -> Void) -> Void
+        let emptyRecord: () -> [String: FlagValueBox]
+
+        var body: some View {
+            if let records {
+                Section {
+                    ForEach(Array(records.enumerated()), id: \.offset) { index, record in
+                        NavigationLink {
+                            FlagRecordEditorView(
+                                title: summary(of: record),
+                                fields: fields,
+                                record: record,
+                                onChange: { edited in
+                                    onChange { current in
+                                        guard current.indices.contains(index) else { return }
+                                        current[index] = edited
+                                    }
                                 }
-                            }
-                        )
-                    } label: {
-                        row(record)
-                    }
-                    .swipeActions(edge: .leading) {
-                        // Leading, because the destructive one owns the trailing edge and
-                        // duplicating a record by mistake should never be one slip away
-                        // from deleting it.
-                        Button {
-                            mutate { current in
-                                guard current.indices.contains(index) else { return }
-                                current.insert(current[index], at: index + 1)
-                            }
+                            )
                         } label: {
-                            Label("Duplicate", systemImage: "plus.square.on.square")
+                            row(record)
                         }
-                        .tint(.accentColor)
+                        .swipeActions(edge: .leading) {
+                            // Leading, because the destructive one owns the trailing edge
+                            // and duplicating a record by mistake should never be one slip
+                            // away from deleting it.
+                            Button {
+                                onChange { current in
+                                    guard current.indices.contains(index) else { return }
+                                    current.insert(current[index], at: index + 1)
+                                }
+                            } label: {
+                                Label("Duplicate", systemImage: "plus.square.on.square")
+                            }
+                            .tint(.accentColor)
+                        }
+                    }
+                    .onDelete { offsets in
+                        onChange { $0.remove(atOffsets: offsets) }
+                    }
+                    .onMove { source, destination in
+                        onChange { $0.move(fromOffsets: source, toOffset: destination) }
+                    }
+                } header: {
+                    Text("\(records.count) \(records.count == 1 ? "record" : "records")")
+                } footer: {
+                    Text(
+                        "Each record has \(fields.count) "
+                            + "\(fields.count == 1 ? "field" : "fields"): "
+                            + fields.map(\.name).joined(separator: ", ") + "."
+                    )
+                }
+
+                // Its own section rather than the last row of the list. A button sharing
+                // a section with navigation rows takes the tap and then hands it on to
+                // the row that lands where it was, so adding a record also opened it.
+                Section {
+                    Button {
+                        onChange { $0.append(emptyRecord()) }
+                    } label: {
+                        Label("Add", systemImage: "plus")
                     }
                 }
-                .onDelete { offsets in
-                    mutate { $0.remove(atOffsets: offsets) }
-                }
-                .onMove { source, destination in
-                    mutate { $0.move(fromOffsets: source, toOffset: destination) }
-                }
-            } header: {
-                Text("\(records.count) \(records.count == 1 ? "record" : "records")")
-            } footer: {
-                Text(
-                    "Each record has \(fields.count) "
-                        + "\(fields.count == 1 ? "field" : "fields"): "
-                        + fields.map(\.name).joined(separator: ", ") + "."
-                )
-            }
-
-            // Its own section rather than the last row of the list. A button sharing a
-            // section with navigation rows takes the tap and then hands it on to the row
-            // that lands where it was, so adding a record also opened it.
-            Section {
-                Button {
-                    mutate { $0.append(entry.emptyRecord) }
-                } label: {
-                    Label("Add", systemImage: "plus")
+            } else {
+                Section {
+                    Text("This value is not a list of records.")
+                    Text(unreadableText)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                } footer: {
+                    // Said plainly because the app is already ignoring this value, and an
+                    // editor that quietly showed an empty list would invite you to add a
+                    // record and wonder why nothing changed.
+                    Text(
+                        "The app cannot read it either, so it is using its default. Reset "
+                            + "the flag to edit it here."
+                    )
                 }
             }
         }
@@ -138,41 +180,17 @@
         private func detail(of record: [String: FlagValueBox]) -> String {
             fields
                 .dropFirst()
-                .map { "\($0.name): \(record[$0.name]?.displayString ?? "—")" }
+                .map { "\($0.name): \(summary(of: $0, in: record))" }
                 .joined(separator: "  ")
         }
 
-        // MARK: - Nothing readable
-
-        private var unreadableSection: some View {
-            Section {
-                Text("This value is not a list of records.")
-                Text(store.value(for: entry).displayString)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-            } footer: {
-                // Said plainly because the app is already ignoring this value, and an
-                // editor that quietly showed an empty list would invite you to add a
-                // record and wonder why nothing changed.
-                Text(
-                    "The app cannot read it either, so it is using its default. Reset the "
-                        + "flag to edit it here."
-                )
-            }
-        }
-
-        // MARK: - Writing
-
-        /// Every change goes through here, and every change starts from what is stored
-        /// right now rather than from the array this screen was built with.
-        ///
-        /// A record's own screen is pushed on top of this list and lives as long as you
-        /// are editing it, so writing back a captured copy would undo anything that
-        /// happened to the list in between — silently, and to records you never opened.
-        private func mutate(_ change: (inout [[String: FlagValueBox]]) -> Void) {
-            guard var current = store.records(for: entry) else { return }
-            change(&current)
-            try? store.setRecords(current, for: entry)
+        /// A nested list reads as "2 targets" rather than as its escaped JSON, which is
+        /// unreadable at row width and tells you nothing a count does not.
+        private func summary(of field: FlagRecordField, in record: [String: FlagValueBox]) -> String {
+            guard let box = record[field.name] else { return "—" }
+            guard let nested = field.fields else { return box.displayString }
+            let count = box.recordValues(matching: nested)?.count ?? 0
+            return "\(count)"
         }
     }
 
@@ -237,7 +255,39 @@
 
         @ViewBuilder
         private var control: some View {
-            if let cases = field.cases, cases.isEmpty == false {
+            if let nested = field.fields {
+                // A list inside a record is the same screen one level down, rather than
+                // the escaped JSON it is stored as — which is what a text field would
+                // have shown, and which nobody can edit by hand without counting
+                // backslashes.
+                NavigationLink {
+                    List {
+                        FlagRecordList(
+                            fields: nested,
+                            records: value.recordValues(matching: nested),
+                            unreadableText: value.displayString,
+                            onChange: { change in
+                                var current = value.recordValues(matching: nested) ?? []
+                                change(&current)
+                                onChange(.records(current))
+                            },
+                            emptyRecord: {
+                                Dictionary(
+                                    uniqueKeysWithValues: nested.map { ($0.name, $0.emptyBox) }
+                                )
+                            }
+                        )
+                    }
+                    .navigationTitle(field.name)
+                    #if os(iOS)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar { EditButton() }
+                    #endif
+                } label: {
+                    Text(nestedSummary(nested))
+                        .foregroundStyle(.secondary)
+                }
+            } else if let cases = field.cases, cases.isEmpty == false {
                 Picker(field.name, selection: binding) {
                     ForEach(cases, id: \.self) { option in
                         Text(option.displayString).tag(option)
@@ -267,6 +317,15 @@
                     }
                 }
             }
+        }
+
+        /// "2 records", or that the stored text is not any — the same thing the flag row
+        /// says, one level down.
+        private func nestedSummary(_ nested: [FlagRecordField]) -> String {
+            guard let records = value.recordValues(matching: nested) else {
+                return "Unreadable"
+            }
+            return "\(records.count) record\(records.count == 1 ? "" : "s")"
         }
 
         private var keyboard: TextInputKeyboard {
@@ -320,11 +379,13 @@
 
         /// What a new record starts this field at.
         ///
-        /// An enum field starts on a real case rather than an empty string. Anything
-        /// else is not a value of its type, so the host would reject the record — and
-        /// with it the whole list — the moment it read it.
+        /// The value the field was declared with, when it has one — the author already
+        /// said what a sensible starting point is, and repeating it here would be a
+        /// second opinion. Failing that, an enum field starts on a real case rather
+        /// than an empty string, which is not a value of its type and would have the
+        /// host reject the record, and with it the whole list.
         var emptyBox: FlagValueBox {
-            cases?.first ?? type.emptyBox
+            defaultValue ?? cases?.first ?? type.emptyBox
         }
     }
 

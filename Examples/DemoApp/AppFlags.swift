@@ -28,6 +28,14 @@ public enum PaymentKind: String, FlagValue, CaseIterable, FlagValueCases {
     case transfer
 }
 
+/// A record nested inside another. `FlagRecords` is a `FlagValue`, so a record's field
+/// can be a list of its own.
+@FlagRecord
+public struct SpendLimit {
+    public var currency: String
+    public var maximum: Double
+}
+
 /// A record: a fixed shape a flag can hold a list of.
 ///
 /// Every field is a `FlagValue`, so each one arrives in the companion app with the
@@ -39,6 +47,10 @@ public struct PaymentMethod {
     public var kind: PaymentKind
     public var enabled: Bool
     public var minimumSpend: Double
+
+    /// Written with a value, so the payloads that predate it — and every list already
+    /// stored on a device — keep working instead of being rejected.
+    public var limits: FlagRecords<SpendLimit> = []
 }
 
 @FlagContainer

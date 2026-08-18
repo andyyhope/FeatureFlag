@@ -14,10 +14,33 @@ public struct FlagRecordField: Hashable, Sendable {
     /// rather than a free-text field. `nil` — not empty — when there are none.
     public let cases: [FlagValueBox]?
 
-    public init(name: String, type: FlagValueType, cases: [FlagValueBox]? = nil) {
+    /// What the field falls back to when a stored record does not carry it, taken from
+    /// the initialiser it was written with.
+    ///
+    /// This is what makes adding a field to a record survivable: a list written before
+    /// the field existed is filled rather than rejected. A field with no initialiser
+    /// has no default, and a record missing it is still refused — there would be
+    /// nothing honest to put there.
+    public let defaultValue: FlagValueBox?
+
+    /// The fields of each record, when this field is itself a ``FlagRecords`` list.
+    ///
+    /// A nested list is a string like any other record list, so without this an editor
+    /// would show a block of escaped JSON and a backend would have to send one.
+    public let fields: [FlagRecordField]?
+
+    public init(
+        name: String,
+        type: FlagValueType,
+        cases: [FlagValueBox]? = nil,
+        defaultValue: FlagValueBox? = nil,
+        fields: [FlagRecordField]? = nil
+    ) {
         self.name = name
         self.type = type
         self.cases = cases
+        self.defaultValue = defaultValue
+        self.fields = fields
     }
 }
 
@@ -118,10 +141,18 @@ extension FlagValueBox {
         for object in objects {
             var boxes = [String: FlagValueBox](minimumCapacity: shape.count)
             for field in shape {
-                guard
-                    let value = object[field.name],
-                    let box = FlagValueBox(jsonValue: value, as: field.type)
-                else { return nil }
+                // Absent is a migration — a record written before the field existed —
+                // and its declared default is the honest thing to put there. Present
+                // but wrong is not: overwriting it would be guessing, and would hide a
+                // stored value that genuinely disagrees with this build.
+                guard let value = object[field.name] else {
+                    guard let fallback = field.defaultValue else { return nil }
+                    boxes[field.name] = fallback
+                    continue
+                }
+                guard let box = FlagValueBox(jsonValue: value, as: field.type) else {
+                    return nil
+                }
                 boxes[field.name] = box
             }
             records.append(boxes)

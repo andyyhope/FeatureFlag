@@ -73,7 +73,11 @@ extension RemoteConfiguration {
                 "paymentMethods": [
                   { "name": "Visa", "kind": "card", "enabled": true, "minimumSpend": 0 },
                   { "name": "Apple Pay", "kind": "wallet", "enabled": true, "minimumSpend": 0 },
-                  { "name": "Bank transfer", "kind": "transfer", "enabled": true, "minimumSpend": 10 }
+                  { "name": "Bank transfer", "kind": "transfer", "enabled": true, "minimumSpend": 10,
+                    "limits": [
+                      { "currency": "AUD", "maximum": 5000 },
+                      { "currency": "NZD", "maximum": 5500 }
+                    ] }
                 ]
               }
             }
