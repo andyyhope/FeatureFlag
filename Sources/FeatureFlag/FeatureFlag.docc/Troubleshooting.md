@@ -141,6 +141,10 @@ ways out — add `@FlagGroup`, add `@Flag`, or give the property a value of its 
 an earlier build it surfaces pointed into expanded code, which is why it reads as
 though the macro is broken rather than the declaration.
 
+A `FlagRecords` property is told which one it needs, since only `@Flag` is right: a
+record list is a flag's *value*, not a nested container. The same message appears if
+it is marked `@FlagGroup`, which otherwise fails as two errors inside expanded code.
+
 The same error from `@FlagRecord` means two fields sharing one declaration —
 `var host: String, port: String`. Only the first would be generated for. Declare them
 on separate lines.

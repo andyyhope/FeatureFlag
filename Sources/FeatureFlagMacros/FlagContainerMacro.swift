@@ -172,14 +172,14 @@ extension FlagContainerMacro {
                 // wrote and never naming the property responsible. The commonest cause
                 // is a nested container written without '@FlagGroup'.
                 if variable.needsInitialisingByTheGeneratedInit {
-                    context.diagnose(
-                        Diagnostic(
-                            node: variable,
-                            message: FlagContainerDiagnostic.unattributedStoredProperty(
-                                variable.firstPropertyName ?? "This property"
-                            )
-                        )
-                    )
+                    let name = variable.firstPropertyName ?? "This property"
+                    // A record list is exactly identifiable, so name the one fix that
+                    // works rather than offering three and leading with the wrong one.
+                    let message: FlagContainerDiagnostic =
+                        variable.declaresARecordList
+                        ? .recordListNeedsFlag(name)
+                        : .unattributedStoredProperty(name)
+                    context.diagnose(Diagnostic(node: variable, message: message))
                 }
                 return nil
             }
@@ -209,6 +209,20 @@ extension FlagContainerMacro {
             }
 
             if attribute.identifier == "FlagGroup" {
+                // The mirror of the diagnostic above, and the mistake its wording can
+                // lead to. A group is initialised as a nested container, so a record
+                // list here fails as two errors inside expanded code, neither naming
+                // the property.
+                if variable.declaresARecordList {
+                    context.diagnose(
+                        Diagnostic(
+                            node: variable,
+                            message: FlagContainerDiagnostic.recordListNeedsFlag(identifier)
+                        )
+                    )
+                    return nil
+                }
+
                 return .group(
                     FlagDeclaration.Group(
                         propertyName: identifier,
@@ -262,6 +276,9 @@ enum FlagContainerDiagnostic: DiagnosticMessage {
     /// Carries the property's name, because the whole point is to say which one.
     case unattributedStoredProperty(String)
 
+    /// The same mistake on a `FlagRecords` property, where only one fix is right.
+    case recordListNeedsFlag(String)
+
     var message: String {
         switch self {
         case .structsOnly:
@@ -279,6 +296,12 @@ enum FlagContainerDiagnostic: DiagnosticMessage {
                 flags cannot be optional: a flag always has a value, because 'default' \
                 is what it falls back to. Use a sentinel the type already has, or an \
                 enum with a case for 'unset'
+                """
+        case let .recordListNeedsFlag(name):
+            return """
+                '\(name)' holds a list of records, which is a flag's value rather than \
+                a nested container, so it needs '@Flag(default:description:)' — \
+                '@FlagGroup' is for a nested '@FlagContainer'
                 """
         case let .unattributedStoredProperty(name):
             return """
@@ -300,6 +323,7 @@ enum FlagContainerDiagnostic: DiagnosticMessage {
         case .defaultRequired: return "defaultRequired"
         case .optionalUnsupported: return "optionalUnsupported"
         case .unattributedStoredProperty: return "unattributedStoredProperty"
+        case .recordListNeedsFlag: return "recordListNeedsFlag"
         }
     }
 
@@ -318,6 +342,18 @@ extension VariableDeclSyntax {
     /// The name of the first thing this declares, for a message that has to say which.
     var firstPropertyName: String? {
         bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier.text
+    }
+
+    /// Whether this declares a `FlagRecords` list, in either spelling.
+    var declaresARecordList: Bool {
+        guard let type = bindings.first?.typeAnnotation?.type else { return false }
+        if let simple = type.as(IdentifierTypeSyntax.self) {
+            return simple.name.text == "FlagRecords"
+        }
+        if let qualified = type.as(MemberTypeSyntax.self) {
+            return qualified.name.text == "FlagRecords"
+        }
+        return false
     }
 
     /// Whether the generated initialiser has to set this, and cannot.
