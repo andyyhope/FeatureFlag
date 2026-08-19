@@ -44,6 +44,9 @@ extension RemoteOverrideError: CustomStringConvertible, LocalizedError {
             return "The remote payload could not be read: \(reason)."
 
         case let .rejected(problems):
+            guard problems.isEmpty == false else {
+                return "Nothing was applied, and no problem was recorded."
+            }
             let list = problems.map { "  • \($0)" }.joined(separator: "\n")
             return """
                 Nothing was applied. \(problems.count) \
@@ -96,6 +99,9 @@ extension FlagImportError: CustomStringConvertible, LocalizedError {
                 """
 
         case let .rejected(problems):
+            guard problems.isEmpty == false else {
+                return "Nothing was applied, and no problem was recorded."
+            }
             let list = problems.map { "  • \($0)" }.joined(separator: "\n")
             return """
                 Nothing was applied. \(problems.count) \
@@ -237,6 +243,24 @@ extension FlagError: CustomStringConvertible, LocalizedError {
 
 // MARK: - Describing an offending value
 
+/// A value as one short, single-line fragment.
+///
+/// Each problem is a bullet, so a raw newline in a value puts the rest of it in column
+/// zero where it reads as another bullet — or as the sentence that closes the report.
+/// Length is capped for the same reason: a message is something to read, not the value
+/// itself.
+func flagQuoted(_ text: String) -> String {
+    let escaped =
+        text
+        .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "\n", with: "\\n")
+        .replacingOccurrences(of: "\r", with: "\\r")
+        .replacingOccurrences(of: "\t", with: "\\t")
+
+    guard escaped.count > 40 else { return "\"\(escaped)\"" }
+    return "\"\(escaped.prefix(40))…\""
+}
+
 extension RemoteValue {
 
     /// This value in a few characters, for a message that has to fit on one line.
@@ -249,7 +273,7 @@ extension RemoteValue {
         case let .bool(value): return String(value)
         case let .int(value): return String(value)
         case let .double(value): return String(value)
-        case let .string(value): return "\"\(value.prefix(40))\""
+        case let .string(value): return flagQuoted(value)
         case let .data(value): return "\(value.count) bytes"
         case let .date(value): return flagDateFormatter.string(from: value)
         case let .array(values): return "an array of \(values.count)"
@@ -261,7 +285,7 @@ extension RemoteValue {
 /// A value straight out of `JSONSerialization` or `PropertyListSerialization`, in a
 /// few characters.
 func flagShortDescription(of value: Any) -> String {
-    if let string = value as? String { return "\"\(string.prefix(40))\"" }
+    if let string = value as? String { return flagQuoted(string) }
     if isBooleanValue(value) { return (value as? Bool).map(String.init) ?? "a boolean" }
     if let array = value as? [Any] { return "an array of \(array.count)" }
     if let object = value as? [String: Any] { return "an object with \(object.count) field(s)" }

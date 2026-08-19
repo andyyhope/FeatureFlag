@@ -107,6 +107,59 @@ final class ErrorMessageTests: XCTestCase {
         assertSays(RemoteOverrideError.malformed("not valid JSON"), "not valid JSON")
     }
 
+    // MARK: - Values that fight the layout
+
+    func testAValueContainingNewlinesStaysOnOneLine() {
+        // Each problem is a bullet. A raw newline in the value puts the rest of it in
+        // column zero, where it reads as another bullet or as the closing sentence.
+        let error = RemoteOverrideError.rejected([
+            RemoteOverrideProblem(
+                key: "k",
+                remoteKey: "r",
+                kind: .typeMismatch,
+                expected: "int",
+                found: RemoteValue.string("line one\nline two").shortDescription
+            )
+        ])
+
+        let bulletLines = String(describing: error)
+            .split(separator: "\n")
+            .filter { $0.contains("•") }
+        XCTAssertEqual(bulletLines.count, 1)
+        XCTAssertTrue(String(describing: error).contains("line one\\nline two"))
+    }
+
+    func testALongValueSaysThatItWasCutShort() {
+        let long = RemoteValue.string(String(repeating: "A", count: 200)).shortDescription
+
+        XCTAssertTrue(long.hasSuffix("…\""), long)
+        XCTAssertLessThan(long.count, 60)
+    }
+
+    func testAValueThatFitsIsNotMarkedAsCutShort() {
+        XCTAssertEqual(RemoteValue.string("short").shortDescription, "\"short\"")
+    }
+
+    func testTheSameIsTrueOfValuesFromADocument() {
+        XCTAssertTrue(flagShortDescription(of: String(repeating: "A", count: 200)).hasSuffix("…\""))
+        XCTAssertFalse(flagShortDescription(of: "line one\nline two").contains("\n"))
+    }
+
+    // MARK: - Degenerate input
+
+    func testARejectionWithNoProblemsStillReadsAsASentence() {
+        // Not reachable from the framework, which only throws when there is something to
+        // report — but the case is public, and "0 problems:" followed by nothing is not
+        // a sentence.
+        for message in messages(RemoteOverrideError.rejected([])) {
+            XCTAssertFalse(message.contains("0 problems"), message)
+            XCTAssertFalse(message.hasSuffix(":"), message)
+        }
+        for message in messages(FlagImportError.rejected([])) {
+            XCTAssertFalse(message.contains("0 problems"), message)
+        }
+    }
+
     // MARK: - Import
 
     func testARejectedImportNamesTheFlagAndTheProblem() {

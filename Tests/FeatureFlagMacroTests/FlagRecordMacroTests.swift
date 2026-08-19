@@ -67,13 +67,19 @@ final class FlagRecordMacroTests: XCTestCase {
                 @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
                 extension Endpoint: FeatureFlag.FlagValue {
                     static var flagValueType: FeatureFlag.FlagValueType {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     init?(box: FeatureFlag.FlagValueBox) {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     var box: FeatureFlag.FlagValueBox {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                 }
                 """,
@@ -125,13 +131,19 @@ final class FlagRecordMacroTests: XCTestCase {
                 @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
                 extension Endpoint: FeatureFlag.FlagValue {
                     public static var flagValueType: FeatureFlag.FlagValueType {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     public init?(box: FeatureFlag.FlagValueBox) {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     public var box: FeatureFlag.FlagValueBox {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                 }
                 """,
@@ -184,13 +196,19 @@ final class FlagRecordMacroTests: XCTestCase {
                 @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
                 extension Endpoint: FeatureFlag.FlagValue {
                     static var flagValueType: FeatureFlag.FlagValueType {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     init?(box: FeatureFlag.FlagValueBox) {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     var box: FeatureFlag.FlagValueBox {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                 }
                 """,
@@ -243,13 +261,19 @@ final class FlagRecordMacroTests: XCTestCase {
                 @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
                 extension Endpoint: FeatureFlag.FlagValue {
                     static var flagValueType: FeatureFlag.FlagValueType {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     init?(box: FeatureFlag.FlagValueBox) {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     var box: FeatureFlag.FlagValueBox {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                 }
                 """,
@@ -304,13 +328,19 @@ final class FlagRecordMacroTests: XCTestCase {
                 @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
                 extension Endpoint: FeatureFlag.FlagValue {
                     static var flagValueType: FeatureFlag.FlagValueType {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     init?(box: FeatureFlag.FlagValueBox) {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                     var box: FeatureFlag.FlagValueBox {
-                        fatalError("unavailable")
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                 }
                 """,

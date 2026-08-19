@@ -188,13 +188,19 @@ extension FlagRecordMacro: ExtensionMacro {
         @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<\(type.trimmed)>' rather than '\(type.trimmed)' or '[\(type.trimmed)]'")
         extension \(type.trimmed): FeatureFlag.FlagValue {
             \(raw: access)static var flagValueType: FeatureFlag.FlagValueType {
-                fatalError("unavailable")
+                fatalError(
+                    "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
+                )
             }
             \(raw: access)init?(box: FeatureFlag.FlagValueBox) {
-                fatalError("unavailable")
+                fatalError(
+                    "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
+                )
             }
             \(raw: access)var box: FeatureFlag.FlagValueBox {
-                fatalError("unavailable")
+                fatalError(
+                    "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
+                )
             }
         }
         """
