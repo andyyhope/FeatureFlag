@@ -162,6 +162,11 @@ From 0.6.0 the compiler says which type to use instead. On an earlier build it n
 `FlagValue` — a protocol the declaration never mentions — and nothing about
 `FlagRecords`.
 
+The same error naming a `@FlagContainer` type means the opposite mistake: a nested
+container marked `@Flag` instead of `@FlagGroup`. That one still reads as the raw
+conformance failure, because a container cannot be constructed without a lookup and so
+there is no `default:` to write in the first place.
+
 ### The macro complains about a missing type annotation
 
 A macro sees syntax, not types, so it cannot infer one:
