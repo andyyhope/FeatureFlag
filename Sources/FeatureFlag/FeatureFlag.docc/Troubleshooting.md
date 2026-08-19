@@ -136,6 +136,15 @@ var newOnboarding = false       // no
 var newOnboarding: Bool         // yes
 ```
 
+### An error says nothing useful
+
+It should not. Every error this framework throws carries a message that names the
+flag, the value and what to do, through both `print(error)` and
+`localizedDescription`.
+
+If you are seeing "The operation couldn't be completed", you are on a build older
+than 0.6.0.
+
 ### A remote payload appears to do nothing
 
 Ask what the apply reported:

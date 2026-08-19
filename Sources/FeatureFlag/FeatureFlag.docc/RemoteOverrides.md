@@ -88,6 +88,27 @@ otherwise fail silently at every read, looking exactly like a flag that does not
 One deliberate allowance: JSON has a single number type, so a whole number satisfies a
 `Double` flag. That is exact widening, not coercion — `"true"` is still not a `Bool`.
 
+### What a rejection tells you
+
+`RemoteOverrideError` prints as a report rather than as a reflected enum, and
+`localizedDescription` says the same thing — so whichever one your logging reaches
+for, it is readable:
+
+```
+Nothing was applied. 3 problems:
+  • 'config.tier' → checkout-tier: "gold" is not one of free, pro
+  • 'featureToggles.onboarding' → new-onboarding: expected bool, got "yes"
+  • 'config.pageSize' → page-size: expected int, got an array of 3
+A remote payload is all or nothing, so one bad value leaves every other flag
+reading whatever sits below this source.
+```
+
+Each line names the path in the payload, the flag it maps to, what was expected and
+what arrived. Strings keep their quotes, because `"true"` and `true` is the mistake a
+backend makes most often and the two are indistinguishable otherwise.
+
+Problems are sorted by flag key, so the same payload reports the same way every time.
+
 ### Property lists
 
 The same source reads a property list, which is convenient for configuration shipped in

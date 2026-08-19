@@ -63,10 +63,25 @@ public struct RemoteOverrideProblem: Hashable, Sendable {
     public let remoteKey: String
     public let kind: Kind
 
-    public init(key: FlagKey, remoteKey: String, kind: Kind) {
+    /// What the flag would have accepted — a type name, or an enum's cases. Present
+    /// for the message; ``kind`` is what to switch on.
+    public let expected: String?
+
+    /// What the payload actually held, short enough to read in one line.
+    public let found: String?
+
+    public init(
+        key: FlagKey,
+        remoteKey: String,
+        kind: Kind,
+        expected: String? = nil,
+        found: String? = nil
+    ) {
         self.key = key
         self.remoteKey = remoteKey
         self.kind = kind
+        self.expected = expected
+        self.found = found
     }
 }
 
@@ -187,7 +202,12 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
         for (key, remoteValue) in mapped {
             guard let entry = entries[key] else {
                 problems.append(
-                    RemoteOverrideProblem(key: key, remoteKey: key.rawValue, kind: .unknownKey)
+                    RemoteOverrideProblem(
+                        key: key,
+                        remoteKey: key.rawValue,
+                        kind: .unknownKey,
+                        found: remoteValue.shortDescription
+                    )
                 )
                 continue
             }
@@ -205,7 +225,11 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
                     RemoteOverrideProblem(
                         key: key,
                         remoteKey: entry.remoteKey ?? key.rawValue,
-                        kind: .typeMismatch
+                        kind: .typeMismatch,
+                        expected: entry.recordShape == nil
+                            ? entry.valueType.typeName
+                            : "a list of records (\(entry.recordShape?.map(\.name).joined(separator: ", ") ?? ""))",
+                        found: remoteValue.shortDescription
                     )
                 )
                 continue
@@ -218,7 +242,9 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
                     RemoteOverrideProblem(
                         key: key,
                         remoteKey: entry.remoteKey ?? key.rawValue,
-                        kind: .unknownCase
+                        kind: .unknownCase,
+                        expected: cases.caseListDescription,
+                        found: remoteValue.shortDescription
                     )
                 )
                 continue
