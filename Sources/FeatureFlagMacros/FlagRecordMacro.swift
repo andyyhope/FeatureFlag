@@ -155,12 +155,55 @@ extension FlagRecordMacro: ExtensionMacro {
         // in which case the clause has to be left off or it reads as a redeclaration.
         let conformance = protocols.isEmpty ? "" : ": FeatureFlag.FlagRecord"
 
+        let access = accessLevel(of: declaration)
+
         let extensionDeclaration: DeclSyntax = """
             extension \(type.trimmed)\(raw: conformance) {
-            \(initialiser(for: fields, access: accessLevel(of: declaration)))
+            \(initialiser(for: fields, access: access))
             }
             """
-        return [extensionDeclaration.cast(ExtensionDeclSyntax.self)]
+
+        return [
+            extensionDeclaration.cast(ExtensionDeclSyntax.self),
+            unavailableFlagValue(for: type, access: access).cast(ExtensionDeclSyntax.self),
+        ]
+    }
+
+    /// A `FlagValue` conformance that exists only to be refused, in words.
+    ///
+    /// Declaring a record as a flag's type — `[Endpoint]`, or `Endpoint` on its own —
+    /// otherwise fails as "Generic struct 'Flag' requires that 'Endpoint' conform to
+    /// 'FlagValue'", which names a protocol the author has never heard of and says
+    /// nothing about the type that does work. An unavailable conformance lets the
+    /// compiler carry the sentence instead.
+    ///
+    /// Refusing it is also correct rather than merely convenient: a record boxed on its
+    /// own would be a dictionary of mixed field types, which is the one shape
+    /// `FlagValueType` cannot describe — the reason `FlagRecords` stores text at all.
+    private static func unavailableFlagValue(
+        for type: some TypeSyntaxProtocol,
+        access: String
+    ) -> DeclSyntax {
+        """
+        @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<\(type.trimmed)>' rather than '\(type.trimmed)' or '[\(type.trimmed)]'")
+        extension \(type.trimmed): FeatureFlag.FlagValue {
+            \(raw: access)static var flagValueType: FeatureFlag.FlagValueType {
+                fatalError(
+                    "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
+                )
+            }
+            \(raw: access)init?(box: FeatureFlag.FlagValueBox) {
+                fatalError(
+                    "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
+                )
+            }
+            \(raw: access)var box: FeatureFlag.FlagValueBox {
+                fatalError(
+                    "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
+                )
+            }
+        }
+        """
     }
 }
 
@@ -192,6 +235,18 @@ extension FlagRecordMacro {
             // A record's shape is its instance storage. Statics belong to the type and
             // computed properties are derived, so neither is a field.
             guard variable.isInstanceStorage else { return nil }
+
+            // `var a: Int, b: Int` declares two fields in one breath, and only the
+            // first would be generated for. Skipping the rest silently leaves the
+            // initialiser incomplete, which surfaces as "return from initializer
+            // without initializing all stored properties" pointed into generated code.
+            guard variable.bindings.count == 1 else {
+                diagnose(
+                    Diagnostic(node: variable, message: FlagRecordDiagnostic.oneFieldPerLine)
+                )
+                return nil
+            }
+
             guard
                 let binding = variable.bindings.first,
                 let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text
@@ -227,8 +282,9 @@ extension VariableDeclSyntax {
     var isInstanceStorage: Bool {
         let isStatic = modifiers.contains { $0.name.tokenKind == .keyword(.static) }
         guard isStatic == false else { return false }
-        guard bindings.count == 1, let binding = bindings.first else { return false }
-        return binding.accessorBlock == nil
+        // Every binding, so `var a: Int, b: Int` reaches the diagnostic that names it
+        // rather than being dropped here without a word.
+        return bindings.allSatisfy { $0.accessorBlock == nil }
     }
 }
 
@@ -240,6 +296,7 @@ enum FlagRecordDiagnostic: String, DiagnosticMessage {
     case fieldsRequired
     case typeAnnotationRequired
     case optionalUnsupported
+    case oneFieldPerLine
 
     var message: String {
         switch self {
@@ -257,6 +314,12 @@ enum FlagRecordDiagnostic: String, DiagnosticMessage {
                 record fields cannot be optional: a field is either part of the shape or \
                 it is not. Use a sentinel the type already has, or an enum with a case \
                 for 'unset'
+                """
+        case .oneFieldPerLine:
+            return """
+                declare one field per line: '@FlagRecord' generates a shape entry and a \
+                box for each one by name, and only the first of a shared declaration \
+                would be written
                 """
         }
     }

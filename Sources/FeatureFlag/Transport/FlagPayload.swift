@@ -49,9 +49,18 @@ public struct FlagImportProblem: Hashable, Sendable {
     public let key: FlagKey
     public let kind: Kind
 
-    public init(key: FlagKey, kind: Kind) {
+    /// What the flag would have accepted — a type name, or an enum's cases. Present
+    /// for the message; ``kind`` is what to switch on.
+    public let expected: String?
+
+    /// What the document actually held, short enough to read in one line.
+    public let found: String?
+
+    public init(key: FlagKey, kind: Kind, expected: String? = nil, found: String? = nil) {
         self.key = key
         self.kind = kind
+        self.expected = expected
+        self.found = found
     }
 }
 
@@ -167,7 +176,11 @@ extension FlagPayload {
         for (rawKey, rawValue) in rawValues {
             let key = FlagKey(rawKey)
             guard let type = valueTypes[key] else {
-                problems.append(FlagImportProblem(key: key, kind: .unknownKey))
+                problems.append(
+                    FlagImportProblem(
+                        key: key, kind: .unknownKey, found: flagShortDescription(of: rawValue)
+                    )
+                )
                 continue
             }
 
@@ -178,7 +191,14 @@ extension FlagPayload {
                 }
 
             guard let box else {
-                problems.append(FlagImportProblem(key: key, kind: .typeMismatch))
+                problems.append(
+                    FlagImportProblem(
+                        key: key,
+                        kind: .typeMismatch,
+                        expected: type.typeName,
+                        found: flagShortDescription(of: rawValue)
+                    )
+                )
                 continue
             }
 
@@ -186,7 +206,14 @@ extension FlagPayload {
             // them is caught here rather than at every read, the same way a remote
             // payload is.
             if let permitted = cases[key], permitted.isEmpty == false, !permitted.contains(box) {
-                problems.append(FlagImportProblem(key: key, kind: .unknownCase))
+                problems.append(
+                    FlagImportProblem(
+                        key: key,
+                        kind: .unknownCase,
+                        expected: permitted.caseListDescription,
+                        found: flagShortDescription(of: rawValue)
+                    )
+                )
                 continue
             }
 
@@ -195,7 +222,14 @@ extension FlagPayload {
             // left to the read, where it would fall back to the default and look like
             // an import that did nothing.
             if let shape = recordShapes[key], box.recordValues(matching: shape) == nil {
-                problems.append(FlagImportProblem(key: key, kind: .typeMismatch))
+                problems.append(
+                    FlagImportProblem(
+                        key: key,
+                        kind: .typeMismatch,
+                        expected: "a list of records (\(shape.map(\.name).joined(separator: ", ")))",
+                        found: flagShortDescription(of: rawValue)
+                    )
+                )
                 continue
             }
 

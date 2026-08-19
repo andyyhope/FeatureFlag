@@ -120,7 +120,9 @@ final class FlagPayloadTests: XCTestCase {
         XCTAssertThrowsError(try tower.importPayload(Data(json.utf8), as: .json)) { error in
             XCTAssertEqual(
                 error as? FlagImportError,
-                .rejected([FlagImportProblem(key: "not-a-flag", kind: .unknownKey)])
+                .rejected([
+                    FlagImportProblem(key: "not-a-flag", kind: .unknownKey, found: "1")
+                ])
             )
         }
         XCTAssertFalse(tower.flags.newOnboarding)
@@ -135,7 +137,14 @@ final class FlagPayloadTests: XCTestCase {
         XCTAssertThrowsError(try tower.importPayload(Data(json.utf8), as: .json)) { error in
             XCTAssertEqual(
                 error as? FlagImportError,
-                .rejected([FlagImportProblem(key: "max-items", kind: .typeMismatch)])
+                .rejected([
+                    FlagImportProblem(
+                        key: "max-items",
+                        kind: .typeMismatch,
+                        expected: "int",
+                        found: "\"lots\""
+                    )
+                ])
             )
         }
         XCTAssertFalse(tower.flags.newOnboarding)
@@ -154,8 +163,13 @@ final class FlagPayloadTests: XCTestCase {
             XCTAssertEqual(
                 Set(problems),
                 [
-                    FlagImportProblem(key: "not-a-flag", kind: .unknownKey),
-                    FlagImportProblem(key: "max-items", kind: .typeMismatch),
+                    FlagImportProblem(key: "not-a-flag", kind: .unknownKey, found: "1"),
+                    FlagImportProblem(
+                        key: "max-items",
+                        kind: .typeMismatch,
+                        expected: "int",
+                        found: "\"lots\""
+                    ),
                 ]
             )
         }

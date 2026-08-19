@@ -81,7 +81,9 @@ final class RemoteOverrideTests: XCTestCase {
                     RemoteOverrideProblem(
                         key: "new-onboarding",
                         remoteKey: "featureToggles.onboarding.v2",
-                        kind: .typeMismatch
+                        kind: .typeMismatch,
+                        expected: "bool",
+                        found: "\"true\""
                     )
                 ])
             )

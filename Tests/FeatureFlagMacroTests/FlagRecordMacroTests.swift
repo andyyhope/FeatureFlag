@@ -63,6 +63,25 @@ final class FlagRecordMacroTests: XCTestCase {
                         self.enabled = enabled
                     }
                 }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                }
                 """,
             macros: recordMacros
         )
@@ -106,6 +125,25 @@ final class FlagRecordMacroTests: XCTestCase {
                             return nil
                         }
                         self.name = name
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    public static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    public init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    public var box: FeatureFlag.FlagValueBox {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                 }
                 """,
@@ -154,6 +192,25 @@ final class FlagRecordMacroTests: XCTestCase {
                         self.weight = weight
                     }
                 }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                }
                 """,
             macros: recordMacros
         )
@@ -198,6 +255,25 @@ final class FlagRecordMacroTests: XCTestCase {
                             return nil
                         }
                         self.name = name
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                 }
                 """,
@@ -246,6 +322,25 @@ final class FlagRecordMacroTests: XCTestCase {
                             return nil
                         }
                         self.name = name
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
                     }
                 }
                 """,
@@ -320,6 +415,46 @@ final class FlagRecordMacroTests: XCTestCase {
                     message: """
                         record fields need an explicit type annotation, for example \
                         'var name: String'
+                        """,
+                    line: 3,
+                    column: 5
+                ),
+                DiagnosticSpec(
+                    message: """
+                        '@FlagRecord' needs at least one stored property: a record is a \
+                        shape, and an empty one gives the editor nothing to show
+                        """,
+                    line: 1,
+                    column: 1
+                ),
+            ],
+            macros: recordMacros
+        )
+    }
+
+    func testFieldsDeclaredTogetherAreDiagnosed() {
+        // Only the first of a shared declaration would be generated for, and dropping
+        // the rest silently leaves the initialiser incomplete — which surfaces as
+        // "return from initializer without initializing all stored properties" pointed
+        // into generated code the author never wrote.
+        assertMacroExpansion(
+            """
+            @FlagRecord
+            struct Endpoint {
+                var host: String, port: String
+            }
+            """,
+            expandedSource: """
+                struct Endpoint {
+                    var host: String, port: String
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: """
+                        declare one field per line: '@FlagRecord' generates a shape entry \
+                        and a box for each one by name, and only the first of a shared \
+                        declaration would be written
                         """,
                     line: 3,
                     column: 5

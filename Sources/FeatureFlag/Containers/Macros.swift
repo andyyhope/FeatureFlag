@@ -61,7 +61,11 @@ public macro FlagGroup(description: String) =
 /// The memberwise initialiser survives: the generated one lives in an extension,
 /// because a struct that declares an initialiser in its own body loses it — and a
 /// record you cannot construct is no use as a flag's default.
-@attached(extension, conformances: FlagRecord, names: named(init(flagRecordBoxes:)))
+@attached(
+    extension,
+    conformances: FlagRecord, FlagValue,
+    names: named(init(flagRecordBoxes:)), named(flagValueType), named(init(box:)), named(box)
+)
 @attached(member, names: named(flagRecordShape), named(flagRecordBoxes))
 public macro FlagRecord() =
     #externalMacro(module: "FeatureFlagMacros", type: "FlagRecordMacro")

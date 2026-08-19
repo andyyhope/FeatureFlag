@@ -124,6 +124,49 @@ Swift's own error — "generic struct 'Flag' requires that 'String?' conform to 
 — appears alongside this one and cannot be suppressed: `@Flag` is a property wrapper, so
 its constraint is checked whatever the macro says.
 
+### "Return from initializer without initializing all stored properties"
+
+A stored property the generated initialiser has no way to set. Almost always a nested
+container written without `@FlagGroup`:
+
+```swift
+@FlagContainer
+struct AppFlags {
+    var checkout: CheckoutFlags        // needs @FlagGroup(description:)
+}
+```
+
+From 0.6.0 this is reported at the property itself, naming it and listing the three
+ways out — add `@FlagGroup`, add `@Flag`, or give the property a value of its own. On
+an earlier build it surfaces pointed into expanded code, which is why it reads as
+though the macro is broken rather than the declaration.
+
+A `FlagRecords` property is told which one it needs, since only `@Flag` is right: a
+record list is a flag's *value*, not a nested container. The same message appears if
+it is marked `@FlagGroup`, which otherwise fails as two errors inside expanded code.
+
+The same error from `@FlagRecord` means two fields sharing one declaration —
+`var host: String, port: String`. Only the first would be generated for. Declare them
+on separate lines.
+
+### "requires that 'X' conform to 'FlagValue'" for a record type
+
+A `@FlagRecord` type declared as a flag's own type, or as a plain array of one:
+
+```swift
+@Flag(default: [], description: "Endpoints")
+var endpoints: [Endpoint]        // needs FlagRecords<Endpoint>
+```
+
+From 0.6.0 the compiler says which type to use instead. On an earlier build it names
+`FlagValue` — a protocol the declaration never mentions — and nothing about
+`FlagRecords`.
+
+The same error naming a `@FlagContainer` type means the opposite mistake: a nested
+container marked `@Flag` instead of `@FlagGroup`. That one still reads as the raw
+conformance failure, because a container cannot be constructed without a lookup and so
+there is no `default:` to write in the first place.
+
 ### The macro complains about a missing type annotation
 
 A macro sees syntax, not types, so it cannot infer one:
@@ -135,6 +178,15 @@ var newOnboarding = false       // no
 @Flag(default: false, description: "…")
 var newOnboarding: Bool         // yes
 ```
+
+### An error says nothing useful
+
+It should not. Every error this framework throws carries a message that names the
+flag, the value and what to do, through both `print(error)` and
+`localizedDescription`.
+
+If you are seeing "The operation couldn't be completed", you are on a build older
+than 0.6.0.
 
 ### A remote payload appears to do nothing
 
