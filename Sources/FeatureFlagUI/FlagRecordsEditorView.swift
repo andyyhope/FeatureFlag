@@ -385,7 +385,17 @@
         /// than an empty string, which is not a value of its type and would have the
         /// host reject the record, and with it the whole list.
         var emptyBox: FlagValueBox {
-            defaultValue ?? cases?.first ?? type.emptyBox
+            if let defaultValue { return defaultValue }
+            // A field holding its own list starts as an empty list. The emptiest
+            // string is `""`, which is not a list of records at all, so a record
+            // added with one would be rejected by the host the moment it read it —
+            // taking the whole list back to its default, silently.
+            if fields != nil { return .records([]) }
+            // A field holding its own list starts as an empty list. The emptiest
+            // string is `""`, which is not a list of records at all, so a record
+            // added with one would be rejected by the host the moment it read it —
+            // taking the whole list back to its default, silently.
+            return cases?.first ?? type.emptyBox
         }
     }
 

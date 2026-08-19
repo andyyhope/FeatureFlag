@@ -10,6 +10,7 @@ final class FlagRecordEditorTests: XCTestCase {
 
     /// Fresh per test method, so each one starts from the compiled defaults.
     private let source = SnapshotSource(name: "shared")
+    private let nestedSource = SnapshotSource(name: "nested")
 
     private func makeStore() -> FlagEditingStore {
         FlagEditingStore(schema: FlagSchema(RecordEditorFlags.self), source: source)
@@ -86,6 +87,23 @@ final class FlagRecordEditorTests: XCTestCase {
         let pole = FlagPole(RecordEditorFlags.self, sources: [source])
         XCTAssertEqual(pole.flags.endpoints.values.count, 1)
         XCTAssertEqual(pole.flags.endpoints.values.first?.tier, .primary)
+    }
+
+    func testANewRecordsNestedListStartsAsAnEmptyListNotAnEmptyString() throws {
+        // The trap this avoids: "" is a string but not a list of records, so a record
+        // added with one would be rejected by the host the moment it read the list —
+        // taking the whole flag back to its default, silently. The field here has no
+        // declared default, which is the case that used to fall through to `""`.
+        let store = FlagEditingStore(
+            schema: FlagSchema(NestedEditorFlags.self), source: nestedSource
+        )
+        let entry = try XCTUnwrap(store.entry(for: "routes"))
+
+        try store.setRecords([entry.emptyRecord], for: entry)
+
+        let pole = FlagPole(NestedEditorFlags.self, sources: [nestedSource])
+        XCTAssertEqual(pole.flags.routes.values.count, 1)
+        XCTAssertEqual(pole.flags.routes.values.first?.hops.values, [])
     }
 
     func testDuplicatingPutsTheCopyRightAfterTheOriginal() throws {
@@ -197,6 +215,25 @@ private struct Endpoint {
     var enabled: Bool
     var weight: Int
     var tier: Tier
+}
+
+@FlagRecord
+private struct Hop {
+    var host: String
+}
+
+@FlagRecord
+private struct Route {
+    var name: String
+    /// Deliberately no declared default.
+    var hops: FlagRecords<Hop>
+}
+
+@FlagContainer
+private struct NestedEditorFlags {
+
+    @Flag(default: [], description: "Routes")
+    var routes: FlagRecords<Route>
 }
 
 @FlagContainer
