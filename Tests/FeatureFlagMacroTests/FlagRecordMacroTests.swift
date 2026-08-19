@@ -337,6 +337,46 @@ final class FlagRecordMacroTests: XCTestCase {
         )
     }
 
+    func testFieldsDeclaredTogetherAreDiagnosed() {
+        // Only the first of a shared declaration would be generated for, and dropping
+        // the rest silently leaves the initialiser incomplete — which surfaces as
+        // "return from initializer without initializing all stored properties" pointed
+        // into generated code the author never wrote.
+        assertMacroExpansion(
+            """
+            @FlagRecord
+            struct Endpoint {
+                var host: String, port: String
+            }
+            """,
+            expandedSource: """
+                struct Endpoint {
+                    var host: String, port: String
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: """
+                        declare one field per line: '@FlagRecord' generates a shape entry \
+                        and a box for each one by name, and only the first of a shared \
+                        declaration would be written
+                        """,
+                    line: 3,
+                    column: 5
+                ),
+                DiagnosticSpec(
+                    message: """
+                        '@FlagRecord' needs at least one stored property: a record is a \
+                        shape, and an empty one gives the editor nothing to show
+                        """,
+                    line: 1,
+                    column: 1
+                ),
+            ],
+            macros: recordMacros
+        )
+    }
+
     func testAnOptionalFieldIsDiagnosed() {
         // The same reasoning as flags: a record is rebuilt from stored text, and an
         // absent field is indistinguishable from one that was never written.

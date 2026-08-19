@@ -192,6 +192,18 @@ extension FlagRecordMacro {
             // A record's shape is its instance storage. Statics belong to the type and
             // computed properties are derived, so neither is a field.
             guard variable.isInstanceStorage else { return nil }
+
+            // `var a: Int, b: Int` declares two fields in one breath, and only the
+            // first would be generated for. Skipping the rest silently leaves the
+            // initialiser incomplete, which surfaces as "return from initializer
+            // without initializing all stored properties" pointed into generated code.
+            guard variable.bindings.count == 1 else {
+                diagnose(
+                    Diagnostic(node: variable, message: FlagRecordDiagnostic.oneFieldPerLine)
+                )
+                return nil
+            }
+
             guard
                 let binding = variable.bindings.first,
                 let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text
@@ -227,8 +239,9 @@ extension VariableDeclSyntax {
     var isInstanceStorage: Bool {
         let isStatic = modifiers.contains { $0.name.tokenKind == .keyword(.static) }
         guard isStatic == false else { return false }
-        guard bindings.count == 1, let binding = bindings.first else { return false }
-        return binding.accessorBlock == nil
+        // Every binding, so `var a: Int, b: Int` reaches the diagnostic that names it
+        // rather than being dropped here without a word.
+        return bindings.allSatisfy { $0.accessorBlock == nil }
     }
 }
 
@@ -240,6 +253,7 @@ enum FlagRecordDiagnostic: String, DiagnosticMessage {
     case fieldsRequired
     case typeAnnotationRequired
     case optionalUnsupported
+    case oneFieldPerLine
 
     var message: String {
         switch self {
@@ -257,6 +271,12 @@ enum FlagRecordDiagnostic: String, DiagnosticMessage {
                 record fields cannot be optional: a field is either part of the shape or \
                 it is not. Use a sentinel the type already has, or an enum with a case \
                 for 'unset'
+                """
+        case .oneFieldPerLine:
+            return """
+                declare one field per line: '@FlagRecord' generates a shape entry and a \
+                box for each one by name, and only the first of a shared declaration \
+                would be written
                 """
         }
     }

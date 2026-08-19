@@ -35,6 +35,104 @@ final class FlagContainerDiagnosticTests: XCTestCase {
         )
     }
 
+    func testAContainerPropertyWithoutFlagGroupIsDiagnosedWhereItIsWritten() {
+        // Otherwise this surfaces as "return from initializer without initializing all
+        // stored properties", pointing into generated code the author never wrote and
+        // never naming the property that caused it.
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                var checkout: CheckoutFlags
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    var checkout: CheckoutFlags
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: """
+                        'checkout' has no '@Flag' or '@FlagGroup', so the generated \
+                        initialiser cannot set it. Add '@FlagGroup(description:)' if it \
+                        is a nested container, '@Flag(default:description:)' if it is a \
+                        value, or give it a default value if it is neither
+                        """,
+                    line: 3,
+                    column: 5
+                )
+            ],
+            macros: testMacros
+        )
+    }
+
+    func testAPropertyThatInitialisesItselfIsLeftAlone() {
+        // Swift can set this one without help, so the generated initialiser compiles and
+        // there is nothing to complain about.
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                var notes = "scratch"
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    var notes = "scratch"
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            macros: testMacros
+        )
+    }
+
+    func testAComputedPropertyIsNotStorageAndIsLeftAlone() {
+        assertMacroExpansion(
+            """
+            @FlagContainer
+            struct AppFlags {
+                var summary: String { "none" }
+            }
+            """,
+            expandedSource: """
+                struct AppFlags {
+                    var summary: String { "none" }
+
+                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+
+                    }
+
+                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                        [
+
+                        ]
+                    }
+                }
+                """,
+            macros: testMacros
+        )
+    }
+
     func testGeneratedMembersMatchAPublicContainersAccessLevel() {
         // FlagContainer is a public protocol, so internal members cannot satisfy it.
         // Any framework exposing its flags publicly hits this on the first build.

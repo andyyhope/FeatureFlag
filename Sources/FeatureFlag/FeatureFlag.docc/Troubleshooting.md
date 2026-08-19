@@ -124,6 +124,27 @@ Swift's own error — "generic struct 'Flag' requires that 'String?' conform to 
 — appears alongside this one and cannot be suppressed: `@Flag` is a property wrapper, so
 its constraint is checked whatever the macro says.
 
+### "Return from initializer without initializing all stored properties"
+
+A stored property the generated initialiser has no way to set. Almost always a nested
+container written without `@FlagGroup`:
+
+```swift
+@FlagContainer
+struct AppFlags {
+    var checkout: CheckoutFlags        // needs @FlagGroup(description:)
+}
+```
+
+From 0.6.0 this is reported at the property itself, naming it and listing the three
+ways out — add `@FlagGroup`, add `@Flag`, or give the property a value of its own. On
+an earlier build it surfaces pointed into expanded code, which is why it reads as
+though the macro is broken rather than the declaration.
+
+The same error from `@FlagRecord` means two fields sharing one declaration —
+`var host: String, port: String`. Only the first would be generated for. Declare them
+on separate lines.
+
 ### The macro complains about a missing type annotation
 
 A macro sees syntax, not types, so it cannot infer one:

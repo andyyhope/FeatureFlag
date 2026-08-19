@@ -163,10 +163,26 @@ extension FlagContainerMacro {
         in context: some MacroExpansionContext
     ) -> [FlagDeclaration] {
         declaration.memberBlock.members.compactMap { member in
-            guard
-                let variable = member.decl.as(VariableDeclSyntax.self),
-                let attribute = variable.flagAttribute
-            else { return nil }
+            guard let variable = member.decl.as(VariableDeclSyntax.self) else { return nil }
+
+            guard let attribute = variable.flagAttribute else {
+                // A stored property the generated initialiser has no way to set. Left
+                // alone, this surfaces as "return from initializer without initializing
+                // all stored properties", pointed into generated code the author never
+                // wrote and never naming the property responsible. The commonest cause
+                // is a nested container written without '@FlagGroup'.
+                if variable.needsInitialisingByTheGeneratedInit {
+                    context.diagnose(
+                        Diagnostic(
+                            node: variable,
+                            message: FlagContainerDiagnostic.unattributedStoredProperty(
+                                variable.firstPropertyName ?? "This property"
+                            )
+                        )
+                    )
+                }
+                return nil
+            }
 
             guard
                 let binding = variable.storedBinding,
@@ -234,7 +250,7 @@ extension FlagContainerMacro {
 
 // MARK: - Diagnostics
 
-enum FlagContainerDiagnostic: String, DiagnosticMessage {
+enum FlagContainerDiagnostic: DiagnosticMessage {
 
     case structsOnly
     case typeAnnotationRequired
@@ -242,6 +258,9 @@ enum FlagContainerDiagnostic: String, DiagnosticMessage {
     case descriptionRequired
     case defaultRequired
     case optionalUnsupported
+
+    /// Carries the property's name, because the whole point is to say which one.
+    case unattributedStoredProperty(String)
 
     var message: String {
         switch self {
@@ -261,18 +280,59 @@ enum FlagContainerDiagnostic: String, DiagnosticMessage {
                 is what it falls back to. Use a sentinel the type already has, or an \
                 enum with a case for 'unset'
                 """
+        case let .unattributedStoredProperty(name):
+            return """
+                '\(name)' has no '@Flag' or '@FlagGroup', so the generated initialiser \
+                cannot set it. Add '@FlagGroup(description:)' if it is a nested \
+                container, '@Flag(default:description:)' if it is a value, or give it a \
+                default value if it is neither
+                """
+        }
+    }
+
+    /// The stable part of the identifier, since one case now carries a name.
+    private var id: String {
+        switch self {
+        case .structsOnly: return "structsOnly"
+        case .typeAnnotationRequired: return "typeAnnotationRequired"
+        case .storedPropertyRequired: return "storedPropertyRequired"
+        case .descriptionRequired: return "descriptionRequired"
+        case .defaultRequired: return "defaultRequired"
+        case .optionalUnsupported: return "optionalUnsupported"
+        case .unattributedStoredProperty: return "unattributedStoredProperty"
         }
     }
 
     var severity: DiagnosticSeverity { .error }
 
     var diagnosticID: MessageID {
-        MessageID(domain: "FeatureFlagMacros", id: rawValue)
+        MessageID(domain: "FeatureFlagMacros", id: id)
     }
 }
 
 
 // MARK: - Optionality
+
+extension VariableDeclSyntax {
+
+    /// The name of the first thing this declares, for a message that has to say which.
+    var firstPropertyName: String? {
+        bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier.text
+    }
+
+    /// Whether the generated initialiser has to set this, and cannot.
+    ///
+    /// Instance storage with no value of its own. A `static` belongs to the type, a
+    /// computed property is derived, and one written with an initialiser Swift can set
+    /// by itself — none of those leave the initialiser incomplete.
+    var needsInitialisingByTheGeneratedInit: Bool {
+        let isStatic = modifiers.contains { $0.name.tokenKind == .keyword(.static) }
+        guard isStatic == false else { return false }
+        return bindings.contains { binding in
+            binding.accessorBlock == nil && binding.initializer == nil
+        }
+    }
+}
 
 extension TypeSyntax {
 
