@@ -155,12 +155,49 @@ extension FlagRecordMacro: ExtensionMacro {
         // in which case the clause has to be left off or it reads as a redeclaration.
         let conformance = protocols.isEmpty ? "" : ": FeatureFlag.FlagRecord"
 
+        let access = accessLevel(of: declaration)
+
         let extensionDeclaration: DeclSyntax = """
             extension \(type.trimmed)\(raw: conformance) {
-            \(initialiser(for: fields, access: accessLevel(of: declaration)))
+            \(initialiser(for: fields, access: access))
             }
             """
-        return [extensionDeclaration.cast(ExtensionDeclSyntax.self)]
+
+        return [
+            extensionDeclaration.cast(ExtensionDeclSyntax.self),
+            unavailableFlagValue(for: type, access: access).cast(ExtensionDeclSyntax.self),
+        ]
+    }
+
+    /// A `FlagValue` conformance that exists only to be refused, in words.
+    ///
+    /// Declaring a record as a flag's type — `[Endpoint]`, or `Endpoint` on its own —
+    /// otherwise fails as "Generic struct 'Flag' requires that 'Endpoint' conform to
+    /// 'FlagValue'", which names a protocol the author has never heard of and says
+    /// nothing about the type that does work. An unavailable conformance lets the
+    /// compiler carry the sentence instead.
+    ///
+    /// Refusing it is also correct rather than merely convenient: a record boxed on its
+    /// own would be a dictionary of mixed field types, which is the one shape
+    /// `FlagValueType` cannot describe — the reason `FlagRecords` stores text at all.
+    private static func unavailableFlagValue(
+        for type: some TypeSyntaxProtocol,
+        access: String
+    ) -> DeclSyntax {
+        """
+        @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<\(type.trimmed)>' rather than '\(type.trimmed)' or '[\(type.trimmed)]'")
+        extension \(type.trimmed): FeatureFlag.FlagValue {
+            \(raw: access)static var flagValueType: FeatureFlag.FlagValueType {
+                fatalError("unavailable")
+            }
+            \(raw: access)init?(box: FeatureFlag.FlagValueBox) {
+                fatalError("unavailable")
+            }
+            \(raw: access)var box: FeatureFlag.FlagValueBox {
+                fatalError("unavailable")
+            }
+        }
+        """
     }
 }
 

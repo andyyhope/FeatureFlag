@@ -149,6 +149,19 @@ The same error from `@FlagRecord` means two fields sharing one declaration —
 `var host: String, port: String`. Only the first would be generated for. Declare them
 on separate lines.
 
+### "requires that 'X' conform to 'FlagValue'" for a record type
+
+A `@FlagRecord` type declared as a flag's own type, or as a plain array of one:
+
+```swift
+@Flag(default: [], description: "Endpoints")
+var endpoints: [Endpoint]        // needs FlagRecords<Endpoint>
+```
+
+From 0.6.0 the compiler says which type to use instead. On an earlier build it names
+`FlagValue` — a protocol the declaration never mentions — and nothing about
+`FlagRecords`.
+
 ### The macro complains about a missing type annotation
 
 A macro sees syntax, not types, so it cannot infer one:

@@ -63,6 +63,19 @@ final class FlagRecordMacroTests: XCTestCase {
                         self.enabled = enabled
                     }
                 }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError("unavailable")
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError("unavailable")
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError("unavailable")
+                    }
+                }
                 """,
             macros: recordMacros
         )
@@ -106,6 +119,19 @@ final class FlagRecordMacroTests: XCTestCase {
                             return nil
                         }
                         self.name = name
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    public static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError("unavailable")
+                    }
+                    public init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError("unavailable")
+                    }
+                    public var box: FeatureFlag.FlagValueBox {
+                        fatalError("unavailable")
                     }
                 }
                 """,
@@ -154,6 +180,19 @@ final class FlagRecordMacroTests: XCTestCase {
                         self.weight = weight
                     }
                 }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError("unavailable")
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError("unavailable")
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError("unavailable")
+                    }
+                }
                 """,
             macros: recordMacros
         )
@@ -198,6 +237,19 @@ final class FlagRecordMacroTests: XCTestCase {
                             return nil
                         }
                         self.name = name
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError("unavailable")
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError("unavailable")
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError("unavailable")
                     }
                 }
                 """,
@@ -246,6 +298,19 @@ final class FlagRecordMacroTests: XCTestCase {
                             return nil
                         }
                         self.name = name
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError("unavailable")
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError("unavailable")
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError("unavailable")
                     }
                 }
                 """,

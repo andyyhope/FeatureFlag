@@ -59,6 +59,20 @@ The memberwise initialiser survives, because the generated one lives in an exten
 A struct that declares an initialiser in its own body loses the one Swift writes — and
 a record you cannot construct is no use as a flag's default.
 
+### A record is not a flag's type on its own
+
+`FlagRecords<Endpoint>` is how a record reaches a flag. Neither `[Endpoint]` nor a bare
+`Endpoint` works, and both say so:
+
+```
+conformance of 'Endpoint' to 'FlagValue' is unavailable: a record is stored as a list
+— declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'
+```
+
+That is a refusal rather than a missing feature. A record boxed on its own would be a
+dictionary of mixed field types, which is the one shape ``FlagValueType`` cannot
+describe — and the reason a record list is stored as text at all.
+
 ### How it is stored
 
 A list of records is stored as JSON text:
