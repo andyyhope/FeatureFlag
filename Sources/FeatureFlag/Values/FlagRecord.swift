@@ -210,10 +210,14 @@ extension FlagValueBox {
     ) -> FlagValueBox? {
         guard let key = shape.first(where: \.isKey)?.name else { return nil }
 
-        var seen = Set<FlagValueBox>()
+        var seen = Set<String>()
         for record in records {
             guard let value = record[key] else { continue }
-            if seen.insert(value).inserted == false { return value }
+            // Compared as it will be stored, not as it is held. A Date carries more
+            // precision in memory than the wire format keeps, so two records made a
+            // moment apart looked distinct here and identical once written — a list
+            // this check passed and the reader then refused.
+            if seen.insert(value.storageIdentity).inserted == false { return value }
         }
         return nil
     }
@@ -262,6 +266,19 @@ extension FlagValueBox {
             }
         }
         return nil
+    }
+}
+
+extension FlagValueBox {
+
+    /// This value as its stored form identifies it.
+    ///
+    /// Two values are the same key when they are written the same way, which is not
+    /// always the same as being equal in memory: a `Date` carries more precision than
+    /// the wire format keeps. Anything deciding whether a key is taken has to ask this
+    /// rather than compare boxes, or it will disagree with the reader.
+    public var storageIdentity: String {
+        String(describing: jsonValue)
     }
 }
 

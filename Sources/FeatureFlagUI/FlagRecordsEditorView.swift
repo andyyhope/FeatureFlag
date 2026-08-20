@@ -313,12 +313,16 @@
                                     uniqueKeysWithValues: nested.map { ($0.name, $0.emptyBox) }
                                 )
                                 guard let key = nested.first(where: \.isKey) else { return record }
-                                let taken = Set(existing.compactMap { $0[key.name] })
-                                if taken.contains(record[key.name] ?? key.emptyBox) {
+                                let taken = Set(
+                                    existing.compactMap { $0[key.name]?.storageIdentity }
+                                )
+                                if taken.contains(
+                                    (record[key.name] ?? key.emptyBox).storageIdentity
+                                ) {
                                     for suffix in 2...(taken.count + 2) {
                                         guard let candidate = key.emptyBox.appendingSuffix(suffix)
                                         else { break }
-                                        if taken.contains(candidate) == false {
+                                        if taken.contains(candidate.storageIdentity) == false {
                                             record[key.name] = candidate
                                             break
                                         }
@@ -428,15 +432,45 @@
             _ records: [[String: FlagValueBox]],
             for entry: FlagSchema.Entry
         ) throws {
-            if let shape = entry.recordShape,
-                let duplicate = FlagValueBox.duplicateKey(in: records, matching: shape)
-            {
+            if let shape = entry.recordShape {
+                try Self.checkKeys(in: records, matching: shape)
+            }
+            try setValue(.records(records), for: entry)
+        }
+
+        /// Refuses a duplicate key at any depth.
+        ///
+        /// The host reads a nested list through the same rule as the outer one, so a
+        /// repeated key inside a record makes the whole flag unreadable — and a check
+        /// that stopped at the top would let this screen write exactly that.
+        private static func checkKeys(
+            in records: [[String: FlagValueBox]],
+            matching shape: [FlagRecordField]
+        ) throws {
+            if let duplicate = FlagValueBox.duplicateKey(in: records, matching: shape) {
                 throw FlagRecordEditingError.duplicateKey(
                     field: shape.first(where: \.isKey)?.name ?? "key",
                     value: duplicate
                 )
             }
-            try setValue(.records(records), for: entry)
+
+            for field in shape {
+                guard let nested = field.fields else { continue }
+                for record in records {
+                    guard let box = record[field.name] else { continue }
+                    // Asked for the duplicate rather than for the records: reading them
+                    // applies this very rule and hands back nothing, so the check would
+                    // look straight past the thing it is looking for.
+                    if let duplicate = box.duplicateRecordKey(matching: nested) {
+                        throw FlagRecordEditingError.duplicateKey(
+                            field: nested.first(where: \.isKey)?.name ?? "key",
+                            value: duplicate
+                        )
+                    }
+                    guard let inner = box.recordValues(matching: nested) else { continue }
+                    try checkKeys(in: inner, matching: nested)
+                }
+            }
         }
     }
 
@@ -471,6 +505,12 @@
                 return .string(value.isEmpty ? "\(suffix)" : "\(value) \(suffix)")
             case let .int(value):
                 return .int(value + suffix - 1)
+            case let .date(value):
+                // A second, because that is the resolution the stored form keeps: any
+                // finer and two records would be written identically.
+                return .date(value.addingTimeInterval(TimeInterval(suffix - 1)))
+            case let .url(value):
+                return URL(string: "\(value.absoluteString)-\(suffix)").map(FlagValueBox.url)
             default:
                 return nil
             }
@@ -511,14 +551,18 @@
             var record = Dictionary(uniqueKeysWithValues: shape.map { ($0.name, $0.emptyBox) })
 
             guard let key = shape.first(where: \.isKey) else { return record }
-            let taken = Set(existing.compactMap { $0[key.name] })
-            guard taken.contains(record[key.name] ?? key.emptyBox) else { return record }
+            // By stored identity, the same way the rule that refuses duplicates asks.
+            // Comparing boxes here would call a date free that the reader calls taken.
+            let taken = Set(existing.compactMap { $0[key.name]?.storageIdentity })
+            guard taken.contains((record[key.name] ?? key.emptyBox).storageIdentity) else {
+                return record
+            }
 
             // Counting up from what the field would have held anyway keeps the
             // generated value recognisable as a placeholder rather than as data.
             for suffix in 2...(taken.count + 2) {
                 guard let candidate = key.emptyBox.appendingSuffix(suffix) else { break }
-                if taken.contains(candidate) == false {
+                if taken.contains(candidate.storageIdentity) == false {
                     record[key.name] = candidate
                     return record
                 }

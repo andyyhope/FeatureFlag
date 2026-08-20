@@ -101,6 +101,45 @@ final class FlagRecordKeyEditorTests: XCTestCase {
         )
     }
 
+    func testTwoAddsOnADateKeyStayDistinctOnceStored() throws {
+        // Dates are compared in memory at full precision and stored at the second, so
+        // two records added within the same second looked distinct on the way in and
+        // identical on the way out — a list written here and refused by the host.
+        let store = makeStore()
+        let entry = try XCTUnwrap(store.entry(for: "stamped"))
+
+        var records: [[String: FlagValueBox]] = []
+        for _ in 0..<3 {
+            records.append(entry.emptyRecord(alongside: records))
+        }
+        try store.setRecords(records, for: entry)
+
+        let pole = FlagPole(KeyedEditorFlags.self, sources: [source])
+        XCTAssertEqual(pole.flags.stamped.values.count, 3, "the host refused the list")
+    }
+
+    func testANestedListWithADuplicateKeyIsRefused() throws {
+        // The store must not write what the host will not read, at any depth: a nested
+        // list with a repeated key makes the whole outer flag unreadable.
+        let store = makeStore()
+        let entry = try entry(store)
+        let nested = FlagValueBox.records([["host": .string("a")], ["host": .string("a")]])
+
+        XCTAssertThrowsError(
+            try store.setRecords([["name": .string("one"), "hops": nested]], for: entry)
+        )
+    }
+
+    func testANestedListWithDistinctKeysIsFine() throws {
+        let store = makeStore()
+        let entry = try entry(store)
+        let nested = FlagValueBox.records([["host": .string("a")], ["host": .string("b")]])
+
+        XCTAssertNoThrow(
+            try store.setRecords([["name": .string("one"), "hops": nested]], for: entry)
+        )
+    }
+
     private func named(_ name: String) -> [String: FlagValueBox] {
         ["name": .string(name), "hops": .string("[]")]
     }
@@ -110,7 +149,13 @@ final class FlagRecordKeyEditorTests: XCTestCase {
 
 @FlagRecord
 private struct Hop {
-    var host: String
+    @FlagRecordKey var host: String
+}
+
+@FlagRecord
+private struct Stamped {
+    @FlagRecordKey var at: Date
+    var note: String = ""
 }
 
 @FlagRecord
@@ -132,4 +177,7 @@ private struct KeyedEditorFlags {
 
     @Flag(default: [], description: "Notes")
     var notes: FlagRecords<EditorNote>
+
+    @Flag(default: [], description: "Stamped")
+    var stamped: FlagRecords<Stamped>
 }
