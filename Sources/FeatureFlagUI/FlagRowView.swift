@@ -79,11 +79,22 @@ public struct FlagRowView: View {
                 NavigationLink {
                     FlagArrayEditorView(store: store, entry: entry, element: element)
                 } label: {
-                    LabeledContent(summary(of: element)) {
+                    // Sized like the record row for the same reason: both sit under the
+                    // flag's description and key, so at body size they read as a second
+                    // title rather than as a count and a preview.
+                    LabeledContent {
                         Text(store.value(for: entry).displayString)
-                            .font(.callout.monospaced())
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
+                            // Middle, unlike the record row: an array preview is
+                            // bracketed, and keeping both ends shows it is a list and
+                            // where it stops.
                             .truncationMode(.middle)
+                    } label: {
+                        Text(summary(of: element))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -276,12 +287,15 @@ struct FlagTextField: View {
                     // read character by character rather than as words. Monospacing
                     // stops a 1 and an l, or a 0 and an O, resolving to whichever the
                     // reader expected.
-                    .font(.body.monospaced())
-                    // Shrink before truncating. A truncated endpoint is worse than a
-                    // small one: two staging URLs are told apart by their tails, and a
-                    // value cut short reads as though the store mangled it.
+                    //
+                    // One fixed size for every field, and the same size as the block
+                    // editor. Scaling to fit made a field's text size a function of its
+                    // contents, so a column of them arrived at three different sizes and
+                    // none of them matched anything else on the screen. A value too long
+                    // for the field scrolls within it while being edited, which is what
+                    // a text field does anyway.
+                    .font(.system(.footnote, design: .monospaced))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
                     #if os(iOS) || os(tvOS)
                         .keyboardType(keyboard.uiKeyboardType)
                         .autocorrectionDisabled()
