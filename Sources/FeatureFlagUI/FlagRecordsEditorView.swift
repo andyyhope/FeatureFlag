@@ -38,7 +38,7 @@
                         change(&current)
                         try? store.setRecords(current, for: entry)
                     },
-                    emptyRecord: { entry.emptyRecord }
+                    emptyRecord: { entry.emptyRecord(alongside: $0) }
                 )
 
                 if store.isOverridden(entry) {
@@ -71,7 +71,7 @@
         let records: [[String: FlagValueBox]]?
         let unreadableText: String
         let onChange: ((inout [[String: FlagValueBox]]) -> Void) -> Void
-        let emptyRecord: () -> [String: FlagValueBox]
+        let emptyRecord: ([[String: FlagValueBox]]) -> [String: FlagValueBox]
 
         var body: some View {
             if let records {
@@ -82,6 +82,14 @@
                                 title: summary(of: record),
                                 fields: fields,
                                 record: record,
+                                keysInUse: Set(
+                                    records.enumerated()
+                                        .filter { $0.offset != index }
+                                        .compactMap { pair in
+                                            fields.first(where: \.isKey)
+                                                .flatMap { pair.element[$0.name] }
+                                        }
+                                ),
                                 onChange: { edited in
                                     onChange { current in
                                         guard current.indices.contains(index) else { return }
@@ -128,7 +136,7 @@
                 // the row that lands where it was, so adding a record also opened it.
                 Section {
                     Button {
-                        onChange { $0.append(emptyRecord()) }
+                        onChange { $0.append(emptyRecord($0)) }
                     } label: {
                         Label("Add", systemImage: "plus")
                     }
@@ -169,7 +177,11 @@
         /// The first field that reads like a name, because a row headed "record 3" tells
         /// you nothing you could not have counted.
         private func summary(of record: [String: FlagValueBox]) -> String {
-            guard let first = fields.first, let box = record[first.name] else {
+            // The key when there is one — it is the field that says which record this
+            // is, which is precisely what a row title is for. Otherwise the first
+            // declared field, which is a guess but a consistent one.
+            let titleField = fields.first(where: \.isKey) ?? fields.first
+            guard let titleField, let box = record[titleField.name] else {
                 return "Record"
             }
             let text = box.displayString
@@ -178,8 +190,9 @@
 
         /// Everything but the first field, which the summary already showed.
         private func detail(of record: [String: FlagValueBox]) -> String {
-            fields
-                .dropFirst()
+            let titleField = fields.first(where: \.isKey) ?? fields.first
+            return fields
+                .filter { $0.name != titleField?.name }
                 .map { "\($0.name): \(summary(of: $0, in: record))" }
                 .joined(separator: "  ")
         }
@@ -203,6 +216,9 @@
         let title: String
         let fields: [FlagRecordField]
         let record: [String: FlagValueBox]
+        /// The key values the other records already have, so this screen can refuse an
+        /// edit that would collide instead of writing one the host will not read.
+        var keysInUse: Set<FlagValueBox> = []
         let onChange: ([String: FlagValueBox]) -> Void
 
         var body: some View {
@@ -212,6 +228,7 @@
                         FlagRecordFieldRow(
                             field: field,
                             value: record[field.name] ?? field.emptyBox,
+                            unavailable: field.isKey ? keysInUse : [],
                             onChange: { box in
                                 var updated = record
                                 updated[field.name] = box
@@ -233,6 +250,8 @@
 
         let field: FlagRecordField
         let value: FlagValueBox
+        /// Values this field may not take, because another record already has them.
+        var unavailable: Set<FlagValueBox> = []
         let onChange: (FlagValueBox) -> Void
 
         /// The field's name above, its value below, the way the flag rows read. Sharing
@@ -271,10 +290,23 @@
                                 change(&current)
                                 onChange(.records(current))
                             },
-                            emptyRecord: {
-                                Dictionary(
+                            emptyRecord: { existing in
+                                var record = Dictionary(
                                     uniqueKeysWithValues: nested.map { ($0.name, $0.emptyBox) }
                                 )
+                                guard let key = nested.first(where: \.isKey) else { return record }
+                                let taken = Set(existing.compactMap { $0[key.name] })
+                                if taken.contains(record[key.name] ?? key.emptyBox) {
+                                    for suffix in 2...(taken.count + 2) {
+                                        guard let candidate = key.emptyBox.appendingSuffix(suffix)
+                                        else { break }
+                                        if taken.contains(candidate) == false {
+                                            record[key.name] = candidate
+                                            break
+                                        }
+                                    }
+                                }
+                                return record
                             }
                         )
                     }
@@ -309,9 +341,12 @@
                         keyboard: keyboard,
                         isMultiline: false
                     ) { edited in
-                        guard let box = FlagValueBox(displayString: edited, as: field.type) else {
-                            return false
-                        }
+                        // Refused the same way an unparseable edit is: the field snaps
+                        // back to what is still in effect and marks itself, rather than
+                        // writing a list the host would refuse to read.
+                        guard let box = FlagValueBox(displayString: edited, as: field.type),
+                            unavailable.contains(box) == false
+                        else { return false }
                         onChange(box)
                         return true
                     }
@@ -367,11 +402,60 @@
         }
 
         /// Writes records back as the text the host reads them from.
+        ///
+        /// Throws rather than writing a list with a duplicate key. The host refuses one,
+        /// so writing it would leave the flag reading its default with the editor still
+        /// showing what you typed.
         public func setRecords(
             _ records: [[String: FlagValueBox]],
             for entry: FlagSchema.Entry
         ) throws {
+            if let shape = entry.recordShape,
+                let duplicate = FlagValueBox.duplicateKey(in: records, matching: shape)
+            {
+                throw FlagRecordEditingError.duplicateKey(
+                    field: shape.first(where: \.isKey)?.name ?? "key",
+                    value: duplicate
+                )
+            }
             try setValue(.records(records), for: entry)
+        }
+    }
+
+    /// A change the editor will not make.
+    public enum FlagRecordEditingError: Error, CustomStringConvertible, LocalizedError {
+
+        /// Two records would share the key that tells them apart.
+        case duplicateKey(field: String, value: FlagValueBox)
+
+        public var description: String {
+            switch self {
+            case let .duplicateKey(field, value):
+                return """
+                    Another record already has that \(field). It is what tells one record \
+                    from another, so two cannot share it.
+                    """
+            }
+        }
+
+        public var errorDescription: String? { description }
+    }
+
+    extension FlagValueBox {
+
+        /// This value with a counter appended, for generating a distinct placeholder.
+        ///
+        /// Only the two types a counter means anything for. Anything else keeps its
+        /// empty value, and the editor shows the collision rather than inventing data.
+        func appendingSuffix(_ suffix: Int) -> FlagValueBox? {
+            switch self {
+            case let .string(value):
+                return .string(value.isEmpty ? "\(suffix)" : "\(value) \(suffix)")
+            case let .int(value):
+                return .int(value + suffix - 1)
+            default:
+                return nil
+            }
         }
     }
 
@@ -394,8 +478,34 @@
         /// A record with every field at its emptiest usable value, which is what "Add"
         /// appends: something to edit rather than something to interpret.
         var emptyRecord: [String: FlagValueBox] {
+            emptyRecord(alongside: [])
+        }
+
+        /// The same, made distinct from the records it is joining.
+        ///
+        /// Without this, pressing "Add" twice writes two records sharing an empty key,
+        /// which the host refuses — so the whole flag would fall back to its default on
+        /// the second press, with nothing on screen to say why.
+        func emptyRecord(
+            alongside existing: [[String: FlagValueBox]]
+        ) -> [String: FlagValueBox] {
             guard let shape = recordShape else { return [:] }
-            return Dictionary(uniqueKeysWithValues: shape.map { ($0.name, $0.emptyBox) })
+            var record = Dictionary(uniqueKeysWithValues: shape.map { ($0.name, $0.emptyBox) })
+
+            guard let key = shape.first(where: \.isKey) else { return record }
+            let taken = Set(existing.compactMap { $0[key.name] })
+            guard taken.contains(record[key.name] ?? key.emptyBox) else { return record }
+
+            // Counting up from what the field would have held anyway keeps the
+            // generated value recognisable as a placeholder rather than as data.
+            for suffix in 2...(taken.count + 2) {
+                guard let candidate = key.emptyBox.appendingSuffix(suffix) else { break }
+                if taken.contains(candidate) == false {
+                    record[key.name] = candidate
+                    return record
+                }
+            }
+            return record
         }
     }
 

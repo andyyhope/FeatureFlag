@@ -226,8 +226,12 @@ extension FlagPayload {
                     FlagImportProblem(
                         key: key,
                         kind: .typeMismatch,
-                        expected: "a list of records (\(shape.map(\.name).joined(separator: ", ")))",
-                        found: flagShortDescription(of: rawValue)
+                        expected: box.duplicateRecordKey(matching: shape) == nil
+                            ? "a list of records (\(shape.map(\.name).joined(separator: ", ")))"
+                            : "every record to have its own \(shape.first(where: \.isKey)?.name ?? "key")",
+                        found: box.duplicateRecordKey(matching: shape)
+                            .map { "two with \($0.shortMessageDescription)" }
+                            ?? flagShortDescription(of: rawValue)
                     )
                 )
                 continue

@@ -66,6 +66,36 @@ public macro FlagGroup(description: String) =
     conformances: FlagRecord, FlagValue,
     names: named(init(flagRecordBoxes:)), named(flagValueType), named(init(box:)), named(box)
 )
-@attached(member, names: named(flagRecordShape), named(flagRecordBoxes))
+@attached(
+    member,
+    names: named(flagRecordShape), named(flagRecordBoxes), named(flagRecordKey)
+)
 public macro FlagRecord() =
     #externalMacro(module: "FeatureFlagMacros", type: "FlagRecordMacro")
+
+/// Marks the field that tells one record from another.
+///
+/// ```swift
+/// @FlagRecord
+/// struct Endpoint {
+///     @FlagRecordKey var name: String
+///     var url: URL
+/// }
+///
+/// flags.endpoints["staging"]?.url
+/// ```
+///
+/// The key is what makes one record a different record rather than an edited one. Two
+/// sharing it is a mistake with no correct behaviour — picking one silently would leave
+/// the app running on a value nobody chose — so a list containing a duplicate is
+/// unreadable and falls back to the flag's default, exactly as any other malformed
+/// value does. A payload or a document carrying one is refused outright, naming the key.
+///
+/// It marks the field rather than being an argument on ``FlagRecord()`` because a key
+/// path cannot be written there: `\.name` has no context to infer its root from, and
+/// `\Endpoint.name` is a circular reference to the type being expanded.
+///
+/// This expands to nothing on its own — ``FlagRecord()`` reads it for metadata.
+@attached(peer)
+public macro FlagRecordKey() =
+    #externalMacro(module: "FeatureFlagMacros", type: "FlagRecordKeyMacro")

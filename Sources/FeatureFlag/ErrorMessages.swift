@@ -282,6 +282,25 @@ extension RemoteValue {
     }
 }
 
+extension FlagValueBox {
+
+    /// This value in a few characters, for a message that has to fit on one line.
+    var shortMessageDescription: String {
+        switch self {
+        case let .string(value): return flagQuoted(value)
+        case let .bool(value): return String(value)
+        case let .int(value): return String(value)
+        case let .double(value): return String(value)
+        case let .float(value): return String(value)
+        case let .url(value): return flagQuoted(value.absoluteString)
+        case let .date(value): return flagDateFormatter.string(from: value)
+        case let .data(value): return "\(value.count) bytes"
+        case let .array(values): return "an array of \(values.count)"
+        case let .dictionary(values): return "an object with \(values.count) field(s)"
+        }
+    }
+}
+
 /// A value straight out of `JSONSerialization` or `PropertyListSerialization`, in a
 /// few characters.
 func flagShortDescription(of value: Any) -> String {

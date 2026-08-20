@@ -28,12 +28,17 @@ extension FlagRecordMacro: MemberMacro {
         }
 
         let access = accessLevel(of: declaration)
+        let key = keyField(among: fields) { context.diagnose(Diagnostic(node: node, message: $0)) }
 
         // The initialiser is deliberately not here — see the extension below.
-        return [
-            shape(for: fields, access: access),
+        var members = [
+            shape(for: fields, key: key, access: access),
             boxes(for: fields, access: access),
         ]
+        if let key {
+            members.append("\(raw: access)static var flagRecordKey: String? { \"\(raw: key)\" }")
+        }
+        return members
     }
 
     /// The modifier generated members need to carry.
@@ -62,7 +67,24 @@ extension FlagRecordMacro: MemberMacro {
             .joined(separator: "\n")
     }
 
-    private static func shape(for fields: [RecordField], access: String) -> DeclSyntax {
+    /// The field marked `@FlagRecordKey`, if one is.
+    private static func keyField(
+        among fields: [RecordField],
+        diagnose: (FlagRecordDiagnostic) -> Void
+    ) -> String? {
+        let keys = fields.filter(\.isKey).map(\.name)
+        guard keys.count <= 1 else {
+            diagnose(.oneKeyOnly(keys))
+            return nil
+        }
+        return keys.first
+    }
+
+    private static func shape(
+        for fields: [RecordField],
+        key: String?,
+        access: String
+    ) -> DeclSyntax {
         let entries = fields.map { field in
             // Cast the way `@Flag` casts a default, so the expression always compiles
             // given the annotation the field is required to carry anyway.
@@ -75,7 +97,8 @@ extension FlagRecordMacro: MemberMacro {
                     type: \(field.type).flagValueType,
                     cases: FeatureFlag._flagValueCases(of: \(field.type).self),
                     defaultValue: \(fallback),
-                    fields: FeatureFlag._flagRecordShape(of: \(field.type).self)
+                    fields: FeatureFlag._flagRecordShape(of: \(field.type).self),
+                    isKey: \(field.name == key)
                 )
                 """
         }
@@ -214,6 +237,9 @@ struct RecordField {
     let name: String
     let type: String
 
+    /// Whether the field carries `@FlagRecordKey`.
+    let isKey: Bool
+
     /// The expression it was written with, if any. `var weight: Int = 1` has one;
     /// `var name: String` does not.
     let defaultValue: String?
@@ -269,6 +295,9 @@ extension FlagRecordMacro {
             return RecordField(
                 name: name,
                 type: type.trimmedDescription,
+                isKey: variable.attributes.contains { attribute in
+                    attribute.as(AttributeSyntax.self)?.identifier == "FlagRecordKey"
+                },
                 defaultValue: binding.initializer?.value.trimmedDescription
             )
         }
@@ -290,13 +319,14 @@ extension VariableDeclSyntax {
 
 // MARK: - Diagnostics
 
-enum FlagRecordDiagnostic: String, DiagnosticMessage {
+enum FlagRecordDiagnostic: DiagnosticMessage {
 
     case structsOnly
     case fieldsRequired
     case typeAnnotationRequired
     case optionalUnsupported
     case oneFieldPerLine
+    case oneKeyOnly([String])
 
     var message: String {
         switch self {
@@ -321,12 +351,30 @@ enum FlagRecordDiagnostic: String, DiagnosticMessage {
                 box for each one by name, and only the first of a shared declaration \
                 would be written
                 """
+        case let .oneKeyOnly(names):
+            return """
+                a record has one key at most, and \(names.joined(separator: ", ")) are \
+                all marked '@FlagRecordKey' — the key is the single field that tells one \
+                record from another
+                """
+        }
+    }
+
+    /// The stable part of the identifier, since one case now carries a name.
+    private var id: String {
+        switch self {
+        case .structsOnly: return "structsOnly"
+        case .fieldsRequired: return "fieldsRequired"
+        case .typeAnnotationRequired: return "typeAnnotationRequired"
+        case .optionalUnsupported: return "optionalUnsupported"
+        case .oneFieldPerLine: return "oneFieldPerLine"
+        case .oneKeyOnly: return "oneKeyOnly"
         }
     }
 
     var severity: DiagnosticSeverity { .error }
 
     var diagnosticID: MessageID {
-        MessageID(domain: "FeatureFlagMacros", id: rawValue)
+        MessageID(domain: "FeatureFlagMacros", id: id)
     }
 }

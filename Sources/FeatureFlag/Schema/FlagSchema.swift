@@ -366,6 +366,7 @@ extension FlagRecordField {
         object["cases"] = cases?.map(\.jsonValue)
         object["default"] = defaultValue?.jsonValue
         object["fields"] = fields?.map(\.jsonObject)
+        if isKey { object["isKey"] = true }
         return object
     }
 
@@ -387,6 +388,7 @@ extension FlagRecordField {
         self.fields = (object["fields"] as? [[String: Any]])?.compactMap(
             FlagRecordField.init(jsonObject:)
         )
+        self.isKey = object["isKey"] as? Bool ?? false
     }
 }
 

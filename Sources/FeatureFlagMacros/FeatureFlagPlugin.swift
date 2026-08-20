@@ -7,5 +7,6 @@ struct FeatureFlagPlugin: CompilerPlugin {
         FlagContainerMacro.self,
         FlagGroupMacro.self,
         FlagRecordMacro.self,
+        FlagRecordKeyMacro.self,
     ]
 }
