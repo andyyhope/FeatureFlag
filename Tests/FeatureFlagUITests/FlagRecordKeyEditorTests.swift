@@ -84,6 +84,23 @@ final class FlagRecordKeyEditorTests: XCTestCase {
         )
     }
 
+    func testAListWithADuplicateKeyReadsAsUnreadableToTheEditorToo() throws {
+        // The host refuses it, so the editor must agree — and must say which rule was
+        // broken, since a duplicate key is a well-formed list failing a different one.
+        let store = makeStore()
+        let entry = try entry(store)
+        try store.setValue(
+            .string(#"[{"name":"a","hops":"[]"},{"name":"a","hops":"[]"}]"#),
+            for: entry
+        )
+
+        XCTAssertNil(store.records(for: entry))
+        XCTAssertEqual(
+            store.value(for: entry).duplicateRecordKey(matching: try XCTUnwrap(entry.recordShape)),
+            .string("a")
+        )
+    }
+
     private func named(_ name: String) -> [String: FlagValueBox] {
         ["name": .string(name), "hops": .string("[]")]
     }

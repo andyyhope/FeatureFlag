@@ -56,12 +56,20 @@ public struct FlagRowView: View {
                 NavigationLink {
                     FlagRecordsEditorView(store: store, entry: entry, fields: fields)
                 } label: {
-                    LabeledContent(recordSummary) {
+                    // Both lines sit under the flag's description and key, so they are
+                    // the fourth and fifth things in one row. At body size they compete
+                    // with the description for the eye; sized down they read as what
+                    // they are — a count and a reminder of the shape.
+                    LabeledContent {
                         Text(fields.map(\.name).joined(separator: ", "))
-                            .font(.callout)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                    } label: {
+                        Text(recordSummary)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -83,9 +91,17 @@ public struct FlagRowView: View {
         .padding(.vertical, 4)
     }
 
-    /// "3 records", or that the stored text is not any.
+    /// "3 records", or the reason there is no count to give.
     private var recordSummary: String {
-        guard let records = store.records(for: entry) else { return "Unreadable" }
+        guard let records = store.records(for: entry) else {
+            // Two answers, because a duplicate key is a well-formed list breaking a
+            // different rule, and one word for both would start the wrong search.
+            guard let shape = entry.recordShape,
+                store.value(for: entry).duplicateRecordKey(matching: shape) != nil,
+                let key = shape.first(where: \.isKey)?.name
+            else { return "Unreadable" }
+            return "Two records share a \(key)"
+        }
         return "\(records.count) record\(records.count == 1 ? "" : "s")"
     }
 

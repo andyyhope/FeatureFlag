@@ -143,7 +143,7 @@
                 }
             } else {
                 Section {
-                    Text("This value is not a list of records.")
+                    Text(unreadableReason)
                     Text(unreadableText)
                         .font(.caption.monospaced())
                         .foregroundStyle(.secondary)
@@ -157,6 +157,24 @@
                     )
                 }
             }
+        }
+
+        /// Why the stored text cannot be read, which is not always the same answer.
+        ///
+        /// A duplicate key is a list of records — a perfectly well-formed one — that
+        /// breaks a different rule, and saying "this is not a list of records" would
+        /// send someone looking for a syntax problem that is not there.
+        private var unreadableReason: String {
+            if let duplicate = FlagValueBox.string(unreadableText)
+                .duplicateRecordKey(matching: fields),
+                let key = fields.first(where: \.isKey)?.name
+            {
+                return """
+                    Two records share the same \(key), \(duplicate.displayString) — it is \
+                    what tells one record from another, so they cannot.
+                    """
+            }
+            return "This value is not a list of records."
         }
 
         /// One row: what the record is, and a taste of the rest of it.
