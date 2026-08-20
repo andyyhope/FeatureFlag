@@ -251,16 +251,19 @@ struct FlagTextField: View {
             } else {
                 TextField("", text: $draft)
                     .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.trailing)
+                    // Leading, like the block editor beside it. A value is read from its
+                    // start — a URL by its scheme and host, a number by its leading
+                    // digits — and every field starting in the same place is what lets a
+                    // column of them be scanned rather than read one at a time.
+                    .multilineTextAlignment(.leading)
                     // Flag values are identifiers, numbers, URLs and base64 — strings
                     // read character by character rather than as words. Monospacing
                     // stops a 1 and an l, or a 0 and an O, resolving to whichever the
                     // reader expected.
                     .font(.body.monospaced())
                     // Shrink before truncating. A truncated endpoint is worse than a
-                    // small one: you cannot tell two staging URLs apart by their heads,
-                    // and SwiftUI abandons the trailing alignment once text overflows,
-                    // so the column goes ragged as well as unreadable.
+                    // small one: two staging URLs are told apart by their tails, and a
+                    // value cut short reads as though the store mangled it.
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     #if os(iOS) || os(tvOS)

@@ -56,7 +56,7 @@ public struct PaymentMethod {
     public var limits: FlagRecords<SpendLimit> = []
 }
 
-@FlagContainer
+@FlagContainer(description: "Everything this demo can turn on, and where each value came from")
 public struct AppFlags {
 
     /// Deliberately no `remoteKey`: this flag decides which payload gets fetched, so a

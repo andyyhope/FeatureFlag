@@ -41,6 +41,9 @@ extension FlagLookup {
 /// underscored because they are call sites for generated code, not for you.
 public protocol FlagContainer: Sendable {
 
+    /// What this set of flags is for, if the container says.
+    static var flagContainerDescription: String? { get }
+
     /// Builds the container, wiring every flag beneath it to `_lookup` and rooting its
     /// keys at `_keyPrefix`.
     init(_lookup: any FlagLookup, _keyPrefix: FlagKeyPath)
@@ -50,4 +53,11 @@ public protocol FlagContainer: Sendable {
     /// This is what lets a host publish its schema — and a companion app render it —
     /// with no runtime reflection anywhere.
     static var flagDescriptors: [FlagSchemaNode] { get }
+}
+
+
+extension FlagContainer {
+
+    /// A container says nothing about itself unless it is given something to say.
+    public static var flagContainerDescription: String? { nil }
 }

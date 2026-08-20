@@ -18,8 +18,31 @@
 ///
 /// Flags must carry an explicit type annotation, because a macro cannot infer types.
 @attached(extension, conformances: FlagContainer)
-@attached(member, names: named(init(_lookup:_keyPrefix:)), named(flagDescriptors))
+@attached(
+    member,
+    names: named(init(_lookup:_keyPrefix:)), named(flagDescriptors),
+    named(flagContainerDescription)
+)
 public macro FlagContainer() =
+    #externalMacro(module: "FeatureFlagMacros", type: "FlagContainerMacro")
+
+/// The same, with a line saying what this set of flags is for.
+///
+/// ```swift
+/// @FlagContainer(description: "Everything the checkout team can turn on")
+/// struct AppFlags { … }
+/// ```
+///
+/// The companion shows it above the flags. The application name answers "whose flags
+/// are these"; this answers "what are they", which is the question someone handed an
+/// unfamiliar debug build actually has.
+@attached(extension, conformances: FlagContainer)
+@attached(
+    member,
+    names: named(init(_lookup:_keyPrefix:)), named(flagDescriptors),
+    named(flagContainerDescription)
+)
+public macro FlagContainer(description: String) =
     #externalMacro(module: "FeatureFlagMacros", type: "FlagContainerMacro")
 
 /// Nests one container inside another, namespacing its keys.

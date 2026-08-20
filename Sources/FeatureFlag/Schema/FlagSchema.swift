@@ -19,6 +19,9 @@ public struct FlagSchema: Sendable, Equatable {
     /// Which app published this, for a companion that can see more than one.
     public let applicationName: String?
 
+    /// What this set of flags is for, as the container describes itself.
+    public let description: String?
+
     /// Every flag, depth first, in declaration order.
     public let flags: [Entry]
 
@@ -87,6 +90,7 @@ public struct FlagSchema: Sendable, Equatable {
         self.formatVersion = Self.currentFormatVersion
         self.generatedAt = generatedAt
         self.applicationName = applicationName
+        self.description = Root.flagContainerDescription
         self.flags = flags
         self.groups = groups
 
@@ -112,21 +116,31 @@ public struct FlagSchema: Sendable, Equatable {
         flags: [Entry],
         groups: [Group] = [],
         applicationName: String? = nil,
+        description: String? = nil,
         generatedAt: Date = Date()
     ) {
         self.init(
             formatVersion: Self.currentFormatVersion,
             generatedAt: generatedAt,
             applicationName: applicationName,
+            description: description,
             flags: flags,
             groups: groups
         )
     }
 
-    init(formatVersion: Int, generatedAt: Date, applicationName: String?, flags: [Entry], groups: [Group]) {
+    init(
+        formatVersion: Int,
+        generatedAt: Date,
+        applicationName: String?,
+        description: String? = nil,
+        flags: [Entry],
+        groups: [Group]
+    ) {
         self.formatVersion = formatVersion
         self.generatedAt = generatedAt
         self.applicationName = applicationName
+        self.description = description
         self.flags = flags
         self.groups = groups
     }
@@ -269,6 +283,7 @@ extension FlagSchema {
             "groups": groups.map(\.jsonObject),
         ]
         object["applicationName"] = applicationName
+        object["description"] = description
         return object
     }
 
@@ -305,6 +320,7 @@ extension FlagSchema {
             generatedAt: (object["generatedAt"] as? String).flatMap(flagDateFormatter.date(from:))
                 ?? Date(timeIntervalSince1970: 0),
             applicationName: object["applicationName"] as? String,
+            description: object["description"] as? String,
             flags: entries,
             groups: (object["groups"] as? [[String: Any]] ?? []).compactMap(
                 Group.init(jsonObject:)
