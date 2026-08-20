@@ -18,8 +18,31 @@
 ///
 /// Flags must carry an explicit type annotation, because a macro cannot infer types.
 @attached(extension, conformances: FlagContainer)
-@attached(member, names: named(init(_lookup:_keyPrefix:)), named(flagDescriptors))
+@attached(
+    member,
+    names: named(init(_lookup:_keyPrefix:)), named(flagDescriptors),
+    named(flagContainerDescription)
+)
 public macro FlagContainer() =
+    #externalMacro(module: "FeatureFlagMacros", type: "FlagContainerMacro")
+
+/// The same, with a line saying what this set of flags is for.
+///
+/// ```swift
+/// @FlagContainer(description: "Everything the checkout team can turn on")
+/// struct AppFlags { … }
+/// ```
+///
+/// The companion shows it above the flags. The application name answers "whose flags
+/// are these"; this answers "what are they", which is the question someone handed an
+/// unfamiliar debug build actually has.
+@attached(extension, conformances: FlagContainer)
+@attached(
+    member,
+    names: named(init(_lookup:_keyPrefix:)), named(flagDescriptors),
+    named(flagContainerDescription)
+)
+public macro FlagContainer(description: String) =
     #externalMacro(module: "FeatureFlagMacros", type: "FlagContainerMacro")
 
 /// Nests one container inside another, namespacing its keys.
@@ -66,6 +89,36 @@ public macro FlagGroup(description: String) =
     conformances: FlagRecord, FlagValue,
     names: named(init(flagRecordBoxes:)), named(flagValueType), named(init(box:)), named(box)
 )
-@attached(member, names: named(flagRecordShape), named(flagRecordBoxes))
+@attached(
+    member,
+    names: named(flagRecordShape), named(flagRecordBoxes), named(flagRecordKey)
+)
 public macro FlagRecord() =
     #externalMacro(module: "FeatureFlagMacros", type: "FlagRecordMacro")
+
+/// Marks the field that tells one record from another.
+///
+/// ```swift
+/// @FlagRecord
+/// struct Endpoint {
+///     @FlagRecordKey var name: String
+///     var url: URL
+/// }
+///
+/// flags.endpoints["staging"]?.url
+/// ```
+///
+/// The key is what makes one record a different record rather than an edited one. Two
+/// sharing it is a mistake with no correct behaviour — picking one silently would leave
+/// the app running on a value nobody chose — so a list containing a duplicate is
+/// unreadable and falls back to the flag's default, exactly as any other malformed
+/// value does. A payload or a document carrying one is refused outright, naming the key.
+///
+/// It marks the field rather than being an argument on ``FlagRecord()`` because a key
+/// path cannot be written there: `\.name` has no context to infer its root from, and
+/// `\Endpoint.name` is a circular reference to the type being expanded.
+///
+/// This expands to nothing on its own — ``FlagRecord()`` reads it for metadata.
+@attached(peer)
+public macro FlagRecordKey() =
+    #externalMacro(module: "FeatureFlagMacros", type: "FlagRecordKeyMacro")

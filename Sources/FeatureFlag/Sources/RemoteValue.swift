@@ -134,7 +134,36 @@ extension RemoteValue {
             records.append(boxes)
         }
 
+        // The same rule the store applies, for the same reason: a list nobody can read
+        // should be refused where it arrives rather than discovered later as a flag
+        // that quietly stopped taking effect.
+        guard FlagValueBox.duplicateKey(in: records, matching: shape) == nil else {
+            return nil
+        }
+
         return .records(records)
+    }
+
+    /// The duplicate key in this payload, when that is what makes it unusable.
+    func duplicateRecordKey(matching shape: [FlagRecordField]) -> FlagValueBox? {
+        if case let .string(text) = self {
+            return FlagValueBox.string(text).duplicateRecordKey(matching: shape)
+        }
+        guard case let .array(values) = self else { return nil }
+
+        var records = [[String: FlagValueBox]]()
+        for value in values {
+            guard case let .object(fields) = value else { return nil }
+            var boxes = [String: FlagValueBox]()
+            for field in shape {
+                guard let raw = fields[field.name], let box = raw.box(as: field.type) else {
+                    continue
+                }
+                boxes[field.name] = box
+            }
+            records.append(boxes)
+        }
+        return FlagValueBox.duplicateKey(in: records, matching: shape)
     }
 
     func box(as type: FlagValueType) -> FlagValueBox? {

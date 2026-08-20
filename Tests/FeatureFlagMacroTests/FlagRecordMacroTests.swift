@@ -5,7 +5,8 @@ import XCTest
 @testable import FeatureFlagMacros
 
 private let recordMacros: [String: Macro.Type] = [
-    "FlagRecord": FlagRecordMacro.self
+    "FlagRecord": FlagRecordMacro.self,
+    "FlagRecordKey": FlagRecordKeyMacro.self,
 ]
 
 /// `@FlagRecord` writes the boxing a record would otherwise need by hand: a shape for
@@ -33,14 +34,16 @@ final class FlagRecordMacroTests: XCTestCase {
                                 type: String.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
-                                fields: FeatureFlag._flagRecordShape(of: String.self)
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: false
                             ),
                             FeatureFlag.FlagRecordField(
                                 name: "enabled",
                                 type: Bool.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: Bool.self),
                                 defaultValue: nil,
-                                fields: FeatureFlag._flagRecordShape(of: Bool.self)
+                                fields: FeatureFlag._flagRecordShape(of: Bool.self),
+                                isKey: false
                             )
                         ]
                     }
@@ -107,7 +110,8 @@ final class FlagRecordMacroTests: XCTestCase {
                                 type: String.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
-                                fields: FeatureFlag._flagRecordShape(of: String.self)
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: false
                             )
                         ]
                     }
@@ -172,7 +176,8 @@ final class FlagRecordMacroTests: XCTestCase {
                                 type: Int.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: Int.self),
                                 defaultValue: (1 as Int).box,
-                                fields: FeatureFlag._flagRecordShape(of: Int.self)
+                                fields: FeatureFlag._flagRecordShape(of: Int.self),
+                                isKey: false
                             )
                         ]
                     }
@@ -216,6 +221,162 @@ final class FlagRecordMacroTests: XCTestCase {
         )
     }
 
+    func testTheKeyFieldIsMarkedAndPublished() {
+        assertMacroExpansion(
+            """
+            @FlagRecord
+            struct Endpoint {
+                @FlagRecordKey var name: String
+            }
+            """,
+            expandedSource: """
+                struct Endpoint {
+                    var name: String
+
+                    static var flagRecordShape: [FeatureFlag.FlagRecordField] {
+                        [
+                            FeatureFlag.FlagRecordField(
+                                name: "name",
+                                type: String.flagValueType,
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: true
+                            )
+                        ]
+                    }
+
+                    var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
+                        [
+                            "name": name.box
+                        ]
+                    }
+
+                    static var flagRecordKey: String? {
+                        "name"
+                    }
+                }
+
+                extension Endpoint {
+                    init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+                        guard let name = flagRecordBoxes["name"].flatMap(String.init(box:)) else {
+                            return nil
+                        }
+                        self.name = name
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                }
+                """,
+            macros: recordMacros
+        )
+    }
+
+    func testTwoFieldsMarkedAsTheKeyIsDiagnosed() {
+        assertMacroExpansion(
+            """
+            @FlagRecord
+            struct Endpoint {
+                @FlagRecordKey var name: String
+                @FlagRecordKey var region: String
+            }
+            """,
+            expandedSource: """
+                struct Endpoint {
+                    var name: String
+                    var region: String
+
+                    static var flagRecordShape: [FeatureFlag.FlagRecordField] {
+                        [
+                            FeatureFlag.FlagRecordField(
+                                name: "name",
+                                type: String.flagValueType,
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: false
+                            ),
+                            FeatureFlag.FlagRecordField(
+                                name: "region",
+                                type: String.flagValueType,
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: false
+                            )
+                        ]
+                    }
+
+                    var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
+                        [
+                            "name": name.box,
+                            "region": region.box
+                        ]
+                    }
+                }
+
+                extension Endpoint {
+                    init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+                        guard let name = flagRecordBoxes["name"].flatMap(String.init(box:)),
+                              let region = flagRecordBoxes["region"].flatMap(String.init(box:)) else {
+                            return nil
+                        }
+                        self.name = name
+                        self.region = region
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                }
+                """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: """
+                        a record has one key at most, and name, region are all marked \
+                        '@FlagRecordKey' — the key is the single field that tells one \
+                        record from another
+                        """,
+                    line: 1,
+                    column: 1
+                )
+            ],
+            macros: recordMacros
+        )
+    }
+
     // MARK: - What is and is not a field
 
     func testConstantsAreFieldsToo() {
@@ -237,7 +398,8 @@ final class FlagRecordMacroTests: XCTestCase {
                                 type: String.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
-                                fields: FeatureFlag._flagRecordShape(of: String.self)
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: false
                             )
                         ]
                     }
@@ -304,7 +466,8 @@ final class FlagRecordMacroTests: XCTestCase {
                                 type: String.flagValueType,
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
-                                fields: FeatureFlag._flagRecordShape(of: String.self)
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: false
                             )
                         ]
                     }

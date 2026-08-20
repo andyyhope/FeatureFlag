@@ -59,6 +59,40 @@ The memberwise initialiser survives, because the generated one lives in an exten
 A struct that declares an initialiser in its own body loses the one Swift writes — and
 a record you cannot construct is no use as a flag's default.
 
+### Telling one record from another
+
+Mark the field that identifies a record and it becomes the record's key:
+
+```swift
+@FlagRecord
+struct Endpoint {
+    @FlagRecordKey var name: String
+    var url: URL
+}
+
+flags.endpoints["staging"]?.url
+```
+
+A key is what makes one record a *different* record rather than an edited one. Two
+sharing it has no correct behaviour — picking one would leave the app running on a
+value nobody chose — so a list containing a duplicate is unreadable and falls back to
+the flag's default, exactly as any other malformed value does. A payload or a document
+carrying one is refused outright, naming the key:
+
+```
+'config.endpoints' → endpoints: expected every record to have its own name,
+got two with "staging"
+```
+
+The companion enforces the same rule rather than writing something the app will not
+read: an edit that would collide is refused the way an unparseable one is, and "Add"
+gives a new record a distinct key instead of a second empty one. The key also titles
+each row, which is otherwise the first declared field and therefore a guess.
+
+It marks the field rather than being an argument on `@FlagRecord` because a key path
+cannot be written there — `\.name` has no context to infer its root from, and
+`\Endpoint.name` is a circular reference to the type being expanded.
+
 ### A record is not a flag's type on its own
 
 `FlagRecords<Endpoint>` is how a record reaches a flag. Neither `[Endpoint]` nor a bare

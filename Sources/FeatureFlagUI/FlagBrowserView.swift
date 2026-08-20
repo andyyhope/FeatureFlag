@@ -22,6 +22,16 @@ public struct FlagBrowserView: View {
     public var body: some View {
         NavigationStack {
             List {
+                // Only when nothing is being searched: a description explains the set,
+                // and a set being filtered is not the set any more.
+                if let description = store.schema.description, store.searchText.isEmpty {
+                    Section {
+                        Text(description)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 if store.searchText.isEmpty {
                     tree
                 } else {

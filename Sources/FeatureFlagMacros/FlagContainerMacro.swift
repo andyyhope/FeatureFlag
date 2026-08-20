@@ -24,10 +24,20 @@ extension FlagContainerMacro: MemberMacro {
         let declarations = parse(declaration, in: context)
         let access = accessLevel(of: declaration)
 
-        return [
+        var members = [
             initialiser(for: declarations, access: access),
             descriptors(for: declarations, access: access),
         ]
+        if let description = node.argument(labelled: "description") {
+            members.append(
+                """
+                \(raw: access)static var flagContainerDescription: String? {
+                    \(raw: description.trimmedDescription)
+                }
+                """
+            )
+        }
+        return members
     }
 
     /// The modifier generated members need to carry.

@@ -56,12 +56,20 @@ public struct FlagRowView: View {
                 NavigationLink {
                     FlagRecordsEditorView(store: store, entry: entry, fields: fields)
                 } label: {
-                    LabeledContent(recordSummary) {
+                    // Both lines sit under the flag's description and key, so they are
+                    // the fourth and fifth things in one row. At body size they compete
+                    // with the description for the eye; sized down they read as what
+                    // they are — a count and a reminder of the shape.
+                    LabeledContent {
                         Text(fields.map(\.name).joined(separator: ", "))
-                            .font(.callout)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                    } label: {
+                        Text(recordSummary)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -71,11 +79,22 @@ public struct FlagRowView: View {
                 NavigationLink {
                     FlagArrayEditorView(store: store, entry: entry, element: element)
                 } label: {
-                    LabeledContent(summary(of: element)) {
+                    // Sized like the record row for the same reason: both sit under the
+                    // flag's description and key, so at body size they read as a second
+                    // title rather than as a count and a preview.
+                    LabeledContent {
                         Text(store.value(for: entry).displayString)
-                            .font(.callout.monospaced())
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
+                            // Middle, unlike the record row: an array preview is
+                            // bracketed, and keeping both ends shows it is a list and
+                            // where it stops.
                             .truncationMode(.middle)
+                    } label: {
+                        Text(summary(of: element))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -83,9 +102,17 @@ public struct FlagRowView: View {
         .padding(.vertical, 4)
     }
 
-    /// "3 records", or that the stored text is not any.
+    /// "3 records", or the reason there is no count to give.
     private var recordSummary: String {
-        guard let records = store.records(for: entry) else { return "Unreadable" }
+        guard let records = store.records(for: entry) else {
+            // Two answers, because a duplicate key is a well-formed list breaking a
+            // different rule, and one word for both would start the wrong search.
+            guard let shape = entry.recordShape,
+                store.value(for: entry).duplicateRecordKey(matching: shape) != nil,
+                let key = shape.first(where: \.isKey)?.name
+            else { return "Unreadable" }
+            return "Two records share a \(key)"
+        }
         return "\(records.count) record\(records.count == 1 ? "" : "s")"
     }
 
@@ -251,18 +278,24 @@ struct FlagTextField: View {
             } else {
                 TextField("", text: $draft)
                     .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.trailing)
+                    // Leading, like the block editor beside it. A value is read from its
+                    // start — a URL by its scheme and host, a number by its leading
+                    // digits — and every field starting in the same place is what lets a
+                    // column of them be scanned rather than read one at a time.
+                    .multilineTextAlignment(.leading)
                     // Flag values are identifiers, numbers, URLs and base64 — strings
                     // read character by character rather than as words. Monospacing
                     // stops a 1 and an l, or a 0 and an O, resolving to whichever the
                     // reader expected.
-                    .font(.body.monospaced())
-                    // Shrink before truncating. A truncated endpoint is worse than a
-                    // small one: you cannot tell two staging URLs apart by their heads,
-                    // and SwiftUI abandons the trailing alignment once text overflows,
-                    // so the column goes ragged as well as unreadable.
+                    //
+                    // One fixed size for every field, and the same size as the block
+                    // editor. Scaling to fit made a field's text size a function of its
+                    // contents, so a column of them arrived at three different sizes and
+                    // none of them matched anything else on the screen. A value too long
+                    // for the field scrolls within it while being edited, which is what
+                    // a text field does anyway.
+                    .font(.system(.footnote, design: .monospaced))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
                     #if os(iOS) || os(tvOS)
                         .keyboardType(keyboard.uiKeyboardType)
                         .autocorrectionDisabled()

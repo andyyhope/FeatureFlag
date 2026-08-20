@@ -85,6 +85,28 @@ public struct RemoteOverrideProblem: Hashable, Sendable {
     }
 }
 
+extension FlagSchema.Entry {
+
+    /// What to say a record flag wanted, which is not always its type: a list that
+    /// parses but repeats a key failed the uniqueness rule, not the shape.
+    func expectedDescription(for value: RemoteValue) -> String {
+        guard let shape = recordShape else { return valueType.typeName }
+        if let keyName = shape.first(where: \.isKey)?.name,
+            value.duplicateRecordKey(matching: shape) != nil
+        {
+            return "every record to have its own \(keyName)"
+        }
+        return "a list of records (\(shape.map(\.name).joined(separator: ", ")))"
+    }
+
+    func foundDescription(for value: RemoteValue) -> String {
+        guard let shape = recordShape,
+            let duplicate = value.duplicateRecordKey(matching: shape)
+        else { return value.shortDescription }
+        return "two with \(duplicate.shortMessageDescription)"
+    }
+}
+
 public enum RemoteOverrideError: Error, Equatable {
     case malformed(String)
 
@@ -226,10 +248,8 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
                         key: key,
                         remoteKey: entry.remoteKey ?? key.rawValue,
                         kind: .typeMismatch,
-                        expected: entry.recordShape == nil
-                            ? entry.valueType.typeName
-                            : "a list of records (\(entry.recordShape?.map(\.name).joined(separator: ", ") ?? ""))",
-                        found: remoteValue.shortDescription
+                        expected: entry.expectedDescription(for: remoteValue),
+                        found: entry.foundDescription(for: remoteValue)
                     )
                 )
                 continue

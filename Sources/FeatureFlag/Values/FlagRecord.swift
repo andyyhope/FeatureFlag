@@ -23,6 +23,10 @@ public struct FlagRecordField: Hashable, Sendable {
     /// nothing honest to put there.
     public let defaultValue: FlagValueBox?
 
+    /// Whether this field is the record's key — the thing that tells one record from
+    /// another. At most one field in a shape carries it.
+    public let isKey: Bool
+
     /// The fields of each record, when this field is itself a ``FlagRecords`` list.
     ///
     /// A nested list is a string like any other record list, so without this an editor
@@ -34,13 +38,15 @@ public struct FlagRecordField: Hashable, Sendable {
         type: FlagValueType,
         cases: [FlagValueBox]? = nil,
         defaultValue: FlagValueBox? = nil,
-        fields: [FlagRecordField]? = nil
+        fields: [FlagRecordField]? = nil,
+        isKey: Bool = false
     ) {
         self.name = name
         self.type = type
         self.cases = cases
         self.defaultValue = defaultValue
         self.fields = fields
+        self.isKey = isKey
     }
 }
 
@@ -67,11 +73,20 @@ public protocol FlagRecord: Equatable, Sendable {
     /// The fields, in the order they should be shown.
     static var flagRecordShape: [FlagRecordField] { get }
 
+    /// The field that tells one record from another, if the record names one.
+    static var flagRecordKey: String? { get }
+
     /// Each field's value, keyed by field name.
     var flagRecordBoxes: [String: FlagValueBox] { get }
 
     /// Rebuilds a record, or fails if a field is missing or holds the wrong type.
     init?(flagRecordBoxes: [String: FlagValueBox])
+}
+
+extension FlagRecord {
+
+    /// Records are told apart by position unless they say otherwise.
+    public static var flagRecordKey: String? { nil }
 }
 
 /// A list of records, stored as JSON text.
@@ -95,6 +110,14 @@ public struct FlagRecords<Record: FlagRecord>: FlagValue, ExpressibleByArrayLite
     }
 
     public static var flagValueType: FlagValueType { .string }
+
+    /// The record with this key, or `nil` when none has it — or when the record names
+    /// no key, since then there is nothing to look one up by.
+    public subscript(key: some FlagValue) -> Record? {
+        guard let name = Record.flagRecordKey else { return nil }
+        let wanted = key.box
+        return values.first { $0.flagRecordBoxes[name] == wanted }
+    }
 
     public var box: FlagValueBox {
         .records(values.map(\.flagRecordBoxes))
@@ -129,6 +152,24 @@ extension FlagValueBox {
     /// Every field of the shape must be present and hold its declared type. Returning a
     /// partial list would mean an editor showing a value the host had already rejected.
     public func recordValues(matching shape: [FlagRecordField]) -> [[String: FlagValueBox]]? {
+        guard let records = parsedRecords(matching: shape) else { return nil }
+        // Two records sharing a key is a mistake with no correct behaviour: picking one
+        // would leave the app running on a value nobody chose, and picking neither is
+        // what the caller already does with anything else it cannot read.
+        guard Self.duplicateKey(in: records, matching: shape) == nil else { return nil }
+        return records
+    }
+
+    /// The duplicate key in this value, when that is what makes it unreadable.
+    ///
+    /// Only for saying so: the rejection has already happened by the time anyone asks.
+    public func duplicateRecordKey(matching shape: [FlagRecordField]) -> FlagValueBox? {
+        guard let records = parsedRecords(matching: shape) else { return nil }
+        return Self.duplicateKey(in: records, matching: shape)
+    }
+
+    /// The records this value holds, before the uniqueness rule is applied.
+    private func parsedRecords(matching shape: [FlagRecordField]) -> [[String: FlagValueBox]]? {
         guard
             case let .string(json) = self,
             let objects = try? JSONSerialization.jsonObject(with: Data(json.utf8))
@@ -159,6 +200,26 @@ extension FlagValueBox {
         }
 
         return records
+    }
+
+    /// The first key claimed by more than one record, or `nil` when every one is
+    /// distinct — and when the shape names no key, since then there is nothing to share.
+    public static func duplicateKey(
+        in records: [[String: FlagValueBox]],
+        matching shape: [FlagRecordField]
+    ) -> FlagValueBox? {
+        guard let key = shape.first(where: \.isKey)?.name else { return nil }
+
+        var seen = Set<String>()
+        for record in records {
+            guard let value = record[key] else { continue }
+            // Compared as it will be stored, not as it is held. A Date carries more
+            // precision in memory than the wire format keeps, so two records made a
+            // moment apart looked distinct here and identical once written — a list
+            // this check passed and the reader then refused.
+            if seen.insert(value.storageIdentity).inserted == false { return value }
+        }
+        return nil
     }
 
     /// A list of records as the text a record flag stores.
@@ -205,6 +266,19 @@ extension FlagValueBox {
             }
         }
         return nil
+    }
+}
+
+extension FlagValueBox {
+
+    /// This value as its stored form identifies it.
+    ///
+    /// Two values are the same key when they are written the same way, which is not
+    /// always the same as being equal in memory: a `Date` carries more precision than
+    /// the wire format keeps. Anything deciding whether a key is taken has to ask this
+    /// rather than compare boxes, or it will disagree with the reader.
+    public var storageIdentity: String {
+        String(describing: jsonValue)
     }
 }
 

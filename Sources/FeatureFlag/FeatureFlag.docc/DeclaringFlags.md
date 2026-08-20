@@ -192,3 +192,16 @@ var newOnboarding: Bool
 
 Everything the macro generates is already fully qualified, so nothing else in the
 framework can be shadowed this way.
+
+### Saying what a set of flags is for
+
+```swift
+@FlagContainer(description: "Everything the checkout team can turn on")
+struct AppFlags { … }
+```
+
+The companion shows it above the flags. The application name answers "whose flags are
+these"; this answers "what are they", which is the question someone handed an
+unfamiliar debug build actually has. It is optional, and a container that says nothing
+looks exactly as it did before.
+

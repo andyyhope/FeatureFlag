@@ -43,7 +43,10 @@ public struct SpendLimit {
 /// picker for the enum.
 @FlagRecord
 public struct PaymentMethod {
-    public var name: String
+    /// The key: what tells one payment method from another. Two sharing it would be a
+    /// list nobody can read, so the companion refuses to write one and a payload
+    /// carrying one is rejected outright.
+    @FlagRecordKey public var name: String
     public var kind: PaymentKind
     public var enabled: Bool
     public var minimumSpend: Double
@@ -53,7 +56,7 @@ public struct PaymentMethod {
     public var limits: FlagRecords<SpendLimit> = []
 }
 
-@FlagContainer
+@FlagContainer(description: "Everything this demo can turn on, and where each value came from")
 public struct AppFlags {
 
     /// Deliberately no `remoteKey`: this flag decides which payload gets fetched, so a
