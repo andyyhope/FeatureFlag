@@ -156,10 +156,14 @@ public struct FlagMappingAudit: Sendable, Equatable, CustomStringConvertible {
             }
         case let .array(elements) where elements.isEmpty == false:
             for (index, child) in elements.enumerated() {
-                collectLeafPaths(child, prefix: "\(prefix).\(index)", into: &paths)
+                let childPrefix = prefix.isEmpty ? "\(index)" : "\(prefix).\(index)"
+                collectLeafPaths(child, prefix: childPrefix, into: &paths)
             }
         default:
-            paths.append(prefix)
+            // Not at the root: a payload that is a bare scalar, or empty at the top,
+            // has no path to name, and an empty-string "path" fails strict on a blank
+            // bullet. A nested empty container still has a real path and stays reported.
+            if prefix.isEmpty == false { paths.append(prefix) }
         }
     }
 

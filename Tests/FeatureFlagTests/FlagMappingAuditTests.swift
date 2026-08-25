@@ -175,6 +175,34 @@ final class FlagMappingAuditTests: XCTestCase {
         XCTAssertNoThrow(try audit.requireComplete())
     }
 
+    // MARK: - Degenerate payloads
+
+    func testAnEmptyPayloadReportsNothingUnconsumedNotABlankPath() throws {
+        // {} used to yield unconsumed == [""], which fails strict mode on a blank bullet.
+        let audit = try FlagMappingAudit(AuditFlags.self, applying: Data("{}".utf8))
+
+        // Every flag is absent (nothing was supplied), so the audit is rightly
+        // incomplete — but there is nothing *unread*, and no blank bullet in the report.
+        XCTAssertEqual(audit.unconsumed, [])
+        XCTAssertFalse(audit.description.contains("\u{2022} \n"), audit.description)
+    }
+
+    func testARootLevelArrayDoesNotProduceLeadingDotPaths() throws {
+        // A nonsensical payload for flags, but its paths should still be well formed.
+        let audit = try FlagMappingAudit(AuditFlags.self, applying: Data("[1, 2]".utf8))
+
+        XCTAssertFalse(audit.unconsumed.contains { $0.hasPrefix(".") }, "\(audit.unconsumed)")
+        XCTAssertEqual(audit.unconsumed, ["0", "1"])
+    }
+
+    func testANestedEmptyContainerIsStillNamed() throws {
+        // Only the *root* empty case was wrong. A nested empty object has a real path,
+        // and a flag might have expected something under it, so it stays reported.
+        let audit = try FlagMappingAudit(AuditFlags.self, applying: Data(#"{"meta": {}}"#.utf8))
+
+        XCTAssertEqual(audit.unconsumed, ["meta"])
+    }
+
     // MARK: - Bad input
 
     func testMalformedJSONThrowsRatherThanAuditing() {
