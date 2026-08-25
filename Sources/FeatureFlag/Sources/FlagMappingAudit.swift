@@ -45,6 +45,25 @@ public struct FlagMappingAudit: Sendable, Equatable, CustomStringConvertible {
     /// Neither applied nor absent — listed so the audit accounts for every flag.
     public let notRemotelyOverridable: [FlagKey]
 
+    /// How each supplied value compares to the flag's compiled default.
+    ///
+    /// One entry per applied flag — the only flags for which both a default and a usable
+    /// incoming value exist. Purely informational: whether a value matches its default
+    /// or differs from it, ``isComplete`` is unaffected.
+    public let defaults: [FlagDefaultComparison]
+
+    /// Applied flags whose config value equals the compiled default — the config is
+    /// restating what the app already ships, and could omit them.
+    public var matchesDefault: [FlagKey] {
+        defaults.filter(\.matchesDefault).map(\.key)
+    }
+
+    /// Applied flags whose config value differs from the compiled default — the values
+    /// this config actually changes.
+    public var changesDefault: [FlagKey] {
+        defaults.filter { $0.matchesDefault == false }.map(\.key)
+    }
+
     // MARK: - Building
 
     /// Audits a container against a payload, decoding it the way the source would.
@@ -112,6 +131,19 @@ public struct FlagMappingAudit: Sendable, Equatable, CustomStringConvertible {
         self.unconsumed = Self.unconsumedPaths(
             in: value, claimedBy: schema.flags.compactMap(\.remoteKey)
         )
+
+        let defaultsByKey = Dictionary(
+            schema.flags.map { ($0.key, $0.defaultValue) }, uniquingKeysWith: { first, _ in first }
+        )
+        self.defaults =
+            applied
+            .compactMap { key -> FlagDefaultComparison? in
+                guard let incoming = mapping.boxes[key], let base = defaultsByKey[key] else {
+                    return nil
+                }
+                return FlagDefaultComparison(key: key, defaultValue: base, incomingValue: incoming)
+            }
+            .sorted { $0.key.rawValue < $1.key.rawValue }
     }
 
     // MARK: - Reverse coverage
@@ -231,6 +263,62 @@ public struct FlagMappingAudit: Sendable, Equatable, CustomStringConvertible {
             lines.append(contentsOf: shownUnconsumed.map { "    • \($0)" })
         }
         lines.append("  \(applied.count) of \(overridable) remotely-overridable flags applied.")
+        return lines.joined(separator: "\n")
+    }
+}
+
+/// How one flag's compiled default compares to the value a config supplies for it.
+public struct FlagDefaultComparison: Sendable, Equatable, CustomStringConvertible {
+
+    public let key: FlagKey
+
+    /// The value compiled into the app, from `@Flag(default:)`.
+    public let defaultValue: FlagValueBox
+
+    /// The value the config supplied, as a real apply would store it.
+    public let incomingValue: FlagValueBox
+
+    /// Whether the config is restating the compiled default rather than changing it.
+    public var matchesDefault: Bool { defaultValue == incomingValue }
+
+    public init(key: FlagKey, defaultValue: FlagValueBox, incomingValue: FlagValueBox) {
+        self.key = key
+        self.defaultValue = defaultValue
+        self.incomingValue = incomingValue
+    }
+
+    public var description: String {
+        if matchesDefault {
+            return "\(key): \(incomingValue.shortMessageDescription) — matches the default"
+        }
+        // The default becoming the incoming value, which is what applying this config
+        // does.
+        return "\(key): \(defaultValue.shortMessageDescription) → \(incomingValue.shortMessageDescription)"
+    }
+}
+
+extension FlagMappingAudit {
+
+    /// The default-versus-config diff as a block: what changes, then what is restated.
+    public var defaultsDescription: String {
+        guard defaults.isEmpty == false else {
+            return "This config changes nothing — it supplies no value for any flag."
+        }
+
+        let changes = defaults.filter { $0.matchesDefault == false }
+        let restated = defaults.filter(\.matchesDefault)
+
+        var lines = ["Default vs config:"]
+        if changes.isEmpty {
+            lines.append("  every supplied value matches the compiled default.")
+        } else {
+            lines.append("  changes (\(changes.count)):")
+            lines.append(contentsOf: changes.map { "    • \($0)" })
+        }
+        if restated.isEmpty == false {
+            lines.append("  restated (\(restated.count)) — same as the default, could be omitted:")
+            lines.append(contentsOf: restated.map { "    • \($0.key)" })
+        }
         return lines.joined(separator: "\n")
     }
 }
