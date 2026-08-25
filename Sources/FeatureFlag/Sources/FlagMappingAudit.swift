@@ -314,7 +314,15 @@ public struct FlagDefaultComparison: Sendable, Equatable, CustomStringConvertibl
             return "\(key): \(incomingValue.shortMessageDescription) — matches the default"
         }
         if let records, records.isEmpty == false {
-            let body = records.map { "  \($0.line)" }.joined(separator: "\n")
+            let body =
+                records
+                .map { diff in
+                    diff.line
+                        .split(separator: "\n", omittingEmptySubsequences: false)
+                        .map { "  \($0)" }
+                        .joined(separator: "\n")
+                }
+                .joined(separator: "\n")
             return "\(key):\n\(body)"
         }
         // A scalar: the default becoming the incoming value, which is what applying this
@@ -325,7 +333,8 @@ public struct FlagDefaultComparison: Sendable, Equatable, CustomStringConvertibl
 
 extension FlagRecordDiff {
 
-    /// One record's change as a diff line.
+    /// One record's change: a single line when added or removed, and the record name
+    /// with each changed field on its own line when changed.
     var line: String {
         switch change {
         case .added:
@@ -333,10 +342,10 @@ extension FlagRecordDiff {
         case .removed:
             return "- \(identifier)"
         case let .changed(fields):
-            let parts = fields.map {
-                "\($0.field) \($0.defaultValue.diffFieldDescription) → \($0.incomingValue.diffFieldDescription)"
+            let fieldLines = fields.map {
+                "    \($0.field) \($0.defaultValue.diffFieldDescription) → \($0.incomingValue.diffFieldDescription)"
             }
-            return "~ \(identifier): \(parts.joined(separator: ", "))"
+            return (["~ \(identifier):"] + fieldLines).joined(separator: "\n")
         }
     }
 }

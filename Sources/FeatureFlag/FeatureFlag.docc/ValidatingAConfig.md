@@ -119,7 +119,9 @@ print(audit.defaultsDescription)
 //   changes (2):
 //     • page-size: 10 → 25
 //     • payment-methods:
-//         ~ Apple Pay: enabled true → false, minimumSpend 5.0 → 10.0
+//         ~ Apple Pay:
+//             enabled true → false
+//             minimumSpend 5.0 → 10.0
 //         - Bank transfer
 //         + PayPal
 ```
