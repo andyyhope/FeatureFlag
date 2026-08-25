@@ -132,16 +132,26 @@ public struct FlagMappingAudit: Sendable, Equatable, CustomStringConvertible {
             in: value, claimedBy: schema.flags.compactMap(\.remoteKey)
         )
 
-        let defaultsByKey = Dictionary(
-            schema.flags.map { ($0.key, $0.defaultValue) }, uniquingKeysWith: { first, _ in first }
+        let entriesByKey = Dictionary(
+            schema.flags.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first }
         )
         self.defaults =
             applied
             .compactMap { key -> FlagDefaultComparison? in
-                guard let incoming = mapping.boxes[key], let base = defaultsByKey[key] else {
+                guard let incoming = mapping.boxes[key], let entry = entriesByKey[key] else {
                     return nil
                 }
-                return FlagDefaultComparison(key: key, defaultValue: base, incomingValue: incoming)
+                let base = entry.defaultValue
+                let records = entry.recordShape.map { shape in
+                    FlagRecordDiff.diff(
+                        default: base.recordValues(matching: shape) ?? [],
+                        incoming: incoming.recordValues(matching: shape) ?? [],
+                        shape: shape
+                    )
+                }
+                return FlagDefaultComparison(
+                    key: key, defaultValue: base, incomingValue: incoming, records: records
+                )
             }
             .sorted { $0.key.rawValue < $1.key.rawValue }
     }
@@ -278,22 +288,72 @@ public struct FlagDefaultComparison: Sendable, Equatable, CustomStringConvertibl
     /// The value the config supplied, as a real apply would store it.
     public let incomingValue: FlagValueBox
 
+    /// For a record flag, the per-record breakdown — which records were added, removed,
+    /// or changed, and which fields. `nil` for a scalar flag; empty when the records
+    /// match. Reading two record lists as one line each is unreadable, so this is how a
+    /// record flag's diff is meant to be shown.
+    public let records: [FlagRecordDiff]?
+
     /// Whether the config is restating the compiled default rather than changing it.
     public var matchesDefault: Bool { defaultValue == incomingValue }
 
-    public init(key: FlagKey, defaultValue: FlagValueBox, incomingValue: FlagValueBox) {
+    public init(
+        key: FlagKey,
+        defaultValue: FlagValueBox,
+        incomingValue: FlagValueBox,
+        records: [FlagRecordDiff]? = nil
+    ) {
         self.key = key
         self.defaultValue = defaultValue
         self.incomingValue = incomingValue
+        self.records = records
     }
 
     public var description: String {
         if matchesDefault {
             return "\(key): \(incomingValue.shortMessageDescription) — matches the default"
         }
-        // The default becoming the incoming value, which is what applying this config
-        // does.
+        if let records {
+            guard records.isEmpty == false else {
+                // A record flag that reaches here differs (it is not a match) yet no
+                // record was added, removed, or edited — the only thing left is order.
+                // Say that rather than dumping the two JSON strings the breakdown exists
+                // to replace.
+                return "\(key): records reordered"
+            }
+            let body =
+                records
+                .map { diff in
+                    diff.line
+                        .split(separator: "\n", omittingEmptySubsequences: false)
+                        .map { "  \($0)" }
+                        .joined(separator: "\n")
+                }
+                .joined(separator: "\n")
+            return "\(key):\n\(body)"
+        }
+        // A scalar: the default becoming the incoming value, which is what applying this
+        // config does.
         return "\(key): \(defaultValue.shortMessageDescription) → \(incomingValue.shortMessageDescription)"
+    }
+}
+
+extension FlagRecordDiff {
+
+    /// One record's change: a single line when added or removed, and the record name
+    /// with each changed field on its own line when changed.
+    var line: String {
+        switch change {
+        case .added:
+            return "+ \(identifier)"
+        case .removed:
+            return "- \(identifier)"
+        case let .changed(fields):
+            let fieldLines = fields.map {
+                "    \($0.field): \($0.defaultValue.diffFieldDescription) → \($0.incomingValue.diffFieldDescription)"
+            }
+            return (["~ \(identifier):"] + fieldLines).joined(separator: "\n")
+        }
     }
 }
 
@@ -313,7 +373,11 @@ extension FlagMappingAudit {
             lines.append("  every supplied value matches the compiled default.")
         } else {
             lines.append("  changes (\(changes.count)):")
-            lines.append(contentsOf: changes.map { "    • \($0)" })
+            for change in changes {
+                let rendered = change.description.split(separator: "\n", omittingEmptySubsequences: false)
+                lines.append("    • \(rendered[0])")
+                lines.append(contentsOf: rendered.dropFirst().map { "      \($0)" })
+            }
         }
         if restated.isEmpty == false {
             lines.append("  restated (\(restated.count)) — same as the default, could be omitted:")

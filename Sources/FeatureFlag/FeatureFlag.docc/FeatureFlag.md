@@ -98,6 +98,8 @@ goes from an empty project to a flag you can toggle from a second app.
 - <doc:ValidatingAConfig>
 - ``FlagMappingAudit``
 - ``FlagDefaultComparison``
+- ``FlagRecordDiff``
+- ``FlagFieldDiff``
 
 ### Sharing flags with a companion app
 
