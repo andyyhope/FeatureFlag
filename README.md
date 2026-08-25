@@ -54,7 +54,7 @@ if flags.checkout.applePay { … }
 Add the package in Xcode via **File → Add Package Dependencies**, or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.8.1"))
+.package(url: "https://github.com/andyyhope/FeatureFlag.git", .upToNextMinor(from: "0.8.2"))
 ```
 
 Pre-1.0, `from:` would accept every breaking `0.x` bump. While the API is still moving,
