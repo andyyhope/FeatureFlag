@@ -211,83 +211,23 @@ public final class RemoteOverrideSource: FlagValueSource, @unchecked Sendable {
     /// Applies an already-decoded payload.
     @discardableResult
     public func apply(_ value: RemoteValue) throws -> RemoteApplyResult {
-        let mapped = try mapper.map(value, schema: schema)
-        // First wins on a duplicated key rather than trapping — a schema handed in
-        // directly is not guaranteed well formed the way one built from a container is.
-        let entries = Dictionary(
-            schema.flags.map { ($0.key, $0) }, uniquingKeysWith: { first, _ in first }
-        )
+        let mapping = try schema.mapRemote(value, using: mapper)
 
-        var boxes = [FlagKey: FlagValueBox]()
-        var problems = [RemoteOverrideProblem]()
-
-        for (key, remoteValue) in mapped {
-            guard let entry = entries[key] else {
-                problems.append(
-                    RemoteOverrideProblem(
-                        key: key,
-                        remoteKey: key.rawValue,
-                        kind: .unknownKey,
-                        found: remoteValue.shortDescription
-                    )
-                )
-                continue
-            }
-
-            // A record flag stores text, so it cannot be checked by type alone: the
-            // shape published beside it is what says whether the list a backend sent is
-            // one this build can read. A bad field inside a record is reported as a
-            // mismatch on the flag, since a problem names a flag and not a field.
-            let converted =
-                entry.recordShape.map { remoteValue.recordBox(matching: $0) }
-                ?? remoteValue.box(as: entry.valueType)
-
-            guard let box = converted else {
-                problems.append(
-                    RemoteOverrideProblem(
-                        key: key,
-                        remoteKey: entry.remoteKey ?? key.rawValue,
-                        kind: .typeMismatch,
-                        expected: entry.expectedDescription(for: remoteValue),
-                        found: entry.foundDescription(for: remoteValue)
-                    )
-                )
-                continue
-            }
-
-            // Enums declare their cases, so a backend sending a value the app cannot
-            // represent is caught here rather than silently falling back at read time.
-            if let cases = entry.cases, !cases.contains(box) {
-                problems.append(
-                    RemoteOverrideProblem(
-                        key: key,
-                        remoteKey: entry.remoteKey ?? key.rawValue,
-                        kind: .unknownCase,
-                        expected: cases.caseListDescription,
-                        found: remoteValue.shortDescription
-                    )
-                )
-                continue
-            }
-
-            boxes[key] = box
-        }
-
-        guard problems.isEmpty else {
+        guard mapping.problems.isEmpty else {
             throw RemoteOverrideError.rejected(
-                problems.sorted { $0.key.rawValue < $1.key.rawValue }
+                mapping.problems.sorted { $0.key.rawValue < $1.key.rawValue }
             )
         }
 
         lock.lock()
-        values = boxes
+        values = mapping.boxes
         lock.unlock()
         subject.send(.all)
 
         let remotelyOverridable = schema.flags.filter { $0.remoteKey != nil }.map(\.key)
         return RemoteApplyResult(
-            appliedKeys: boxes.keys.sorted { $0.rawValue < $1.rawValue },
-            absentKeys: remotelyOverridable.filter { boxes[$0] == nil }
+            appliedKeys: mapping.boxes.keys.sorted { $0.rawValue < $1.rawValue },
+            absentKeys: remotelyOverridable.filter { mapping.boxes[$0] == nil }
         )
     }
 
