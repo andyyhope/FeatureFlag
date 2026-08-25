@@ -173,8 +173,8 @@ public struct FlagMappingAudit: Sendable, Equatable, CustomStringConvertible {
 
     /// - Parameters:
     ///   - strict: Also require that every value in the payload is read by a flag.
-    ///   - ignoring: Path prefixes whose unconsumed values are allowed even under
-    ///     `strict` — the metadata a file is expected to carry.
+    ///   - ignoredPrefixes: Path prefixes whose unconsumed values are allowed even
+    ///     under `strict` — the metadata a file is expected to carry.
     public func isComplete(strict: Bool, ignoring ignoredPrefixes: [String] = []) -> Bool {
         guard absent.isEmpty, mismatched.isEmpty else { return false }
         guard strict else { return true }
