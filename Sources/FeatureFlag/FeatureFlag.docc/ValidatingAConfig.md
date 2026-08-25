@@ -110,6 +110,25 @@ restates and could drop. `defaults` carries the full per-flag comparison. None o
 affects ``FlagMappingAudit/isComplete`` — restating a default, or changing it, is not a
 coverage problem, only something worth seeing.
 
+A record flag is broken down per record rather than shown as two JSON blobs — which
+field of which record changed, and which records were added or removed:
+
+```swift
+print(audit.defaultsDescription)
+// Default vs config:
+//   changes (2):
+//     • page-size: 10 → 25
+//     • payment-methods:
+//         ~ Apple Pay: enabled true → false, minimumSpend 5.0 → 10.0
+//         - Bank transfer
+//         + PayPal
+```
+
+Records are paired by their `@FlagRecordKey` when they have one — so a reordered list
+is not a wall of false changes — and by position (`[0]`, `[1]`) when they do not. Each
+comparison's `records` carries the structured breakdown (`FlagRecordDiff`), for
+inspecting a specific record rather than reading the text.
+
 A whole number sent for a `Double` flag matches a `Double` default: JSON has one number
 type, so `3` and `3.0` are the same value, not a change.
 
@@ -132,4 +151,6 @@ accurate, since those come from what the mapper actually produced.
 
 - ``FlagMappingAudit``
 - ``FlagDefaultComparison``
+- ``FlagRecordDiff``
+- ``FlagFieldDiff``
 - ``FlagMappingAuditError``
