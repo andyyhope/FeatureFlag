@@ -78,6 +78,25 @@ final class FlagRecordDiffTests: XCTestCase {
         XCTAssertEqual(fields.first { $0.field == "port" }?.incomingValue, .int(443))
     }
 
+    // MARK: - Reordering
+
+    func testAReorderedListSaysSoRatherThanDumpingTheBlob() throws {
+        // Same records, different order. The stored value differs, so it is a change —
+        // but no record was added, removed, or edited. It must not fall back to the two
+        // truncated JSON strings the structured diff exists to replace.
+        let audit = try audit("""
+            { "config": { "endpoints": [
+                { "name": "prod", "url": "https://prod.a", "weight": 3 },
+                { "name": "staging", "url": "https://staging.a", "weight": 1 }
+            ] } }
+            """)
+
+        XCTAssertEqual(try endpoints(audit).records, [], "no record changed, only order")
+        XCTAssertTrue(audit.changesDefault.contains("endpoints"), "order is a real change")
+        XCTAssertTrue(audit.defaultsDescription.contains("reordered"), audit.defaultsDescription)
+        XCTAssertFalse(audit.defaultsDescription.contains(#""url":"#), audit.defaultsDescription)
+    }
+
     // MARK: - Matching and non-record flags
 
     func testARecordListRestatedExactlyHasNoRecordChanges() throws {

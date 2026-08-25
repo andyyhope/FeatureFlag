@@ -313,7 +313,14 @@ public struct FlagDefaultComparison: Sendable, Equatable, CustomStringConvertibl
         if matchesDefault {
             return "\(key): \(incomingValue.shortMessageDescription) — matches the default"
         }
-        if let records, records.isEmpty == false {
+        if let records {
+            guard records.isEmpty == false else {
+                // A record flag that reaches here differs (it is not a match) yet no
+                // record was added, removed, or edited — the only thing left is order.
+                // Say that rather than dumping the two JSON strings the breakdown exists
+                // to replace.
+                return "\(key): records reordered"
+            }
             let body =
                 records
                 .map { diff in
