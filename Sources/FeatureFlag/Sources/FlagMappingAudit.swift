@@ -343,7 +343,7 @@ extension FlagRecordDiff {
             return "- \(identifier)"
         case let .changed(fields):
             let fieldLines = fields.map {
-                "    \($0.field) \($0.defaultValue.diffFieldDescription) → \($0.incomingValue.diffFieldDescription)"
+                "    \($0.field): \($0.defaultValue.diffFieldDescription) → \($0.incomingValue.diffFieldDescription)"
             }
             return (["~ \(identifier):"] + fieldLines).joined(separator: "\n")
         }
