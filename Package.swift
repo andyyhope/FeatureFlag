@@ -14,6 +14,8 @@ let package = Package(
     products: [
         .library(name: "FeatureFlag", targets: ["FeatureFlag"]),
         .library(name: "FeatureFlagUI", targets: ["FeatureFlagUI"]),
+        // Add to a test target only — it links XCTest, which an app must not.
+        .library(name: "FeatureFlagTestSupport", targets: ["FeatureFlagTestSupport"]),
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0" ..< "606.0.0"),
@@ -39,6 +41,10 @@ let package = Package(
             name: "FeatureFlagUI",
             dependencies: ["FeatureFlag"]
         ),
+        .target(
+            name: "FeatureFlagTestSupport",
+            dependencies: ["FeatureFlag"]
+        ),
         // Built but not shipped, so the example sources cannot silently rot. Only the
         // two @main entry points are excluded — those need real Xcode app targets.
         .target(
@@ -58,11 +64,11 @@ let package = Package(
         ),
         .testTarget(
             name: "DemoExamplesTests",
-            dependencies: ["DemoExamples", "FeatureFlag"]
+            dependencies: ["DemoExamples", "FeatureFlag", "FeatureFlagTestSupport"]
         ),
         .testTarget(
             name: "FeatureFlagTests",
-            dependencies: ["FeatureFlag"]
+            dependencies: ["FeatureFlag", "FeatureFlagTestSupport"]
         ),
         .testTarget(
             name: "FeatureFlagMacroTests",

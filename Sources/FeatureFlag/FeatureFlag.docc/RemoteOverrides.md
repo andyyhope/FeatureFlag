@@ -47,6 +47,12 @@ Paths index into arrays with a number, so `experiments.0.enabled` works:
 property: a flag only moves remotely if you said it could, so nothing your backend sends
 can reach a flag you did not opt in.
 
+### Checking a config before you trust it
+
+A large payload is worth auditing rather than eyeballing: `absentKeys` names a flag
+whose path matched nothing, but not a value in the file that no flag reads. See
+<doc:ValidatingAConfig> for both directions at once, from a test or a debug build.
+
 ### What a successful apply tells you
 
 ```swift

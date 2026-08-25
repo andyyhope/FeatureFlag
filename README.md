@@ -84,6 +84,8 @@ compiles to nothing rather than pretending. The core module supports all four.
 - **A companion app** sharing flags through an App Group, updating your app while it runs.
 - **Remote overrides** from JSON or PLIST, mapped from whatever shape your backend sends.
 - **Export and import** as JSON, PLIST, or a QR code.
+- **A mapping audit** that checks, without running the app, that a config file wires up
+  every flag — in both directions, so a path typo cannot hide.
 - **Combine** publishers per flag, and `ObservableObject` for SwiftUI.
 
 ## The idea that makes it work

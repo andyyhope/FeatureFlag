@@ -95,6 +95,8 @@ goes from an empty project to a flag you can toggle from a second app.
 - ``RemoteApplyResult``
 - ``RemoteOverrideProblem``
 - ``RemoteOverrideError``
+- <doc:ValidatingAConfig>
+- ``FlagMappingAudit``
 
 ### Sharing flags with a companion app
 
