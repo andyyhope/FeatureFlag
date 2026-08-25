@@ -88,6 +88,31 @@ try audit.requireComplete(strict: true, ignoring: ["meta"])  // throws the repor
 
 `requireComplete` also suits a one-off check at launch in a debug build.
 
+### Which values actually change something
+
+Alongside coverage, the audit compares every value the config supplies against the
+flag's compiled default — so a large file tells you what it really does, not just that
+it parses.
+
+```swift
+print(audit.defaultsDescription)
+// Default vs config:
+//   changes (2):
+//     • new-onboarding: false → true
+//     • tier: "free" → "pro"
+//   restated (2) — same as the default, could be omitted:
+//     • markets
+//     • page-size
+```
+
+`changesDefault` is the values that differ; `matchesDefault` is the ones the config
+restates and could drop. `defaults` carries the full per-flag comparison. None of it
+affects ``FlagMappingAudit/isComplete`` — restating a default, or changing it, is not a
+coverage problem, only something worth seeing.
+
+A whole number sent for a `Double` flag matches a `Double` default: JSON has one number
+type, so `3` and `3.0` are the same value, not a change.
+
 ### A record flag reads a whole subtree
 
 A record list's `remoteKey` names a subtree — `config.endpoints` — and every leaf
@@ -106,4 +131,5 @@ accurate, since those come from what the mapper actually produced.
 ### Auditing
 
 - ``FlagMappingAudit``
+- ``FlagDefaultComparison``
 - ``FlagMappingAuditError``
