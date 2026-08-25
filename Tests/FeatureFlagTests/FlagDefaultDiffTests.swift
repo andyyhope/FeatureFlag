@@ -72,6 +72,28 @@ final class FlagDefaultDiffTests: XCTestCase {
         XCTAssertEqual(audit.matchesDefault, ["ratio"])
     }
 
+    // MARK: - Records
+
+    func testARecordListRestatedExactlyMatchesItsDefault() throws {
+        let audit = try FlagMappingAudit(
+            RecordDiffFlags.self,
+            applying: Data(#"{"config":{"endpoints":[{"name":"a","url":"https://a.example"}]}}"#.utf8)
+        )
+
+        XCTAssertEqual(audit.matchesDefault, ["endpoints"])
+    }
+
+    func testRecordFieldOrderInTheConfigDoesNotCreateAFalseChange() throws {
+        // url before name — a different textual order than the default's boxing. Both
+        // canonicalise to sorted keys, so it is the same value, not a change.
+        let audit = try FlagMappingAudit(
+            RecordDiffFlags.self,
+            applying: Data(#"{"config":{"endpoints":[{"url":"https://a.example","name":"a"}]}}"#.utf8)
+        )
+
+        XCTAssertEqual(audit.changesDefault, [])
+    }
+
     // MARK: - Reporting
 
     func testTheDiffDescriptionShowsChangesAndMatches() throws {
@@ -96,6 +118,23 @@ final class FlagDefaultDiffTests: XCTestCase {
 }
 
 // MARK: - Fixtures
+
+@FlagRecord
+private struct Endpoint {
+    @FlagRecordKey var name: String
+    var url: URL
+}
+
+@FlagContainer
+private struct RecordDiffFlags {
+
+    @Flag(
+        default: [Endpoint(name: "a", url: URL(string: "https://a.example")!)],
+        description: "Endpoints",
+        remoteKey: "config.endpoints"
+    )
+    var endpoints: FlagRecords<Endpoint>
+}
 
 @FlagContainer
 private struct DiffFlags {
