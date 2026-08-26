@@ -41,6 +41,12 @@ public final class EnvironmentConfiguration<Environment> {
     private let local: (Environment) throws -> Data?
     private let remote: (Environment) async throws -> Data?
 
+    // A monotonic token so a slow load cannot apply over a newer one. Switching
+    // environments quickly, with a slow fetch, could otherwise leave the new
+    // environment showing the old one's values.
+    private let lock = NSLock()
+    private var epoch = 0
+
     /// Both layers in precedence order — remote first — to splice into a pole's stack.
     public var sources: [any FlagValueSource] { [remoteSource, localSource] }
 
@@ -99,20 +105,35 @@ public final class EnvironmentConfiguration<Environment> {
     /// says what happened to each, since one can succeed while the other does not.
     @discardableResult
     public func load(_ environment: Environment) async -> LoadOutcome {
-        let localOutcome = apply(to: localSource) { try self.local(environment) }
-        let remoteOutcome = await applyAsync(to: remoteSource) { try await self.remote(environment) }
+        lock.lock()
+        epoch += 1
+        let mine = epoch
+        lock.unlock()
+
+        let localOutcome = apply(to: localSource, epoch: mine) { try self.local(environment) }
+        let remoteOutcome = await applyAsync(to: remoteSource, epoch: mine) {
+            try await self.remote(environment)
+        }
         return LoadOutcome(local: localOutcome, remote: remoteOutcome)
+    }
+
+    /// Whether this load is still the most recent — nothing newer has started.
+    private func isCurrent(_ mine: Int) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return mine == epoch
     }
 
     // MARK: - Applying one layer
 
     private func apply(
         to source: RemoteOverrideSource,
+        epoch mine: Int,
         loading load: () throws -> Data?
     ) -> LayerOutcome {
         source.clear()
         do {
             guard let data = try load() else { return .absent }
+            guard isCurrent(mine) else { return .superseded }
             try source.apply(data, format: format)
             return .applied
         } catch {
@@ -122,11 +143,15 @@ public final class EnvironmentConfiguration<Environment> {
 
     private func applyAsync(
         to source: RemoteOverrideSource,
+        epoch mine: Int,
         loading load: () async throws -> Data?
     ) async -> LayerOutcome {
         source.clear()
         do {
             guard let data = try await load() else { return .absent }
+            // Re-checked after the await: a newer load may have started and now owns the
+            // source, so a stale result must not be written over it.
+            guard isCurrent(mine) else { return .superseded }
             try source.apply(data, format: format)
             return .applied
         } catch {
@@ -163,15 +188,20 @@ public enum LayerOutcome {
     /// The loader threw, or the config it returned was rejected. The layer is cleared.
     case failed(any Error)
 
+    /// A newer load started before this one finished, and now owns the layer, so this
+    /// result was dropped rather than written over it.
+    case superseded
+
     public var isApplied: Bool {
         if case .applied = self { return true }
         return false
     }
 
-    /// Not a failure: applied, or legitimately absent.
+    /// Not a failure: applied, legitimately absent, or dropped because a newer load
+    /// took over.
     public var isComplete: Bool {
         switch self {
-        case .applied, .absent: return true
+        case .applied, .absent, .superseded: return true
         case .failed: return false
         }
     }

@@ -132,6 +132,33 @@ final class EnvironmentConfigurationTests: XCTestCase {
         XCTAssertEqual(flags.pageSize, 10, "a failed fetch falls to defaults, not stale values")
     }
 
+    // MARK: - Overlapping loads
+
+    func testAStaleLoadDoesNotClobberANewerOne() async throws {
+        // Switch staging → production while staging's fetch is slow. Production must win,
+        // even though staging resolves last — otherwise an app on production would run
+        // staging's values, the very thing clearing-first exists to prevent.
+        let config = EnvironmentConfiguration(
+            EnvFlags.self,
+            local: { (_: Env) in nil },
+            remote: { (env: Env) in
+                if env == .staging { try? await Task.sleep(nanoseconds: 60_000_000) }
+                return Data(env == .staging ? #"{ "pageSize": 25 }"# .utf8 : #"{ "pageSize": 99 }"#.utf8)
+            }
+        )
+        let flags = pole(config)
+
+        async let stale: LoadOutcome = config.load(.staging)
+        try? await Task.sleep(nanoseconds: 10_000_000)   // let production start second
+        async let winner: LoadOutcome = config.load(.production)
+        let (staleOutcome, _) = await (stale, winner)
+
+        XCTAssertEqual(flags.pageSize, 99, "production won; staging's late fetch was dropped")
+        guard case .superseded = staleOutcome.remote else {
+            return XCTFail("stale load should report superseded, got \(staleOutcome.remote)")
+        }
+    }
+
     // MARK: - Malformed config
 
     func testAMalformedLayerIsReportedAndDoesNotApply() async throws {

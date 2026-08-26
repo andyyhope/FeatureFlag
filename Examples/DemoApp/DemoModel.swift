@@ -140,6 +140,9 @@ final class DemoModel: ObservableObject {
         case let .failed(error):
             appliedConfiguration = nil
             rejection = Self.describe(error)
+        case .superseded:
+            // A newer switch is already in flight; let it own the UI state.
+            return
         }
         objectWillChange.send()
     }
