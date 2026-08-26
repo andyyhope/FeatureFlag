@@ -41,7 +41,8 @@ struct ContentView: View {
             Text("Environment")
         } footer: {
             Text(
-                "Changing this fetches and applies that environment's payload. The flag "
+                "Changing this loads two layers for the environment: a config bundled "
+                    + "in the app, then one fetched for it, remote winning. The flag "
                     + "carries no remoteKey, so nothing a payload contains can change it "
                     + "back — otherwise the two would drive each other in a loop."
             )
@@ -117,8 +118,9 @@ struct ContentView: View {
         } footer: {
             Text(
                 "One field of the wrong type rejects the whole payload — the valid "
-                    + "applePay beside it is not applied either. Nothing runs on half a "
-                    + "configuration."
+                    + "applePay beside it is not applied either. Clearing the remote "
+                    + "layer falls back to the bundled local config, not to raw "
+                    + "defaults — watch the sources below change from Remote to Local."
             )
         }
     }
@@ -140,7 +142,11 @@ struct ContentView: View {
         } header: {
             Text("Where each value came from")
         } footer: {
-            Text("resolution(for:) — the answer to “why is this flag false?”")
+            Text(
+                "resolution(for:) — which layer each value came from. Highest first: a "
+                    + "by-hand override (Companion), the fetched Remote config, the "
+                    + "bundled Local config, then the compiled default."
+            )
         }
     }
 

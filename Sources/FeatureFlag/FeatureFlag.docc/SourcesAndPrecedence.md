@@ -84,6 +84,19 @@ rather than leaving an app labelled *staging* running the previous environment's
 ``EnvironmentConfiguration/load(_:)`` returns a ``LoadOutcome`` saying what happened to
 each layer, since one can succeed while the other does not.
 
+Drive it from the environment flag itself, so setting the environment to *staging* loads
+staging's two layers:
+
+```swift
+pole.flags.$environment.publisher
+    .removeDuplicates()
+    .sink { environment in Task { await config.load(environment) } }
+    .store(in: &cancellables)
+```
+
+Give that flag no `remoteKey`. A config could otherwise set the environment, which would
+mean the app should have loaded a different config — and loading *that* could set it back.
+
 The framework does no networking and reads no files: the two closures hand it the bytes,
 it decodes, validates against the schema, and layers them. Each layer is an ordinary
 ``RemoteOverrideSource``, so you can audit either with a ``FlagMappingAudit`` before you
