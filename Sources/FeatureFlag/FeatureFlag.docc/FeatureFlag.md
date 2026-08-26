@@ -76,6 +76,9 @@ goes from an empty project to a flag you can toggle from a second app.
 - ``MutableFlagValueSource``
 - ``UserDefaultsSource``
 - ``SnapshotSource``
+- ``EnvironmentConfiguration``
+- ``LoadOutcome``
+- ``LayerOutcome``
 - ``FlagResolution``
 - ``FlagError``
 

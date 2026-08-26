@@ -2,8 +2,9 @@ import Combine
 import FeatureFlag
 import Foundation
 
-/// Holds everything the demo screen needs: the pole, the remote source it feeds, and the
-/// Combine subscription that lets the environment flag drive which payload is applied.
+/// Holds everything the demo screen needs: the pole, the environment configuration that
+/// feeds its local and remote layers, and the Combine subscription that lets the
+/// environment flag drive which config is loaded.
 @MainActor
 final class DemoModel: ObservableObject {
 
@@ -24,27 +25,38 @@ final class DemoModel: ObservableObject {
     @Published private(set) var purgedCaches = 0
     @Published private(set) var awaitingRelaunch = false
 
-    private let remote: RemoteOverrideSource
+    private let config: EnvironmentConfiguration<DemoEnvironment>
     private let signals: FlagSignalChannel?
     private var signalSubscription: FlagSignalSubscription?
     private var cacheSignalSubscription: FlagSignalSubscription?
     private var cancellables: Set<AnyCancellable> = []
 
     init() {
-        let remote = RemoteOverrideSource(AppFlags.self, mapper: DemoRemoteMapper(), name: "Remote")
-        self.remote = remote
+        // The environment's two layers: a config bundled in the app, and one fetched for
+        // it. The framework does no networking or file reading — these closures hand it
+        // the bytes. `remote` is async because a real fetch would be.
+        let config = EnvironmentConfiguration(
+            AppFlags.self,
+            mapper: DemoRemoteMapper(),
+            localName: "Local",
+            remoteName: "Remote",
+            local: { environment in LocalConfiguration.forEnvironment(environment).data },
+            remote: { environment in RemoteConfiguration.forEnvironment(environment).data }
+        )
+        self.config = config
 
-        // Order is the precedence. Overrides sit above the backend, so a value set by
-        // hand for testing survives the next payload.
+        // Order is the precedence, highest first: a value set by hand in the companion
+        // beats the backend, which beats the bundled local config, which beats the
+        // compiled defaults. `config.sources` is [remote, local] in that order.
         var sources: [any FlagValueSource] = []
         if let shared = UserDefaultsSource(appGroup: demoAppGroup, name: "Companion") {
             sources.append(shared)
         } else {
             // Keeps the demo usable if the App Group is unavailable; the companion app
             // simply will not see anything.
-            sources.append(SnapshotSource(name: "Local"))
+            sources.append(SnapshotSource(name: "By hand"))
         }
-        sources.append(remote)
+        sources.append(contentsOf: config.sources)
 
         self.flags = FlagPole(AppFlags.self, sources: sources, applicationName: "Demo")
         self.signals = FlagSignalChannel(appGroup: demoAppGroup)
@@ -53,7 +65,9 @@ final class DemoModel: ObservableObject {
         // current value on subscribe, so this also performs the initial fetch.
         flags.flags.$environment.publisher
             .removeDuplicates()
-            .sink { [weak self] environment in self?.switchTo(environment) }
+            .sink { [weak self] environment in
+                Task { await self?.switchTo(environment) }
+            }
             .store(in: &cancellables)
 
         flags.flags.$newOnboarding.publisher
@@ -78,7 +92,7 @@ final class DemoModel: ObservableObject {
         lastSignal = signal.signalDescription
         switch signal {
         case .refetchRemoteConfiguration:
-            switchTo(flags.environment)
+            Task { await switchTo(flags.environment) }
         case .clearRemoteConfiguration:
             clearRemote()
         }
@@ -102,22 +116,35 @@ final class DemoModel: ObservableObject {
 
     // MARK: - Environment
 
-    /// Fetches and applies the payload for an environment.
-    ///
-    /// Two things here are the whole reason this is worth playing out.
+    /// Loads both layers for an environment: the bundled local config, then the fetched
+    /// remote one.
     ///
     /// The environment flag has no `remoteKey`. If it did, a staging payload could set
-    /// the environment to production, which would mean the app should have fetched a
-    /// different payload — and applying *that* could set it back. Nothing in the
-    /// framework stops you wiring that loop; leaving the key off is what prevents it.
+    /// the environment to production, which would mean the app should have loaded a
+    /// different config — and loading *that* could set it back. Nothing in the framework
+    /// stops you wiring that loop; leaving the key off is what prevents it.
     ///
-    /// The old environment's values are cleared before the new ones are applied. That
-    /// leaves a brief window on compiled defaults, which is deliberate: if the fetch
-    /// fails, an app labelled "staging" running yesterday's production values is worse
-    /// than one running its own defaults, because nothing about it looks wrong.
-    func switchTo(_ environment: DemoEnvironment) {
-        remote.clear()
-        apply(.forEnvironment(environment))
+    /// The coordinator clears each layer before loading it, so a failed fetch falls back
+    /// to the local config, then the compiled defaults — never to the previous
+    /// environment's values, which on an app labelled "staging" would look wrong to no
+    /// one.
+    func switchTo(_ environment: DemoEnvironment) async {
+        let outcome = await config.load(environment)
+        switch outcome.remote {
+        case .applied:
+            appliedConfiguration = .forEnvironment(environment)
+            rejection = nil
+        case .absent:
+            appliedConfiguration = nil
+            rejection = nil
+        case let .failed(error):
+            appliedConfiguration = nil
+            rejection = Self.describe(error)
+        case .superseded:
+            // A newer switch is already in flight; let it own the UI state.
+            return
+        }
+        objectWillChange.send()
     }
 
     var environment: DemoEnvironment {
@@ -130,7 +157,7 @@ final class DemoModel: ObservableObject {
     /// Stands in for "your app downloaded a config and handed over the bytes".
     func apply(_ configuration: RemoteConfiguration) {
         do {
-            try remote.apply(configuration.data, format: .json)
+            try config.remoteSource.apply(configuration.data, format: .json)
             appliedConfiguration = configuration
             rejection = nil
         } catch {
@@ -140,8 +167,10 @@ final class DemoModel: ObservableObject {
         objectWillChange.send()
     }
 
+    /// Clears just the remote layer, leaving the bundled local config showing through —
+    /// which is the local layer earning its place, rather than falling to raw defaults.
     func clearRemote() {
-        remote.clear()
+        config.remoteSource.clear()
         appliedConfiguration = nil
         rejection = nil
         objectWillChange.send()
