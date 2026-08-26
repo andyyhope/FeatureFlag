@@ -55,6 +55,40 @@ flags.checkout.applePay     // true
 ``RemoteOverrideSource`` holds whatever the last backend payload said. It has its own
 article: [Remote overrides](doc:RemoteOverrides).
 
+### Layering a config per environment
+
+An app that talks to more than one backend usually wants two config layers for the
+environment it is in: one bundled with the build, and one fetched. ``EnvironmentConfiguration``
+holds both and keeps them in step with the environment you switch to.
+
+```swift
+let config = EnvironmentConfiguration(
+    AppFlags.self,
+    local:  { env in Bundle.main.data(named: "\(env).json") },   // ships with the app
+    remote: { env in try await api.fetchConfig(for: env) }       // fetched, async
+)
+
+let pole = FlagPole(AppFlags.self, sources: [byHand] + config.sources)
+
+// when the environment flag changes:
+await config.load(.staging)   // local staging.json, then remote staging.json
+```
+
+Precedence within the pair is **remote over local**, and ``EnvironmentConfiguration/sources``
+returns them in that order — so the full stack, highest first, is a by-hand override, the
+fetched config, the bundled config, then the compiled defaults.
+
+Loading an environment clears each layer before it loads it, so a fetch that fails or
+returns nothing falls back to the layer beneath — the bundled config, then the defaults —
+rather than leaving an app labelled *staging* running the previous environment's values.
+``EnvironmentConfiguration/load(_:)`` returns a ``LoadOutcome`` saying what happened to
+each layer, since one can succeed while the other does not.
+
+The framework does no networking and reads no files: the two closures hand it the bytes,
+it decodes, validates against the schema, and layers them. Each layer is an ordinary
+``RemoteOverrideSource``, so you can audit either with a ``FlagMappingAudit`` before you
+trust it.
+
 ### Setting and clearing overrides
 
 Writes go to the highest-priority source that accepts them — the first

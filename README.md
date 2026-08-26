@@ -83,6 +83,9 @@ compiles to nothing rather than pretending. The core module supports all four.
   a switch, repeated — with a field-by-field editor in the companion app.
 - **A companion app** sharing flags through an App Group, updating your app while it runs.
 - **Remote overrides** from JSON or PLIST, mapped from whatever shape your backend sends.
+- **Environment layering.** `EnvironmentConfiguration` keeps a bundled local config and a
+  fetched remote one in step with the environment you switch to — remote over local over
+  the compiled defaults.
 - **Export and import** as JSON, PLIST, or a QR code.
 - **A mapping audit** that checks, without running the app, that a config file wires up
   every flag — in both directions, so a path typo cannot hide.

@@ -17,6 +17,7 @@
 		93B42FB8C8BBBED1D06C81DF /* FeatureFlag in Frameworks */ = {isa = PBXBuildFile; productRef = AA84288416DAAC6B17DA4992 /* FeatureFlag */; };
 		9990D6C8791C6AA84AC9EC9A /* DemoModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E86E5759BB3B6D0FEF375 /* DemoModel.swift */; };
 		A7A0B60AFCD53DDB44006B4F /* DemoRemoteMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4A92A4F78E305DCB9DB97D /* DemoRemoteMapper.swift */; };
+		B138C0F14E953F6F33AC75CD /* LocalConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A9FC634815B5DB7CF973DBF /* LocalConfiguration.swift */; };
 		DFE8C6996D398545270E9E42 /* DemoCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB5A86BF1272ADC4BDFC2B66 /* DemoCompanionApp.swift */; };
 		EAE70026F056D16CB1487BAD /* AppSignals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978F72F38B94A4CCA5F8AB32 /* AppSignals.swift */; };
 		F888D70DD87EF0914605A0B6 /* FeatureFlagUI in Frameworks */ = {isa = PBXBuildFile; productRef = BBD75572CDFFA4FD7BC97E6B /* FeatureFlagUI */; };
@@ -27,6 +28,7 @@
 		246EC28FE443BD7DBD7DCC89 /* DemoCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DemoCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		418E3598E2BAE7BDB15B49B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		485880915FD9905E1B3DD6DA /* feature-flags */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "feature-flags"; path = ..; sourceTree = SOURCE_ROOT; };
+		6A9FC634815B5DB7CF973DBF /* LocalConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalConfiguration.swift; sourceTree = "<group>"; };
 		6E5019F70F2E43DCBC32792D /* DemoApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DemoApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8075F24C2370323626E7A218 /* DemoCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DemoCompanion.entitlements; sourceTree = "<group>"; };
 		978F72F38B94A4CCA5F8AB32 /* AppSignals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSignals.swift; sourceTree = "<group>"; };
@@ -107,6 +109,7 @@
 				B040F4A907056358E2970A06 /* DemoApp.swift */,
 				AC2E86E5759BB3B6D0FEF375 /* DemoModel.swift */,
 				FC4A92A4F78E305DCB9DB97D /* DemoRemoteMapper.swift */,
+				6A9FC634815B5DB7CF973DBF /* LocalConfiguration.swift */,
 				C0F30C3CE0080624FAE3B965 /* RemoteConfigurations.swift */,
 			);
 			path = DemoApp;
@@ -215,6 +218,7 @@
 				48805EB7DED827669C2B2632 /* DemoApp.swift in Sources */,
 				9990D6C8791C6AA84AC9EC9A /* DemoModel.swift in Sources */,
 				A7A0B60AFCD53DDB44006B4F /* DemoRemoteMapper.swift in Sources */,
+				B138C0F14E953F6F33AC75CD /* LocalConfiguration.swift in Sources */,
 				749E4A731FCEC5665DF0E72C /* RemoteConfigurations.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
