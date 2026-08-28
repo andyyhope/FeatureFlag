@@ -39,7 +39,9 @@ public final class EnvironmentConfiguration<Environment> {
 
     private let format: FlagPayloadFormat
     private let local: (Environment) throws -> Data?
-    private let remote: (Environment) async throws -> Data?
+    // A var so it can be rebound after the pole exists — see ``fetchRemote(_:)``.
+    // Guarded by `lock`, alongside `epoch`.
+    private var remote: (Environment) async throws -> Data?
 
     // A monotonic token so a slow load cannot apply over a newer one. Switching
     // environments quickly, with a slow fetch, could otherwise leave the new
@@ -59,7 +61,9 @@ public final class EnvironmentConfiguration<Environment> {
     ///   - local: The bytes of the local config for an environment, or `nil` when there
     ///     is none. Runs synchronously — it reads something already on the device.
     ///   - remote: The bytes of the remote config for an environment, or `nil` when there
-    ///     is none. Runs `async` — this is your fetch.
+    ///     is none. Runs `async` — this is your fetch. Omit it and set ``fetchRemote(_:)``
+    ///     later when the fetch depends on a flag the local layer carries, since the pole
+    ///     that resolves it does not exist yet at construction.
     public init(
         schema: FlagSchema,
         format: FlagPayloadFormat = .json,
@@ -67,7 +71,7 @@ public final class EnvironmentConfiguration<Environment> {
         localName: String = "Local",
         remoteName: String = "Remote",
         local: @escaping (Environment) throws -> Data?,
-        remote: @escaping (Environment) async throws -> Data?
+        remote: @escaping (Environment) async throws -> Data? = { _ in nil }
     ) {
         self.localSource = RemoteOverrideSource(schema: schema, mapper: mapper, name: localName)
         self.remoteSource = RemoteOverrideSource(schema: schema, mapper: mapper, name: remoteName)
@@ -85,7 +89,7 @@ public final class EnvironmentConfiguration<Environment> {
         localName: String = "Local",
         remoteName: String = "Remote",
         local: @escaping (Environment) throws -> Data?,
-        remote: @escaping (Environment) async throws -> Data?
+        remote: @escaping (Environment) async throws -> Data? = { _ in nil }
     ) {
         self.init(
             schema: FlagSchema(Root.self, keyEncoding: keyEncoding),
@@ -108,13 +112,33 @@ public final class EnvironmentConfiguration<Environment> {
         lock.lock()
         epoch += 1
         let mine = epoch
+        let remote = self.remote
         lock.unlock()
 
         let localOutcome = apply(to: localSource, epoch: mine) { try self.local(environment) }
         let remoteOutcome = await applyAsync(to: remoteSource, epoch: mine) {
-            try await self.remote(environment)
+            try await remote(environment)
         }
         return LoadOutcome(local: localOutcome, remote: remoteOutcome)
+    }
+
+    /// Supplies the remote layer's bytes, replacing any loader given at init.
+    ///
+    /// Set this after the pole exists when the fetch depends on a flag the local layer
+    /// carries — the endpoint to fetch from, say. Capture the pole and read it in the
+    /// closure: ``load(_:)`` applies the local layer before the loader runs, so a value
+    /// it, or a layer above it, supplies is already resolvable.
+    ///
+    /// ```swift
+    /// let pole = FlagPole(AppFlags.self, sources: [companion] + config.sources)
+    /// config.fetchRemote { [pole] env in
+    ///     try await api.fetch(pole.flags.checkout.remoteURL)   // resolved after local lands
+    /// }
+    /// ```
+    public func fetchRemote(_ load: @escaping (Environment) async throws -> Data?) {
+        lock.lock()
+        remote = load
+        lock.unlock()
     }
 
     /// Whether this load is still the most recent — nothing newer has started.

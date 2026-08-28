@@ -102,6 +102,37 @@ it decodes, validates against the schema, and layers them. Each layer is an ordi
 ``RemoteOverrideSource``, so you can audit either with a ``FlagMappingAudit`` before you
 trust it.
 
+#### When the fetch depends on a flag the local layer carries
+
+Sometimes the remote config's URL is itself a flag — one the bundled local config sets, so
+the app knows where to fetch from only after the local layer is applied. The timing already
+works: ``EnvironmentConfiguration/load(_:)`` applies the local layer in full before it runs
+the remote loader. What is missing at construction is the pole — it does not exist until you
+splice in ``EnvironmentConfiguration/sources``, so the loader you pass to `init` cannot read
+a resolved flag.
+
+Set the loader afterwards with ``EnvironmentConfiguration/fetchRemote(_:)``, capturing the
+pole:
+
+```swift
+let config = EnvironmentConfiguration(
+    AppFlags.self,
+    local: { env in Bundle.main.data(named: "\(env).json") }   // carries checkout.remoteURL
+)
+let pole = FlagPole(AppFlags.self, sources: [byHand] + config.sources)
+
+config.fetchRemote { [pole] env in
+    let url = pole.flags.checkout.remoteURL   // resolved: by-hand ▸ (remote cleared) ▸ local ▸ default
+    return try await api.fetch(url)
+}
+```
+
+Because the loader resolves the flag through the whole pole, a by-hand override of the URL
+wins over the bundled value — so you can point a *staging* build at a different config server
+from the companion without touching the build. And because switching environments clears the
+remote layer before fetching, the URL the loader reads is never the previous fetch's own
+value.
+
 ### Setting and clearing overrides
 
 Writes go to the highest-priority source that accepts them — the first

@@ -176,6 +176,68 @@ final class EnvironmentConfigurationTests: XCTestCase {
         }
         XCTAssertEqual(flags.pageSize, 10)
     }
+
+    // MARK: - A remote loader that depends on the local layer
+
+    func testALateBoundRemoteLoaderRunsAfterLocalIsApplied() async throws {
+        // The real motivation: the URL the remote layer is fetched from lives in the
+        // local config. The loader must see the local value, so local has to be applied
+        // before it runs.
+        let config = EnvironmentConfiguration(
+            EnvFlags.self,
+            local: { (_: Env) in Data(#"{ "label": "from-local" }"#.utf8) }
+        )
+        let flags = pole(config)
+
+        var seenLabel: String?
+        config.fetchRemote { [flags] (_: Env) in
+            seenLabel = flags.label
+            return Data(#"{ "pageSize": 25 }"#.utf8)
+        }
+
+        let outcome = await config.load(.staging)
+
+        XCTAssertEqual(seenLabel, "from-local", "the loader runs after the local layer is applied")
+        XCTAssertTrue(outcome.remote.isApplied)
+        XCTAssertEqual(flags.pageSize, 25, "the bytes the loader returned were applied")
+    }
+
+    func testALateBoundRemoteLoaderResolvesThroughLayersAboveLocal() async throws {
+        // A by-hand override of the URL flag, above both config layers, must win — the
+        // loader resolves through the whole pole, not just the local layer.
+        let companion = SnapshotSource(name: "By hand")
+        let config = EnvironmentConfiguration(
+            EnvFlags.self,
+            local: { (_: Env) in Data(#"{ "label": "from-local" }"#.utf8) }
+        )
+        let flags = FlagPole(EnvFlags.self, sources: [companion] + config.sources)
+        try flags.setOverride("from-companion", for: flags.flags.$label)
+
+        var seenLabel: String?
+        config.fetchRemote { [flags] (_: Env) in
+            seenLabel = flags.label
+            return nil
+        }
+
+        _ = await config.load(.staging)
+
+        XCTAssertEqual(seenLabel, "from-companion", "resolution walks the whole stack")
+    }
+
+    func testWithNoRemoteLoaderTheRemoteLayerIsAbsent() async throws {
+        let config = EnvironmentConfiguration(
+            EnvFlags.self,
+            local: { (_: Env) in Data(#"{ "label": "local" }"#.utf8) }
+        )
+        let flags = pole(config)
+
+        let outcome = await config.load(.staging)
+
+        guard case .absent = outcome.remote else {
+            return XCTFail("expected the remote layer absent, got \(outcome.remote)")
+        }
+        XCTAssertEqual(flags.label, "local")
+    }
 }
 
 // MARK: - Fixtures
