@@ -86,10 +86,14 @@ extension FlagRecordMacro: MemberMacro {
         access: String
     ) -> DeclSyntax {
         let entries = fields.map { field in
-            // Cast the way `@Flag` casts a default, so the expression always compiles
-            // given the annotation the field is required to carry anyway.
+            // An optional field has no decode fallback: absence is nil, not a default.
+            // A required field casts the way `@Flag` casts a default, so the expression
+            // always compiles given the annotation the field carries anyway.
             let fallback =
-                field.defaultValue.map { "(\($0) as \(field.type)).box" } ?? "nil"
+                field.isOptional
+                ? "nil"
+                : (field.defaultValue.map { "(\($0) as \(field.type)).box" } ?? "nil")
+            let decodedName = field.decodedName.map { "\"\($0)\"" } ?? "nil"
 
             return """
                 FeatureFlag.FlagRecordField(
@@ -98,7 +102,9 @@ extension FlagRecordMacro: MemberMacro {
                     cases: FeatureFlag._flagValueCases(of: \(field.type).self),
                     defaultValue: \(fallback),
                     fields: FeatureFlag._flagRecordShape(of: \(field.type).self),
-                    isKey: \(field.name == key)
+                    isKey: \(field.name == key),
+                    isOptional: \(field.isOptional),
+                    decodedName: \(decodedName)
                 )
                 """
         }
@@ -113,13 +119,22 @@ extension FlagRecordMacro: MemberMacro {
     }
 
     private static func boxes(for fields: [RecordField], access: String) -> DeclSyntax {
-        let entries = fields.map { "\"\($0.name)\": \($0.name).box" }
+        // Built up rather than a dictionary literal so a nil optional field can be left
+        // out entirely — there is no null to store, and an absent key reads back as nil.
+        // Fields are read through `self` so a field named `boxes` cannot shadow the
+        // accumulator, and an optional binds to a fixed `value` for the same reason.
+        let entries = fields.map { field -> String in
+            if field.isOptional {
+                return "if let value = self.\(field.name) { boxes[\"\(field.name)\"] = value.box }"
+            }
+            return "boxes[\"\(field.name)\"] = self.\(field.name).box"
+        }
 
         return """
             \(raw: access)var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                [
-            \(raw: indented(entries.joined(separator: ",\n"), by: 8))
-                ]
+                var boxes = [String: FeatureFlag.FlagValueBox]()
+            \(raw: indented(entries.joined(separator: "\n"), by: 4))
+                return boxes
             }
             """
     }
@@ -132,20 +147,30 @@ extension FlagRecordMacro: MemberMacro {
         // guard, and fail as an error pointing into code nobody wrote. The only name
         // that can collide now is one that already collides with the generated
         // property of the same name.
-        let bindings = fields.map { field in
+        let required = fields.filter { $0.isOptional == false }
+        let optional = fields.filter(\.isOptional)
+
+        func binding(_ field: RecordField) -> String {
             """
             let \(field.name) = flagRecordBoxes["\(field.name)"]\
             .flatMap(\(field.type).init(box:))
             """
         }
-        let assignments = fields.map { "self.\($0.name) = \($0.name)" }
+
+        // Required fields go in one guard — a record is all of them or none. An optional
+        // field binds outside it: an absent one reads back as nil, which is no failure.
+        var body = [String]()
+        if required.isEmpty == false {
+            body.append("guard \(required.map(binding).joined(separator: ",\n      ")) else {")
+            body.append("    return nil")
+            body.append("}")
+        }
+        body.append(contentsOf: optional.map(binding))
+        body.append(contentsOf: fields.map { "self.\($0.name) = \($0.name)" })
 
         return """
             \(raw: access)init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
-                guard \(raw: bindings.joined(separator: ",\n          ")) else {
-                    return nil
-                }
-            \(raw: indented(assignments.joined(separator: "\n"), by: 4))
+            \(raw: indented(body.joined(separator: "\n"), by: 4))
             }
             """
     }
@@ -235,10 +260,22 @@ extension FlagRecordMacro: ExtensionMacro {
 /// One stored property of a record.
 struct RecordField {
     let name: String
+
+    /// The field's type. For an optional field this is the wrapped type — the type the
+    /// value boxes and validates as, since absence is what carries the nil.
     let type: String
 
     /// Whether the field carries `@FlagRecordKey`.
     let isKey: Bool
+
+    /// Whether the field is declared optional (`T?`). An optional field a payload omits
+    /// or sends as `null` decodes to nil rather than failing the record, and nil is left
+    /// out of the stored form.
+    let isOptional: Bool
+
+    /// The key to read the field from a payload, from `@FlagRecordProperty(key:)`, or
+    /// `nil` to read by the property name. Decode-only.
+    let decodedName: String?
 
     /// The expression it was written with, if any. `var weight: Int = 1` has one;
     /// `var name: String` does not.
@@ -285,22 +322,62 @@ extension FlagRecordMacro {
                 return nil
             }
 
-            guard type.isOptional == false else {
+            let isOptional = type.isOptional
+            // An optional field boxes and validates as its wrapped type; the shape
+            // describes that underlying type, and absence carries the nil.
+            let baseType =
+                isOptional
+                ? (type.optionalWrappedName ?? type.trimmedDescription.strippingOptionalWrapper)
+                : type.trimmedDescription
+
+            let isKey = variable.attributes.contains { attribute in
+                attribute.as(AttributeSyntax.self)?.identifier == "FlagRecordKey"
+            }
+
+            // The key is what tells one record from another, so it has to be there in
+            // every record — an optional key could be absent, leaving one unidentifiable.
+            if isKey, isOptional {
                 diagnose(
-                    Diagnostic(node: variable, message: FlagRecordDiagnostic.optionalUnsupported)
+                    Diagnostic(node: variable, message: FlagRecordDiagnostic.keyCannotBeOptional)
                 )
-                return nil
             }
 
             return RecordField(
                 name: name,
-                type: type.trimmedDescription,
-                isKey: variable.attributes.contains { attribute in
-                    attribute.as(AttributeSyntax.self)?.identifier == "FlagRecordKey"
-                },
+                type: baseType,
+                isKey: isKey,
+                isOptional: isOptional,
+                decodedName: variable.attributes.recordPropertyKey,
                 defaultValue: binding.initializer?.value.trimmedDescription
             )
         }
+    }
+}
+
+extension AttributeListSyntax {
+
+    /// The `key:` of `@FlagRecordProperty(key:)` on this field, or `nil` when it has none
+    /// — or the argument is not a plain string literal.
+    var recordPropertyKey: String? {
+        for attribute in self {
+            guard let attribute = attribute.as(AttributeSyntax.self),
+                attribute.identifier == "FlagRecordProperty",
+                let expression = attribute.argument(labelled: "key"),
+                let literal = expression.as(StringLiteralExprSyntax.self)
+            else { continue }
+            return literal.representedLiteralValue
+        }
+        return nil
+    }
+}
+
+extension String {
+
+    /// `Optional<T>` written out as `T`, for the one optional spelling the syntax tree
+    /// does not expose a wrapped type for. Any other string is returned unchanged.
+    var strippingOptionalWrapper: String {
+        guard hasPrefix("Optional<"), hasSuffix(">") else { return self }
+        return String(dropFirst("Optional<".count).dropLast())
     }
 }
 
@@ -324,7 +401,7 @@ enum FlagRecordDiagnostic: DiagnosticMessage {
     case structsOnly
     case fieldsRequired
     case typeAnnotationRequired
-    case optionalUnsupported
+    case keyCannotBeOptional
     case oneFieldPerLine
     case oneKeyOnly([String])
 
@@ -339,11 +416,10 @@ enum FlagRecordDiagnostic: DiagnosticMessage {
                 """
         case .typeAnnotationRequired:
             return "record fields need an explicit type annotation, for example 'var name: String'"
-        case .optionalUnsupported:
+        case .keyCannotBeOptional:
             return """
-                record fields cannot be optional: a field is either part of the shape or \
-                it is not. Use a sentinel the type already has, or an enum with a case \
-                for 'unset'
+                a record's key cannot be optional: it is the field that tells one record \
+                from another, so every record has to carry it
                 """
         case .oneFieldPerLine:
             return """
@@ -366,7 +442,7 @@ enum FlagRecordDiagnostic: DiagnosticMessage {
         case .structsOnly: return "structsOnly"
         case .fieldsRequired: return "fieldsRequired"
         case .typeAnnotationRequired: return "typeAnnotationRequired"
-        case .optionalUnsupported: return "optionalUnsupported"
+        case .keyCannotBeOptional: return "keyCannotBeOptional"
         case .oneFieldPerLine: return "oneFieldPerLine"
         case .oneKeyOnly: return "oneKeyOnly"
         }

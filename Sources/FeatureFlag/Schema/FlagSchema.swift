@@ -383,6 +383,11 @@ extension FlagRecordField {
         object["default"] = defaultValue?.jsonValue
         object["fields"] = fields?.map(\.jsonObject)
         if isKey { object["isKey"] = true }
+        // Only written when set, so a shape with neither reads the same as one from
+        // before these existed — the companion needs isOptional to let a field be
+        // cleared; decodedName rides along to keep the shape faithful.
+        if isOptional { object["isOptional"] = true }
+        if let decodedName { object["decodedName"] = decodedName }
         return object
     }
 
@@ -405,6 +410,8 @@ extension FlagRecordField {
             FlagRecordField.init(jsonObject:)
         )
         self.isKey = object["isKey"] as? Bool ?? false
+        self.isOptional = object["isOptional"] as? Bool ?? false
+        self.decodedName = object["decodedName"] as? String
     }
 }
 

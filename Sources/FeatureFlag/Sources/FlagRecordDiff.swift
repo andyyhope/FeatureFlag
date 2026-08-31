@@ -23,8 +23,12 @@ public struct FlagRecordDiff: Sendable, Equatable {
 public struct FlagFieldDiff: Sendable, Equatable {
 
     public let field: String
-    public let defaultValue: FlagValueBox
-    public let incomingValue: FlagValueBox
+
+    /// The value in the default, or `nil` when an optional field was unset there.
+    public let defaultValue: FlagValueBox?
+
+    /// The value in the config, or `nil` when an optional field is unset there.
+    public let incomingValue: FlagValueBox?
 }
 
 extension FlagRecordDiff {
@@ -117,7 +121,10 @@ extension FlagRecordDiff {
         shape.compactMap { field in
             let a = base[field.name]
             let b = incoming[field.name]
-            guard a != b, let a, let b else { return nil }
+            // A missing key is an optional field left unset. nil on one side and a value
+            // on the other is a change worth showing, so the guard is on inequality
+            // alone — not on both being present, which dropped exactly that case.
+            guard a != b else { return nil }
             return FlagFieldDiff(field: field.name, defaultValue: a, incomingValue: b)
         }
     }

@@ -122,3 +122,26 @@ public macro FlagRecord() =
 @attached(peer)
 public macro FlagRecordKey() =
     #externalMacro(module: "FeatureFlagMacros", type: "FlagRecordKeyMacro")
+
+/// Customises how a record field is read from a payload.
+///
+/// ```swift
+/// @FlagRecord
+/// struct PaymentMethod {
+///     @FlagRecordKey var name: String
+///     @FlagRecordProperty(key: "apple_pay") var applePay: Bool
+///     var minimumSpend: Double?
+/// }
+/// ```
+///
+/// - Parameter key: the name to read the field from when decoding a remote payload,
+///   for a backend whose JSON key is not the Swift property name.
+///
+/// It is **decode-only**: the key applies when reading a backend payload, not to the
+/// record's own stored form, which stays keyed by the property name. A field left
+/// without it is read by its property name, as before.
+///
+/// This expands to nothing on its own — ``FlagRecord()`` reads it for metadata.
+@attached(peer)
+public macro FlagRecordProperty(key: String) =
+    #externalMacro(module: "FeatureFlagMacros", type: "FlagRecordPropertyMacro")

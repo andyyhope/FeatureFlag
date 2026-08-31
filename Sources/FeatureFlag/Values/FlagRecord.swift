@@ -27,6 +27,16 @@ public struct FlagRecordField: Hashable, Sendable {
     /// another. At most one field in a shape carries it.
     public let isKey: Bool
 
+    /// Whether the field may be absent. An optional field a payload omits, or sends as
+    /// `null`, decodes to `nil` rather than failing the record, and a `nil` value is
+    /// left out of the stored form rather than written as anything.
+    public let isOptional: Bool
+
+    /// The name to read the field from in a payload, when a backend's key is not the
+    /// property name. `nil` — read by ``name``. Applies to decoding only; the stored
+    /// form is always keyed by ``name``.
+    public let decodedName: String?
+
     /// The fields of each record, when this field is itself a ``FlagRecords`` list.
     ///
     /// A nested list is a string like any other record list, so without this an editor
@@ -39,7 +49,9 @@ public struct FlagRecordField: Hashable, Sendable {
         cases: [FlagValueBox]? = nil,
         defaultValue: FlagValueBox? = nil,
         fields: [FlagRecordField]? = nil,
-        isKey: Bool = false
+        isKey: Bool = false,
+        isOptional: Bool = false,
+        decodedName: String? = nil
     ) {
         self.name = name
         self.type = type
@@ -47,7 +59,13 @@ public struct FlagRecordField: Hashable, Sendable {
         self.defaultValue = defaultValue
         self.fields = fields
         self.isKey = isKey
+        self.isOptional = isOptional
+        self.decodedName = decodedName
     }
+
+    /// The key to read this field from in a payload: the custom one if it has it, else
+    /// the property name.
+    public var payloadName: String { decodedName ?? name }
 }
 
 /// A fixed shape a flag can hold a list of.
@@ -182,18 +200,21 @@ extension FlagValueBox {
         for object in objects {
             var boxes = [String: FlagValueBox](minimumCapacity: shape.count)
             for field in shape {
-                // Absent is a migration — a record written before the field existed —
-                // and its declared default is the honest thing to put there. Present
-                // but wrong is not: overwriting it would be guessing, and would hide a
-                // stored value that genuinely disagrees with this build.
-                guard let value = object[field.name] else {
+                let raw = object[field.name]
+                // Absent, or an explicit null. An optional field takes nil and is left
+                // out. For a required field, absent is a migration — a record written
+                // before the field existed — and its declared default is the honest
+                // thing to put there, or the record cannot be rebuilt.
+                if raw == nil || (raw as? NSNull) != nil {
+                    if field.isOptional { continue }
                     guard let fallback = field.defaultValue else { return nil }
                     boxes[field.name] = fallback
                     continue
                 }
-                guard let box = FlagValueBox(jsonValue: value, as: field.type) else {
-                    return nil
-                }
+                // Present but wrong is not a migration: overwriting it would be
+                // guessing, and would hide a stored value that disagrees with this build.
+                guard let value = raw, let box = FlagValueBox(jsonValue: value, as: field.type)
+                else { return nil }
                 boxes[field.name] = box
             }
             records.append(boxes)

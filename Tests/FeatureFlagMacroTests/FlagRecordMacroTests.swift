@@ -35,7 +35,9 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
                                 fields: FeatureFlag._flagRecordShape(of: String.self),
-                                isKey: false
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
                             ),
                             FeatureFlag.FlagRecordField(
                                 name: "enabled",
@@ -43,16 +45,18 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: Bool.self),
                                 defaultValue: nil,
                                 fields: FeatureFlag._flagRecordShape(of: Bool.self),
-                                isKey: false
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
                             )
                         ]
                     }
 
                     var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                        [
-                            "name": name.box,
-                            "enabled": enabled.box
-                        ]
+                        var boxes = [String: FeatureFlag.FlagValueBox]()
+                        boxes["name"] = self.name.box
+                        boxes["enabled"] = self.enabled.box
+                        return boxes
                     }
                 }
 
@@ -111,15 +115,17 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
                                 fields: FeatureFlag._flagRecordShape(of: String.self),
-                                isKey: false
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
                             )
                         ]
                     }
 
                     public var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                        [
-                            "name": name.box
-                        ]
+                        var boxes = [String: FeatureFlag.FlagValueBox]()
+                        boxes["name"] = self.name.box
+                        return boxes
                     }
                 }
 
@@ -177,15 +183,17 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: Int.self),
                                 defaultValue: (1 as Int).box,
                                 fields: FeatureFlag._flagRecordShape(of: Int.self),
-                                isKey: false
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
                             )
                         ]
                     }
 
                     var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                        [
-                            "weight": weight.box
-                        ]
+                        var boxes = [String: FeatureFlag.FlagValueBox]()
+                        boxes["weight"] = self.weight.box
+                        return boxes
                     }
                 }
 
@@ -241,15 +249,17 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
                                 fields: FeatureFlag._flagRecordShape(of: String.self),
-                                isKey: true
+                                isKey: true,
+                                isOptional: false,
+                                decodedName: nil
                             )
                         ]
                     }
 
                     var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                        [
-                            "name": name.box
-                        ]
+                        var boxes = [String: FeatureFlag.FlagValueBox]()
+                        boxes["name"] = self.name.box
+                        return boxes
                     }
 
                     static var flagRecordKey: String? {
@@ -311,7 +321,9 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
                                 fields: FeatureFlag._flagRecordShape(of: String.self),
-                                isKey: false
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
                             ),
                             FeatureFlag.FlagRecordField(
                                 name: "region",
@@ -319,16 +331,18 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
                                 fields: FeatureFlag._flagRecordShape(of: String.self),
-                                isKey: false
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
                             )
                         ]
                     }
 
                     var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                        [
-                            "name": name.box,
-                            "region": region.box
-                        ]
+                        var boxes = [String: FeatureFlag.FlagValueBox]()
+                        boxes["name"] = self.name.box
+                        boxes["region"] = self.region.box
+                        return boxes
                     }
                 }
 
@@ -399,15 +413,17 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
                                 fields: FeatureFlag._flagRecordShape(of: String.self),
-                                isKey: false
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
                             )
                         ]
                     }
 
                     var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                        [
-                            "name": name.box
-                        ]
+                        var boxes = [String: FeatureFlag.FlagValueBox]()
+                        boxes["name"] = self.name.box
+                        return boxes
                     }
                 }
 
@@ -467,15 +483,17 @@ final class FlagRecordMacroTests: XCTestCase {
                                 cases: FeatureFlag._flagValueCases(of: String.self),
                                 defaultValue: nil,
                                 fields: FeatureFlag._flagRecordShape(of: String.self),
-                                isKey: false
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
                             )
                         ]
                     }
 
                     var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                        [
-                            "name": name.box
-                        ]
+                        var boxes = [String: FeatureFlag.FlagValueBox]()
+                        boxes["name"] = self.name.box
+                        return boxes
                     }
                 }
 
@@ -635,39 +653,100 @@ final class FlagRecordMacroTests: XCTestCase {
         )
     }
 
-    func testAnOptionalFieldIsDiagnosed() {
-        // The same reasoning as flags: a record is rebuilt from stored text, and an
-        // absent field is indistinguishable from one that was never written.
+    func testAnOptionalKeyIsDiagnosed() {
+        // A record's key is what tells one record from another, so it has to be
+        // present on every record — an optional key can't do that job.
         assertMacroExpansion(
             """
             @FlagRecord
             struct Endpoint {
-                var name: String?
+                @FlagRecordKey var name: String?
+                var url: String
             }
             """,
             expandedSource: """
                 struct Endpoint {
                     var name: String?
+                    var url: String
+
+                    static var flagRecordShape: [FeatureFlag.FlagRecordField] {
+                        [
+                            FeatureFlag.FlagRecordField(
+                                name: "name",
+                                type: String.flagValueType,
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: true,
+                                isOptional: true,
+                                decodedName: nil
+                            ),
+                            FeatureFlag.FlagRecordField(
+                                name: "url",
+                                type: String.flagValueType,
+                                cases: FeatureFlag._flagValueCases(of: String.self),
+                                defaultValue: nil,
+                                fields: FeatureFlag._flagRecordShape(of: String.self),
+                                isKey: false,
+                                isOptional: false,
+                                decodedName: nil
+                            )
+                        ]
+                    }
+
+                    var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
+                        var boxes = [String: FeatureFlag.FlagValueBox]()
+                        if let value = self.name {
+                            boxes["name"] = value.box
+                        }
+                        boxes["url"] = self.url.box
+                        return boxes
+                    }
+
+                    static var flagRecordKey: String? {
+                        "name"
+                    }
+                }
+
+                extension Endpoint {
+                    init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+                        guard let url = flagRecordBoxes["url"].flatMap(String.init(box:)) else {
+                            return nil
+                        }
+                        let name = flagRecordBoxes["name"].flatMap(String.init(box:))
+                        self.name = name
+                        self.url = url
+                    }
+                }
+
+                @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<Endpoint>' rather than 'Endpoint' or '[Endpoint]'")
+                extension Endpoint: FeatureFlag.FlagValue {
+                    static var flagValueType: FeatureFlag.FlagValueType {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    init?(box: FeatureFlag.FlagValueBox) {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
+                    var box: FeatureFlag.FlagValueBox {
+                        fatalError(
+                            "Endpoint is a record: a flag holds FlagRecords<Endpoint>, not the record itself"
+                        )
+                    }
                 }
                 """,
             diagnostics: [
                 DiagnosticSpec(
                     message: """
-                        record fields cannot be optional: a field is either part of the \
-                        shape or it is not. Use a sentinel the type already has, or an \
-                        enum with a case for 'unset'
+                        a record's key cannot be optional: it is the field that tells one \
+                        record from another, so every record has to carry it
                         """,
                     line: 3,
                     column: 5
-                ),
-                DiagnosticSpec(
-                    message: """
-                        '@FlagRecord' needs at least one stored property: a record is a \
-                        shape, and an empty one gives the editor nothing to show
-                        """,
-                    line: 1,
-                    column: 1
-                ),
+                )
             ],
             macros: recordMacros
         )

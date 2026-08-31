@@ -391,4 +391,16 @@ extension TypeSyntax {
         }
         return false
     }
+
+    /// The `T` inside `T?` or `T!`, written out, or `nil` when this is neither. The
+    /// `Optional<T>` spelling is handled by the caller, which strips the wrapper by name.
+    var optionalWrappedName: String? {
+        if let optional = self.as(OptionalTypeSyntax.self) {
+            return optional.wrappedType.trimmedDescription
+        }
+        if let forced = self.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+            return forced.wrappedType.trimmedDescription
+        }
+        return nil
+    }
 }

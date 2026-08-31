@@ -8,5 +8,6 @@ struct FeatureFlagPlugin: CompilerPlugin {
         FlagGroupMacro.self,
         FlagRecordMacro.self,
         FlagRecordKeyMacro.self,
+        FlagRecordPropertyMacro.self,
     ]
 }
