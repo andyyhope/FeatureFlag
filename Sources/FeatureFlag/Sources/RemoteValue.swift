@@ -110,10 +110,14 @@ extension RemoteValue {
 
             var boxes = [String: FlagValueBox](minimumCapacity: shape.count)
             for field in shape {
-                // A backend that has not caught up with a newly added field is the same
-                // situation as a stored record that predates it, and gets the same
-                // answer: the field's declared default, if it has one.
-                guard let raw = fields[field.name] else {
+                // Read by the custom key when the field has one: a backend's key can
+                // differ from the property name, though the stored form will not.
+                guard let raw = fields[field.payloadName], raw != .null else {
+                    // Absent or null. An optional field takes nil and is left out of
+                    // the stored form. A required field falls back to its declared
+                    // default — the same answer a record predating a newly added field
+                    // gets — or the record cannot be read.
+                    if field.isOptional { continue }
                     guard let fallback = field.defaultValue else { return nil }
                     boxes[field.name] = fallback
                     continue
@@ -129,6 +133,8 @@ extension RemoteValue {
                 guard let box = converted else { return nil }
 
                 if let cases = field.cases, cases.contains(box) == false { return nil }
+                // Stored under the property name, not the custom key: decoding is the
+                // only place the custom key applies.
                 boxes[field.name] = box
             }
             records.append(boxes)
@@ -156,9 +162,8 @@ extension RemoteValue {
             guard case let .object(fields) = value else { return nil }
             var boxes = [String: FlagValueBox]()
             for field in shape {
-                guard let raw = fields[field.name], let box = raw.box(as: field.type) else {
-                    continue
-                }
+                guard let raw = fields[field.payloadName], let box = raw.box(as: field.type)
+                else { continue }
                 boxes[field.name] = box
             }
             records.append(boxes)

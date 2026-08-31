@@ -349,8 +349,13 @@ extension FlagRecordDiff {
         case .removed:
             return "- \(identifier)"
         case let .changed(fields):
+            // An unset optional field reads as "unset" rather than a blank, so a line
+            // like "minimumSpend: unset → 10" says what happened.
+            func describe(_ box: FlagValueBox?) -> String {
+                box?.diffFieldDescription ?? "unset"
+            }
             let fieldLines = fields.map {
-                "    \($0.field): \($0.defaultValue.diffFieldDescription) → \($0.incomingValue.diffFieldDescription)"
+                "    \($0.field): \(describe($0.defaultValue)) → \(describe($0.incomingValue))"
             }
             return (["~ \(identifier):"] + fieldLines).joined(separator: "\n")
         }

@@ -46,8 +46,11 @@ Every stored property becomes a field, in declaration order. The macro generates
 shape, a box per field, and the way back from boxes to a record.
 
 Each field must itself be a ``FlagValue`` — a field of some type that is not gets an
-error where you wrote it. Fields cannot be optional, for the same reason flags cannot:
-a field is either part of the shape or it is not.
+error where you wrote it. A field may be optional (`var minimumSpend: Double?`): a
+payload that omits it, or sends it as `null`, reads it as `nil` rather than failing the
+record, and a `nil` value is left out of the stored form rather than written as anything.
+The record's key cannot be optional — it is what tells one record from another, so every
+record has to carry it.
 
 Fields are boxed one at a time rather than run through `Codable`. That matters more
 than it sounds: `JSONEncoder` writes a `Date` as a number, so a date inside a record
@@ -169,6 +172,34 @@ or an enum case this build has never heard of rejects the **whole payload** rath
 being found later as a flag that quietly stopped taking effect. A backend that sends the
 list already serialised as a string is understood too, and held to the same standard.
 
+### Matching a backend that is not shaped like your Swift
+
+Two things a real payload often needs. A field the backend omits or sends as `null`:
+declare it optional, and it reads as `nil` instead of failing the record. And a field
+whose JSON key is not the property name: `@FlagRecordProperty(key:)` gives it the key to
+read from.
+
+```swift
+@FlagRecord
+struct PaymentMethod {
+    @FlagRecordKey var name: String
+    @FlagRecordProperty(key: "apple_pay") var applePay: Bool
+    var minimumSpend: Double?          // absent or null → nil
+}
+```
+
+```json
+{ "config": { "paymentMethods": [
+    { "name": "card", "apple_pay": false },
+    { "name": "wallet", "apple_pay": true, "minimumSpend": 10 }
+] } }
+```
+
+The custom key is **decode-only**: it applies when reading a payload, not to the record's
+own stored form, which stays keyed by the property name. Once decoded a record is
+canonical — the backend's key never appears in what is stored, exported, or shown in the
+companion, and re-reading uses the property name.
+
 ### A field that is itself a list
 
 A record's field can be another list of records:
@@ -239,6 +270,7 @@ changed. See <doc:Troubleshooting>.
 ### Declaring a record
 
 - ``FlagRecord()``
+- ``FlagRecordProperty(key:)``
 - ``FlagRecord``
 - ``FlagRecords``
 - ``FlagRecordField``
