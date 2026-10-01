@@ -134,7 +134,8 @@ countdown out of sight. On iOS 16.2 and later the companion can keep it in the D
 Island and on the Lock Screen, as a ring that drains until the send.
 
 Add a widget extension to the companion that shows `FlagSignalLiveActivity`, and set
-`NSSupportsLiveActivities` to `YES` in the companion's Info.plist:
+`NSSupportsLiveActivities` to `YES` in the companion's Info.plist. The extension itself
+targets iOS 16.2; the companion can stay lower.
 
 ```swift
 import FeatureFlagUI
@@ -153,7 +154,9 @@ The signals screen starts and ends the activity itself. Without the extension, o
 Live Activities switched off, a delayed send behaves exactly as before.
 
 Either way, the companion keeps itself running in the background until a delayed send
-has gone and the host has answered, so switching away no longer stops the countdown.
+has gone and the host has answered, so switching away no longer stops the countdown. That
+running time is what iOS allows a backgrounded app — about thirty seconds — which the
+longest delay and the default acknowledgement timeout fit well inside.
 
 ### The two built-in screens
 

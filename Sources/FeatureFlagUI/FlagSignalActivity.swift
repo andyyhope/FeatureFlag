@@ -122,10 +122,18 @@
             backgroundTask = UIApplication.shared.beginBackgroundTask(
                 withName: "Sending \(signal.description)"
             ) { [weak self] in
-                self?.endBackgroundTask()
+                // Out of time, so the send will not go until the companion is reopened.
+                // A ring left counting down would say otherwise.
+                self?.expire()
             }
 
             if #available(iOS 16.2, *) {
+                // Left behind by a companion that was killed mid-countdown, and nothing
+                // else will ever end it.
+                for stale in Activity<FlagSignalActivityAttributes>.activities {
+                    Task { await stale.end(nil, dismissalPolicy: .immediate) }
+                }
+
                 // Throws when Live Activities are switched off, or the companion has no
                 // widget extension to show one. Either way the send goes ahead unseen.
                 activity = try? Activity.request(
@@ -142,16 +150,35 @@
         }
 
         func end() {
+            let activity = self.activity
+            let backgroundTask = self.backgroundTask
+            self.activity = nil
+            self.backgroundTask = .invalid
+
+            // The background task outlives the activity: released first, the companion
+            // could be suspended before the end reached the system, leaving a finished
+            // countdown in the Dynamic Island until it was next opened.
+            Task {
+                if #available(iOS 16.2, *),
+                    let activity = activity as? Activity<FlagSignalActivityAttributes>
+                {
+                    await activity.end(nil, dismissalPolicy: .immediate)
+                }
+                if backgroundTask != .invalid {
+                    UIApplication.shared.endBackgroundTask(backgroundTask)
+                }
+            }
+        }
+
+        /// The expiration handler has to release the task before it returns, so the
+        /// activity's end cannot be waited for here.
+        private func expire() {
             if #available(iOS 16.2, *),
                 let activity = activity as? Activity<FlagSignalActivityAttributes>
             {
                 Task { await activity.end(nil, dismissalPolicy: .immediate) }
             }
             activity = nil
-            endBackgroundTask()
-        }
-
-        private func endBackgroundTask() {
             guard backgroundTask != .invalid else { return }
             UIApplication.shared.endBackgroundTask(backgroundTask)
             backgroundTask = .invalid
