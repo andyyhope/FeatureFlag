@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		015C48BB398EF3C411A324BE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418E3598E2BAE7BDB15B49B5 /* ContentView.swift */; };
+		0E899B6D80B14E19A3E670E7 /* DemoCompanionWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FEBEAF5167480AD7B18B2B5 /* DemoCompanionWidgets.swift */; };
 		47B97943B66C34590B092AD0 /* AppSignals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978F72F38B94A4CCA5F8AB32 /* AppSignals.swift */; };
 		48805EB7DED827669C2B2632 /* DemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B040F4A907056358E2970A06 /* DemoApp.swift */; };
 		6034784464B7CB1C8CABFFFF /* CompanionRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACE5A840958A99CD3628B9B /* CompanionRootView.swift */; };
@@ -16,18 +17,45 @@
 		798F8A34B253A47576F5C85F /* AppFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A6EDE47E5801150AA6EC2E /* AppFlags.swift */; };
 		93B42FB8C8BBBED1D06C81DF /* FeatureFlag in Frameworks */ = {isa = PBXBuildFile; productRef = AA84288416DAAC6B17DA4992 /* FeatureFlag */; };
 		9990D6C8791C6AA84AC9EC9A /* DemoModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2E86E5759BB3B6D0FEF375 /* DemoModel.swift */; };
+		A24D4383570E063D2544001A /* DemoCompanionWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E25D005A115E9A45C648920B /* DemoCompanionWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A7A0B60AFCD53DDB44006B4F /* DemoRemoteMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4A92A4F78E305DCB9DB97D /* DemoRemoteMapper.swift */; };
 		B138C0F14E953F6F33AC75CD /* LocalConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A9FC634815B5DB7CF973DBF /* LocalConfiguration.swift */; };
 		DFE8C6996D398545270E9E42 /* DemoCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB5A86BF1272ADC4BDFC2B66 /* DemoCompanionApp.swift */; };
 		EAE70026F056D16CB1487BAD /* AppSignals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978F72F38B94A4CCA5F8AB32 /* AppSignals.swift */; };
 		F888D70DD87EF0914605A0B6 /* FeatureFlagUI in Frameworks */ = {isa = PBXBuildFile; productRef = BBD75572CDFFA4FD7BC97E6B /* FeatureFlagUI */; };
+		F970D78FCBFA8C78A3927CC0 /* FeatureFlagUI in Frameworks */ = {isa = PBXBuildFile; productRef = 404F10D619AEB0E091962FDF /* FeatureFlagUI */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		92A3A90AFDBAF3B637FA1825 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD6BE49380A6217FAE103267 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5FEF83894E689945EEB4CA85;
+			remoteInfo = DemoCompanionWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8B733CB23D101995A27AC492 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A24D4383570E063D2544001A /* DemoCompanionWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		1670E37C95E49176B690A202 /* DemoApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DemoApp.entitlements; sourceTree = "<group>"; };
 		246EC28FE443BD7DBD7DCC89 /* DemoCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DemoCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		418E3598E2BAE7BDB15B49B5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		485880915FD9905E1B3DD6DA /* feature-flags */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "feature-flags"; path = ..; sourceTree = SOURCE_ROOT; };
+		5FEBEAF5167480AD7B18B2B5 /* DemoCompanionWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCompanionWidgets.swift; sourceTree = "<group>"; };
 		6A9FC634815B5DB7CF973DBF /* LocalConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalConfiguration.swift; sourceTree = "<group>"; };
 		6E5019F70F2E43DCBC32792D /* DemoApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DemoApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8075F24C2370323626E7A218 /* DemoCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DemoCompanion.entitlements; sourceTree = "<group>"; };
@@ -36,6 +64,8 @@
 		B040F4A907056358E2970A06 /* DemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoApp.swift; sourceTree = "<group>"; };
 		BB5A86BF1272ADC4BDFC2B66 /* DemoCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCompanionApp.swift; sourceTree = "<group>"; };
 		C0F30C3CE0080624FAE3B965 /* RemoteConfigurations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigurations.swift; sourceTree = "<group>"; };
+		DA1BB2FE4D1EE91FCB2C8C11 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E25D005A115E9A45C648920B /* DemoCompanionWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = DemoCompanionWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2A6EDE47E5801150AA6EC2E /* AppFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFlags.swift; sourceTree = "<group>"; };
 		FACE5A840958A99CD3628B9B /* CompanionRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionRootView.swift; sourceTree = "<group>"; };
 		FC4A92A4F78E305DCB9DB97D /* DemoRemoteMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoRemoteMapper.swift; sourceTree = "<group>"; };
@@ -47,6 +77,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				93B42FB8C8BBBED1D06C81DF /* FeatureFlag in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1CE80A9BADF779850BFFC666 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F970D78FCBFA8C78A3927CC0 /* FeatureFlagUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,6 +115,7 @@
 			children = (
 				AB0486006806708D49AE5A6E /* DemoApp */,
 				3292C3B4A48E2764338E857B /* DemoCompanion */,
+				F2542D857D8F9A66389C057F /* DemoCompanionWidgets */,
 				68DD6BE16F7B2FC05CFECB3E /* Packages */,
 				759F6AB262B993EB95F3E7C0 /* Products */,
 			);
@@ -95,6 +134,7 @@
 			children = (
 				6E5019F70F2E43DCBC32792D /* DemoApp.app */,
 				246EC28FE443BD7DBD7DCC89 /* DemoCompanion.app */,
+				E25D005A115E9A45C648920B /* DemoCompanionWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -113,6 +153,15 @@
 				C0F30C3CE0080624FAE3B965 /* RemoteConfigurations.swift */,
 			);
 			path = DemoApp;
+			sourceTree = "<group>";
+		};
+		F2542D857D8F9A66389C057F /* DemoCompanionWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				5FEBEAF5167480AD7B18B2B5 /* DemoCompanionWidgets.swift */,
+				DA1BB2FE4D1EE91FCB2C8C11 /* Info.plist */,
+			);
+			path = DemoCompanionWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -143,10 +192,12 @@
 			buildPhases = (
 				069302AC35CE47EC33AB82B4 /* Sources */,
 				F7FC44C189E25B084F475C82 /* Frameworks */,
+				8B733CB23D101995A27AC492 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				30427949475430F27BF03A40 /* PBXTargetDependency */,
 			);
 			name = DemoCompanion;
 			packageProductDependencies = (
@@ -156,6 +207,25 @@
 			productName = DemoCompanion;
 			productReference = 246EC28FE443BD7DBD7DCC89 /* DemoCompanion.app */;
 			productType = "com.apple.product-type.application";
+		};
+		5FEF83894E689945EEB4CA85 /* DemoCompanionWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB525EECD97A06A5BAEB4334 /* Build configuration list for PBXNativeTarget "DemoCompanionWidgets" */;
+			buildPhases = (
+				D52D6FA3F4D6A980703630B0 /* Sources */,
+				1CE80A9BADF779850BFFC666 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DemoCompanionWidgets;
+			packageProductDependencies = (
+				404F10D619AEB0E091962FDF /* FeatureFlagUI */,
+			);
+			productName = DemoCompanionWidgets;
+			productReference = E25D005A115E9A45C648920B /* DemoCompanionWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -170,6 +240,9 @@
 						ProvisioningStyle = Manual;
 					};
 					33341C1C6E60B3C11E5D437B = {
+						ProvisioningStyle = Manual;
+					};
+					5FEF83894E689945EEB4CA85 = {
 						ProvisioningStyle = Manual;
 					};
 				};
@@ -193,6 +266,7 @@
 			targets = (
 				290E243F8E1E0E01B60C4A00 /* DemoApp */,
 				33341C1C6E60B3C11E5D437B /* DemoCompanion */,
+				5FEF83894E689945EEB4CA85 /* DemoCompanionWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -223,7 +297,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D52D6FA3F4D6A980703630B0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E899B6D80B14E19A3E670E7 /* DemoCompanionWidgets.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		30427949475430F27BF03A40 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5FEF83894E689945EEB4CA85 /* DemoCompanionWidgets */;
+			targetProxy = 92A3A90AFDBAF3B637FA1825 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		4C6E6DF196C9841B526B3DAB /* Release */ = {
@@ -264,6 +354,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -277,6 +368,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -284,6 +376,23 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		5FB7BDCD892BA8A56EECC7E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DemoCompanionWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.andyyhope.featureflag.democompanion.widgets;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -313,6 +422,7 @@
 				CODE_SIGN_ENTITLEMENTS = DemoCompanion/DemoCompanion.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_KEY_CFBundleDisplayName = Flags;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -332,6 +442,7 @@
 				CODE_SIGN_ENTITLEMENTS = DemoCompanion/DemoCompanion.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_KEY_CFBundleDisplayName = Flags;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -358,6 +469,23 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.andyyhope.featureflag.demoapp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EC1C31D7891D7192A8316198 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DemoCompanionWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.andyyhope.featureflag.democompanion.widgets;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -401,6 +529,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -420,6 +549,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -452,6 +582,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		AB525EECD97A06A5BAEB4334 /* Build configuration list for PBXNativeTarget "DemoCompanionWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC1C31D7891D7192A8316198 /* Debug */,
+				5FB7BDCD892BA8A56EECC7E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		DF36C4AF02C34C48DEBC8B62 /* Build configuration list for PBXNativeTarget "DemoApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -471,6 +610,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		404F10D619AEB0E091962FDF /* FeatureFlagUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FeatureFlagUI;
+		};
 		4A43E118EFCCE71CFCB2BA72 /* FeatureFlag */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FeatureFlag;

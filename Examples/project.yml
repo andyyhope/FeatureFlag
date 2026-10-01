@@ -22,6 +22,9 @@ settings:
     CODE_SIGNING_ALLOWED: "YES"
     SWIFT_VERSION: "5.0"
     GENERATE_INFOPLIST_FILE: "YES"
+    # An embedded extension must carry its app's version, or it will not install.
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
 
 targets:
   DemoApp:
@@ -58,17 +61,44 @@ targets:
         product: FeatureFlag
       - package: FeatureFlag
         product: FeatureFlagUI
+      # Shows a delayed signal's countdown in the Dynamic Island once you have switched
+      # to the host app.
+      - target: DemoCompanionWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.andyyhope.featureflag.democompanion
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_CFBundleDisplayName: Flags
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_NSSupportsLiveActivities: "YES"
     entitlements:
       path: DemoCompanion/DemoCompanion.entitlements
       properties:
         com.apple.security.application-groups:
           - group.com.andyyhope.featureflag.demo
+
+  DemoCompanionWidgets:
+    type: app-extension
+    platform: iOS
+    # The Live Activity API the widget uses arrived in 16.2.
+    deploymentTarget: "16.2"
+    sources:
+      - path: DemoCompanionWidgets
+    dependencies:
+      - package: FeatureFlag
+        product: FeatureFlagUI
+    info:
+      path: DemoCompanionWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Flags
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.andyyhope.featureflag.democompanion.widgets
+        GENERATE_INFOPLIST_FILE: "NO"
 
 schemes:
   DemoApp:

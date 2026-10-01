@@ -127,6 +127,34 @@ A group lays out flat below seven signals and takes a screen of its own above th
 `display: .nested` or `.flat` to decide for yourself, or move
 ``FlagSignalGroup/automaticNestingThreshold`` if six is the wrong number for your rows.
 
+### Following a delayed signal from the host app
+
+A delay exists so you can switch to the host before the signal fires, which takes the
+countdown out of sight. On iOS 16.2 and later the companion can keep it in the Dynamic
+Island and on the Lock Screen, as a ring that drains until the send.
+
+Add a widget extension to the companion that shows `FlagSignalLiveActivity`, and set
+`NSSupportsLiveActivities` to `YES` in the companion's Info.plist:
+
+```swift
+import FeatureFlagUI
+import SwiftUI
+import WidgetKit
+
+@main
+struct CompanionWidgets: WidgetBundle {
+    var body: some Widget {
+        FlagSignalLiveActivity()
+    }
+}
+```
+
+The signals screen starts and ends the activity itself. Without the extension, or with
+Live Activities switched off, a delayed send behaves exactly as before.
+
+Either way, the companion keeps itself running in the background until a delayed send
+has gone and the host has answered, so switching away no longer stops the countdown.
+
 ### The two built-in screens
 
 ``FlagOverridesView`` lists only what has been changed, with a per-row reset, the exported

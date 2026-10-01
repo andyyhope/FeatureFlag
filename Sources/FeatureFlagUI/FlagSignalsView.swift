@@ -285,6 +285,9 @@
         let start: Date
         let duration: TimeInterval
 
+        /// From the tap to the moment the signal fires.
+        var interval: ClosedRange<Date> { start...start.addingTimeInterval(duration) }
+
         /// How far round the ring is, from 0 at the tap to 1 when the signal fires.
         func progress(at date: Date) -> Double {
             guard duration > 0 else { return 1 }
@@ -308,6 +311,9 @@
         let channel: FlagSignalChannel?
         private let timeout: TimeInterval
         private var pendingTask: Task<Void, Never>?
+        #if os(iOS)
+            private let keepAlive = FlagSignalKeepAlive()
+        #endif
 
         init(appGroup: String, timeout: TimeInterval) {
             self.channel = FlagSignalChannel(appGroup: appGroup)
@@ -346,14 +352,18 @@
         }
 
         private func schedule(_ signal: ErasedSignal) {
+            let countdown = FlagSignalCountdown(start: Date(), duration: delay.rawValue)
             pending = signal
-            countdown = FlagSignalCountdown(start: Date(), duration: delay.rawValue)
+            self.countdown = countdown
+            #if os(iOS)
+                keepAlive.begin(signal, countdown: countdown)
+            #endif
 
             pendingTask = Task { [delay] in
                 try? await Task.sleep(nanoseconds: UInt64(delay.rawValue * 1_000_000_000))
                 guard Task.isCancelled == false else { return }
                 pending = nil
-                countdown = nil
+                self.countdown = nil
                 send(signal)
             }
         }
@@ -363,6 +373,9 @@
             pendingTask = nil
             pending = nil
             countdown = nil
+            #if os(iOS)
+                keepAlive.end()
+            #endif
         }
 
         private func send(_ signal: ErasedSignal) {
@@ -381,6 +394,9 @@
                 )
                 history = Array(history.prefix(5))
                 inFlight = nil
+                #if os(iOS)
+                    keepAlive.end()
+                #endif
             }
         }
     }

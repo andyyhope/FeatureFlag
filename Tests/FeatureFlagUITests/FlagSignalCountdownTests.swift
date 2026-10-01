@@ -31,6 +31,12 @@ final class FlagSignalCountdownTests: XCTestCase {
         XCTAssertEqual(countdown.progress(at: start.addingTimeInterval(-1)), 0)
     }
 
+    func testTheIntervalRunsFromTheTapToWhenTheSignalFires() {
+        // What the Live Activity's ring drains across, so it empties as the send goes.
+        let countdown = FlagSignalCountdown(start: start, duration: 5)
+        XCTAssertEqual(countdown.interval, start...start.addingTimeInterval(5))
+    }
+
     @MainActor
     func testSchedulingASignalStartsACountdownForTheChosenDelay() throws {
         let model = FlagSignalsModel(appGroup: "group.test.countdown", timeout: 1)
