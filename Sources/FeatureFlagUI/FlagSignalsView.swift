@@ -228,16 +228,23 @@
         private func trailing(for signal: ErasedSignal) -> some View {
             if model.inFlight == signal {
                 ProgressView()
-            } else if model.pending == signal {
-                Circle()
-                    .trim(from: 0, to: model.countdown)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 20, height: 20)
-                    .overlay { Circle().stroke(Color.accentColor.opacity(0.2), lineWidth: 3) }
-                    .accessibilityLabel(
-                        "Sending in \(Int(model.delay.rawValue)) seconds. Tap to cancel."
-                    )
+            } else if model.pending == signal, let countdown = model.countdown {
+                // Drawn from the clock, not animated: an animation started in the same
+                // update that inserts the ring has nothing to animate from, and one that
+                // did run would freeze while the app is in the background.
+                TimelineView(.animation) { context in
+                    Circle()
+                        .trim(from: 0, to: countdown.progress(at: context.date))
+                        .stroke(
+                            Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 20, height: 20)
+                        .overlay { Circle().stroke(Color.accentColor.opacity(0.2), lineWidth: 3) }
+                }
+                .accessibilityLabel(
+                    "Sending in \(Int(countdown.duration)) seconds. Tap to cancel."
+                )
             } else {
                 Image(systemName: "paperplane").foregroundStyle(.tint)
             }
@@ -273,6 +280,21 @@
 
     // MARK: - State
 
+    /// A scheduled send, as a span of time rather than an animation.
+    struct FlagSignalCountdown: Equatable {
+        let start: Date
+        let duration: TimeInterval
+
+        /// From the tap to the moment the signal fires.
+        var interval: ClosedRange<Date> { start...start.addingTimeInterval(duration) }
+
+        /// How far round the ring is, from 0 at the tap to 1 when the signal fires.
+        func progress(at date: Date) -> Double {
+            guard duration > 0 else { return 1 }
+            return min(max(date.timeIntervalSince(start) / duration, 0), 1)
+        }
+    }
+
     /// Delay, countdown, what is in flight and what happened.
     ///
     /// Held apart from the views because a nested group is a second screen, and pushing
@@ -282,13 +304,16 @@
 
         @Published var delay: FlagSignalDelay = .instant
         @Published var pending: ErasedSignal?
-        @Published var countdown: Double = 0
+        @Published var countdown: FlagSignalCountdown?
         @Published var inFlight: ErasedSignal?
         @Published var history: [Attempt] = []
 
         let channel: FlagSignalChannel?
         private let timeout: TimeInterval
         private var pendingTask: Task<Void, Never>?
+        #if os(iOS)
+            private let keepAlive = FlagSignalKeepAlive()
+        #endif
 
         init(appGroup: String, timeout: TimeInterval) {
             self.channel = FlagSignalChannel(appGroup: appGroup)
@@ -327,15 +352,18 @@
         }
 
         private func schedule(_ signal: ErasedSignal) {
+            let countdown = FlagSignalCountdown(start: Date(), duration: delay.rawValue)
             pending = signal
-            countdown = 0
-            withAnimation(.linear(duration: delay.rawValue)) { countdown = 1 }
+            self.countdown = countdown
+            #if os(iOS)
+                keepAlive.begin(signal, countdown: countdown)
+            #endif
 
             pendingTask = Task { [delay] in
                 try? await Task.sleep(nanoseconds: UInt64(delay.rawValue * 1_000_000_000))
                 guard Task.isCancelled == false else { return }
                 pending = nil
-                countdown = 0
+                self.countdown = nil
                 send(signal)
             }
         }
@@ -344,7 +372,10 @@
             pendingTask?.cancel()
             pendingTask = nil
             pending = nil
-            withAnimation(.easeOut(duration: 0.15)) { countdown = 0 }
+            countdown = nil
+            #if os(iOS)
+                keepAlive.end()
+            #endif
         }
 
         private func send(_ signal: ErasedSignal) {
@@ -363,6 +394,9 @@
                 )
                 history = Array(history.prefix(5))
                 inFlight = nil
+                #if os(iOS)
+                    keepAlive.end()
+                #endif
             }
         }
     }

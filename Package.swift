@@ -60,6 +60,8 @@ let package = Package(
                 "DemoCompanion/DemoCompanion.entitlements",
                 "DemoApp/DemoApp.swift",
                 "DemoCompanion/DemoCompanionApp.swift",
+                // An app extension, built only by the Xcode project.
+                "DemoCompanionWidgets",
             ]
         ),
         .testTarget(

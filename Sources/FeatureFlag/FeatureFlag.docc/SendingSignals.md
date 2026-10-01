@@ -138,7 +138,8 @@ In practice that means switching apps to press the button is the problem. The ho
 usually still running for a while after being backgrounded and will receive the signal;
 once the system suspends it, nothing arrives. The example companion app handles this with
 a delay — pick a signal, choose three seconds, switch to the host, and the signal fires
-while it is in front of you.
+while it is in front of you. `FeatureFlagUI` keeps the companion running until the send
+has gone, and can show the countdown in the Dynamic Island while you wait.
 
 ``FlagSignalError/notAcknowledged`` is deliberately not called `hostNotRunning`. A missing
 acknowledgement is also what you see if the host is running but slow, still launching, or
