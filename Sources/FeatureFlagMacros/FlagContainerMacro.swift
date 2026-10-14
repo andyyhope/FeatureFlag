@@ -63,7 +63,7 @@ extension FlagContainerMacro: MemberMacro {
             case let .flag(flag):
                 let remoteKey = flag.remoteKey.map { "remoteKey: \($0.trimmedDescription), " } ?? ""
                 return """
-                        _\(flag.propertyName) = FeatureFlag.Flag(
+                        _\(flag.propertyName) = _FeatureFlagMacroSupport.Flag(
                             default: \(flag.defaultValue.trimmedDescription),
                             description: \(flag.description.trimmedDescription),
                             \(remoteKey)lookup: _lookup,
@@ -82,7 +82,7 @@ extension FlagContainerMacro: MemberMacro {
         }
 
         return """
-            \(raw: access)init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+            \(raw: access)init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
             \(raw: assignments.joined(separator: "\n"))
             }
             """
@@ -97,15 +97,15 @@ extension FlagContainerMacro: MemberMacro {
                 let type = flag.valueType.trimmedDescription
                 return """
                             .flag(
-                                FeatureFlag.FlagDescriptor(
+                                _FeatureFlagMacroSupport.FlagDescriptor(
                                     propertyName: "\(flag.propertyName)",
-                                    keyPath: FeatureFlag.FlagKeyPath(["\(flag.propertyName)"]),
+                                    keyPath: _FeatureFlagMacroSupport.FlagKeyPath(["\(flag.propertyName)"]),
                                     description: \(flag.description.trimmedDescription),
                                     valueType: \(type).flagValueType,
                                     defaultValue: (\(flag.defaultValue.trimmedDescription) as \(type)).box,
-                                    cases: FeatureFlag._flagValueCases(of: \(type).self),
+                                    cases: _FeatureFlagMacroSupport.flagValueCases(of: \(type).self),
                                     remoteKey: \(flag.remoteKey?.trimmedDescription ?? "nil"),
-                                    recordShape: FeatureFlag._flagRecordShape(of: \(type).self)
+                                    recordShape: _FeatureFlagMacroSupport.flagRecordShape(of: \(type).self)
                                 )
                             )
                     """
@@ -114,9 +114,9 @@ extension FlagContainerMacro: MemberMacro {
                 let type = group.containerType.trimmedDescription
                 return """
                             .group(
-                                FeatureFlag.FlagGroupDescriptor(
+                                _FeatureFlagMacroSupport.FlagGroupDescriptor(
                                     propertyName: "\(group.propertyName)",
-                                    keyPath: FeatureFlag.FlagKeyPath(["\(group.propertyName)"]),
+                                    keyPath: _FeatureFlagMacroSupport.FlagKeyPath(["\(group.propertyName)"]),
                                     description: \(group.description.trimmedDescription),
                                     children: \(type).flagDescriptors.map {
                                         $0.prefixed(by: "\(group.propertyName)")
@@ -128,7 +128,7 @@ extension FlagContainerMacro: MemberMacro {
         }
 
         return """
-            \(raw: access)static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+            \(raw: access)static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                 [
             \(raw: nodes.joined(separator: ",\n"))
                 ]
@@ -156,7 +156,7 @@ extension FlagContainerMacro: ExtensionMacro {
         guard declaration.is(StructDeclSyntax.self) else { return [] }
 
         let extensionDeclaration: DeclSyntax = """
-            extension \(type.trimmed): FeatureFlag.FlagContainer {}
+            extension \(type.trimmed): _FeatureFlagMacroSupport.FlagContainer {}
             """
         return [extensionDeclaration.cast(ExtensionDeclSyntax.self)]
     }

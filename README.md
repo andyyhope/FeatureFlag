@@ -262,7 +262,8 @@ unavailable for those five names.
 
 **If your own module declares a type called `Flag`**, write `@FeatureFlag.Flag` instead. A
 local `Flag` makes the bare attribute fail before any macro runs. Everything generated is
-fully qualified, so nothing else can be shadowed.
+fully qualified, so nothing else can be shadowed — not even by a type of your own called
+`FeatureFlag`.
 
 **A flag can hold a list of records** when configuration is not one value but several
 small structured ones:

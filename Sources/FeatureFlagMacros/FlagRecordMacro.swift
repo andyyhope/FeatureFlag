@@ -96,12 +96,12 @@ extension FlagRecordMacro: MemberMacro {
             let decodedName = field.decodedName.map { "\"\($0)\"" } ?? "nil"
 
             return """
-                FeatureFlag.FlagRecordField(
+                _FeatureFlagMacroSupport.FlagRecordField(
                     name: "\(field.name)",
                     type: \(field.type).flagValueType,
-                    cases: FeatureFlag._flagValueCases(of: \(field.type).self),
+                    cases: _FeatureFlagMacroSupport.flagValueCases(of: \(field.type).self),
                     defaultValue: \(fallback),
-                    fields: FeatureFlag._flagRecordShape(of: \(field.type).self),
+                    fields: _FeatureFlagMacroSupport.flagRecordShape(of: \(field.type).self),
                     isKey: \(field.name == key),
                     isOptional: \(field.isOptional),
                     decodedName: \(decodedName)
@@ -110,7 +110,7 @@ extension FlagRecordMacro: MemberMacro {
         }
 
         return """
-            \(raw: access)static var flagRecordShape: [FeatureFlag.FlagRecordField] {
+            \(raw: access)static var flagRecordShape: [_FeatureFlagMacroSupport.FlagRecordField] {
                 [
             \(raw: indented(entries.joined(separator: ",\n"), by: 8))
                 ]
@@ -131,8 +131,8 @@ extension FlagRecordMacro: MemberMacro {
         }
 
         return """
-            \(raw: access)var flagRecordBoxes: [String: FeatureFlag.FlagValueBox] {
-                var boxes = [String: FeatureFlag.FlagValueBox]()
+            \(raw: access)var flagRecordBoxes: [String: _FeatureFlagMacroSupport.FlagValueBox] {
+                var boxes = [String: _FeatureFlagMacroSupport.FlagValueBox]()
             \(raw: indented(entries.joined(separator: "\n"), by: 4))
                 return boxes
             }
@@ -169,7 +169,7 @@ extension FlagRecordMacro: MemberMacro {
         body.append(contentsOf: fields.map { "self.\($0.name) = \($0.name)" })
 
         return """
-            \(raw: access)init?(flagRecordBoxes: [String: FeatureFlag.FlagValueBox]) {
+            \(raw: access)init?(flagRecordBoxes: [String: _FeatureFlagMacroSupport.FlagValueBox]) {
             \(raw: indented(body.joined(separator: "\n"), by: 4))
             }
             """
@@ -201,7 +201,7 @@ extension FlagRecordMacro: ExtensionMacro {
         //
         // `protocols` is empty when the type already declares the conformance itself,
         // in which case the clause has to be left off or it reads as a redeclaration.
-        let conformance = protocols.isEmpty ? "" : ": FeatureFlag.FlagRecord"
+        let conformance = protocols.isEmpty ? "" : ": _FeatureFlagMacroSupport.FlagRecord"
 
         let access = accessLevel(of: declaration)
 
@@ -234,18 +234,18 @@ extension FlagRecordMacro: ExtensionMacro {
     ) -> DeclSyntax {
         """
         @available(*, unavailable, message: "a record is stored as a list — declare the flag as 'FlagRecords<\(type.trimmed)>' rather than '\(type.trimmed)' or '[\(type.trimmed)]'")
-        extension \(type.trimmed): FeatureFlag.FlagValue {
-            \(raw: access)static var flagValueType: FeatureFlag.FlagValueType {
+        extension \(type.trimmed): _FeatureFlagMacroSupport.FlagValue {
+            \(raw: access)static var flagValueType: _FeatureFlagMacroSupport.FlagValueType {
                 fatalError(
                     "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
                 )
             }
-            \(raw: access)init?(box: FeatureFlag.FlagValueBox) {
+            \(raw: access)init?(box: _FeatureFlagMacroSupport.FlagValueBox) {
                 fatalError(
                     "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
                 )
             }
-            \(raw: access)var box: FeatureFlag.FlagValueBox {
+            \(raw: access)var box: _FeatureFlagMacroSupport.FlagValueBox {
                 fatalError(
                     "\(type.trimmed) is a record: a flag holds FlagRecords<\(type.trimmed)>, not the record itself"
                 )

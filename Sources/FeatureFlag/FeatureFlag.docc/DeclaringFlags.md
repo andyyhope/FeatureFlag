@@ -191,7 +191,9 @@ var newOnboarding: Bool
 ```
 
 Everything the macro generates is already fully qualified, so nothing else in the
-framework can be shadowed this way.
+framework can be shadowed this way — including by a type of your own called
+`FeatureFlag`, which shadows the module name itself. (With one of those, the
+`@FeatureFlag.Flag` spelling above is unavailable too, so keep only one of the two.)
 
 ### Saying what a set of flags is for
 

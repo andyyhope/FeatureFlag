@@ -66,7 +66,7 @@ var newOnboarding: Bool
 ```
 
 Everything the macro generates is already fully qualified, so nothing else can be
-shadowed this way.
+shadowed this way — not even by a type of your own called `FeatureFlag`.
 
 ### `pole.someFlag` gives you something other than your flag
 
