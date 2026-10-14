@@ -50,11 +50,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                 struct AppFlags {
                     var checkout: CheckoutFlags
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -92,11 +92,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                 struct AppFlags {
                     var endpoints: FlagRecords<Endpoint>
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -135,11 +135,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                 struct AppFlags {
                     var endpoints: FlagRecords<Endpoint>
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -176,11 +176,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                 struct AppFlags {
                     var notes = "scratch"
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -203,11 +203,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                 struct AppFlags {
                     var summary: String { "none" }
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -234,8 +234,8 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                     @Flag(default: false, description: "New onboarding")
                     public var newOnboarding: Bool
 
-                    public init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
-                        _newOnboarding = FeatureFlag.Flag(
+                    public init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
+                        _newOnboarding = _FeatureFlagMacroSupport.Flag(
                             default: false,
                             description: "New onboarding",
                             lookup: _lookup,
@@ -243,18 +243,18 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                         )
                     }
 
-                    public static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    public static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
                             .flag(
-                                FeatureFlag.FlagDescriptor(
+                                _FeatureFlagMacroSupport.FlagDescriptor(
                                     propertyName: "newOnboarding",
-                                    keyPath: FeatureFlag.FlagKeyPath(["newOnboarding"]),
+                                    keyPath: _FeatureFlagMacroSupport.FlagKeyPath(["newOnboarding"]),
                                     description: "New onboarding",
                                     valueType: Bool.flagValueType,
                                     defaultValue: (false as Bool).box,
-                                    cases: FeatureFlag._flagValueCases(of: Bool.self),
+                                    cases: _FeatureFlagMacroSupport.flagValueCases(of: Bool.self),
                                     remoteKey: nil,
-                                    recordShape: FeatureFlag._flagRecordShape(of: Bool.self)
+                                    recordShape: _FeatureFlagMacroSupport.flagRecordShape(of: Bool.self)
                                 )
                             )
                         ]
@@ -279,11 +279,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                     @Flag(default: false, description: "New onboarding")
                     var newOnboarding
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -316,11 +316,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                     @Flag(default: false, description: "New onboarding")
                     var newOnboarding: Bool = false
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -353,11 +353,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                     @Flag(description: "New onboarding")
                     var newOnboarding: Bool
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -389,11 +389,11 @@ final class FlagContainerDiagnosticTests: XCTestCase {
                     @Flag(default: false)
                     var newOnboarding: Bool
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -434,11 +434,11 @@ extension FlagContainerDiagnosticTests {
                     @Flag(default: nil, description: "Endpoint")
                     var endpoint: String?
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -474,11 +474,11 @@ extension FlagContainerDiagnosticTests {
                     @Flag(default: nil, description: "Endpoint")
                     var endpoint: Optional<String>
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
@@ -514,11 +514,11 @@ extension FlagContainerDiagnosticTests {
                     @Flag(default: nil, description: "Endpoint")
                     var endpoint: String!
 
-                    init(_lookup: any FeatureFlag.FlagLookup, _keyPrefix: FeatureFlag.FlagKeyPath) {
+                    init(_lookup: any _FeatureFlagMacroSupport.FlagLookup, _keyPrefix: _FeatureFlagMacroSupport.FlagKeyPath) {
 
                     }
 
-                    static var flagDescriptors: [FeatureFlag.FlagSchemaNode] {
+                    static var flagDescriptors: [_FeatureFlagMacroSupport.FlagSchemaNode] {
                         [
 
                         ]
